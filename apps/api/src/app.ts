@@ -25,6 +25,10 @@ export class App {
     this.app.use("/users", userRoutes);
   }
 
+  private initializeSeed() {
+    this.app.use("/seed", userRoutes);
+  }
+
   private initializeSwagger() {
     this.app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
   }
