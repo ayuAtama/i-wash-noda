@@ -2,9 +2,9 @@ import express from "express";
 import type { Application } from "express";
 import swaggerUi from "swagger-ui-express";
 
-import userRoutes from "./routes/user.routes.js";
-import { openApiDocument } from "./docs/swagger.js";
-import { errorHandler } from "./middleware/error-handler.js";
+import userRoutes from "./routes/user.routes";
+import { openApiDocument } from "./docs/swagger";
+import { errorHandler } from "./middleware/error-handler";
 
 export class App {
   public app: Application;

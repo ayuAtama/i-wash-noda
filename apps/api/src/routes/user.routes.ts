@@ -1,9 +1,9 @@
 //src/routes/user.routes.ts
 import { Router } from "express";
-import { UserService } from "../services/user.service.js";
-import { UserController } from "../controllers/user.controller.js";
-import { Validator } from "../middleware/validate.js";
-import { UserValidation } from "../validations/user.validation.js";
+import { UserService } from "../services/user.service";
+import { UserController } from "../controllers/user.controller";
+import { Validator } from "../middleware/validate";
+import { UserValidation } from "../validations/user.validation";
 
 export class UserRoute {
   public router = Router();

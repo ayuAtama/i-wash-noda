@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { Prisma } from "../config/generated/client.js";
+import { Prisma } from "../config/generated/client";
 
 export function errorHandler(
   err: any,

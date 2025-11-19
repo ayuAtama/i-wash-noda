@@ -1,10 +1,10 @@
 // apps/api/src/services/user.service.ts
-import prisma from "../config/prisma.js";
-import type { Prisma } from "../config/generated/client.js";
+import prisma from "../config/prisma";
+import type { Prisma } from "../config/generated/client";
 import type {
   CreateUserDto,
   UpdateUserDto,
-} from "../validations/user.validation.js";
+} from "../validations/user.validation";
 
 export class UserService {
   async getAll() {
