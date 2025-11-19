@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../src/config/prisma";
 
-const prisma = new PrismaClient();
+console.log("Seeding...");
 
 async function main() {
-  // Clear existing data (optional)
-  await prisma.user.deleteMany();
+  // Option A: wipe the table (dev only; be careful!)
+  // await prisma.user.deleteMany({});
 
   const users = [
     { name: "Alice Johnson", email: "alice@example.com" },
@@ -21,16 +21,18 @@ async function main() {
 
   await prisma.user.createMany({
     data: users,
+    skipDuplicates: true, // ignore duplicates if run multiple times
   });
 
   console.log("Seeding completed!");
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
   });
