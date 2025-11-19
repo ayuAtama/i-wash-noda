@@ -1,17 +1,57 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { UserService } from "../services/user.service.js";
 
-export const UserController = {
-  getUsers: async (_req: Request, res: Response) => {
-    const users = await UserService.getAll();
-    res.json(users);
-  },
+export class UserController {
+  constructor(private userService: UserService) {}
 
-  createUser: async (req: Request, res: Response) => {
-    const { name, email } = req.body;
+  getAll = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const users = await this.userService.getAll();
+      res.json(users);
+    } catch (err) {
+      next(err);
+    }
+  };
 
-    const user = await UserService.create({ name, email });
+  getById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Number(req.params.id);
+      const user = await this.userService.getById(id);
 
-    res.status(201).json(user);
-  },
-};
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.json(user);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  create = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const created = await this.userService.create(req.body);
+      res.status(201).json(created);
+    } catch (err) {
+      next(err); // <-- REQUIRED so error handler can catch it
+    }
+  };
+
+  update = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Number(req.params.id);
+      const updated = await this.userService.update(id, req.body);
+      res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  delete = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Number(req.params.id);
+      await this.userService.delete(id);
+      res.json({ message: "User deleted" });
+    } catch (err) {
+      next(err);
+    }
+  };
+}

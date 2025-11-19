@@ -1,7 +1,7 @@
-import app from "./app.js";
+//src/server.ts
+import { App } from "./app.js";
 
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-app.listen(PORT, () => {
-  console.log("API running at http://localhost:" + PORT);
-});
+const app = new App();
+app.listen(PORT);
