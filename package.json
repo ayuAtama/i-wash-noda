@@ -1,5 +1,5 @@
 {
-  "name": "my-turborepo",
+  "name": "i-wash-noda",
   "private": true,
   "scripts": {
     "build": "turbo run build",
