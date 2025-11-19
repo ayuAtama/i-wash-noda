@@ -1,0 +1,36 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Express API for i-wash-noda",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "pnpm prisma dev & tsx watch ./src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "pnpm prisma generate",
+    "prisma:migrate": "pnpm prisma migrate deploy"
+  },
+  "prisma": {
+    "seed": "tsx ./prisma/seed.ts"
+  },
+  "keywords": [
+    "expres.js",
+    "prisma orm"
+  ],
+  "author": "Wahyu Pratama (@ayuatama)",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^22.15.3",
+    "prisma": "^6.19.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
