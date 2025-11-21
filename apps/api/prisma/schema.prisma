@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url=""
 }
 
 // -----------------------
@@ -85,7 +86,7 @@ model User {
   profile_image  String?
   role           Role
   worker_station WorkerStation?
-  outlet_id      String?
+  outlet_id      String?        @db.Uuid
   verified       Boolean        @default(false)
   created_at     DateTime       @default(now())
   updated_at     DateTime       @updatedAt
@@ -113,7 +114,7 @@ model User {
 // -----------------------
 model UserProvider {
   id             String   @id @default(uuid()) @db.Uuid
-  user_id        String
+  user_id        String   @db.Uuid
   provider       String
   providerUserId String
   created_at     DateTime @default(now())
@@ -129,7 +130,7 @@ model UserProvider {
 // -----------------------
 model VerificationToken {
   id         String   @id @default(uuid()) @db.Uuid
-  user_id    String
+  user_id    String   @db.Uuid
   token      String
   expires_at DateTime
   used       Boolean  @default(false)
@@ -146,7 +147,7 @@ model VerificationToken {
 // -----------------------
 model PasswordResetToken {
   id         String   @id @default(uuid()) @db.Uuid
-  user_id    String
+  user_id    String   @db.Uuid
   token      String
   expires_at DateTime
   used       Boolean  @default(false)
@@ -163,7 +164,7 @@ model PasswordResetToken {
 // -----------------------
 model UserAddress {
   id         String   @id @default(uuid()) @db.Uuid
-  user_id    String
+  user_id    String   @db.Uuid
   label      String?
   address    String
   lat        Decimal  @db.Decimal(10, 7)
@@ -204,8 +205,8 @@ model Outlet {
 // -----------------------
 model WorkerShift {
   id          String         @id @default(uuid()) @db.Uuid
-  worker_id   String
-  outlet_id   String
+  worker_id   String         @db.Uuid
+  outlet_id   String         @db.Uuid
   station     StationName
   day_of_week WorkerShiftDay
   start_time  DateTime       @db.Time()
@@ -239,10 +240,10 @@ model Item {
 // -----------------------
 model Order {
   id                 String      @id @default(uuid()) @db.Uuid
-  customer_id        String
-  outlet_id          String
-  driver_pickup_id   String?
-  driver_delivery_id String?
+  customer_id        String      @db.Uuid
+  outlet_id          String      @db.Uuid
+  driver_pickup_id   String?     @db.Uuid
+  driver_delivery_id String?     @db.Uuid
   pickup_fee         Int
   delivery_fee       Int
   laundry_price      Int
@@ -275,8 +276,8 @@ model Order {
 // -----------------------
 model OrderItem {
   id               String @id @default(uuid()) @db.Uuid
-  order_id         String
-  item_id          String
+  order_id         String @db.Uuid
+  item_id          String @db.Uuid
   quantity_initial Int
 
   order Order @relation(fields: [order_id], references: [id])
@@ -290,8 +291,8 @@ model OrderItem {
 // -----------------------
 model StationSummary {
   id              String      @id @default(uuid()) @db.Uuid
-  order_id        String
-  item_id         String
+  order_id        String      @db.Uuid
+  item_id         String      @db.Uuid
   station         StationName
   latest_quantity Int
   updated_at      DateTime    @default(now())
@@ -307,14 +308,14 @@ model StationSummary {
 // -----------------------
 model OrderStationLog {
   id             String         @id @default(uuid()) @db.Uuid
-  order_id       String
-  item_id        String
+  order_id       String         @db.Uuid
+  item_id        String         @db.Uuid
   station        StationName
-  worker_id      String
+  worker_id      String         @db.Uuid
   quantity_input Int
   status         MismatchStatus
   admin_note     String?
-  approved_by    String?
+  approved_by    String?        @db.Uuid
   created_at     DateTime       @default(now())
   approved_at    DateTime?
 
@@ -331,8 +332,8 @@ model OrderStationLog {
 // -----------------------
 model PickupRequest {
   id         String   @id @default(uuid()) @db.Uuid
-  order_id   String
-  driver_id  String
+  order_id   String   @db.Uuid
+  driver_id  String   @db.Uuid
   accepted   Boolean  @default(false)
   created_at DateTime @default(now())
 
@@ -347,8 +348,8 @@ model PickupRequest {
 // -----------------------
 model DeliveryRequest {
   id         String   @id @default(uuid()) @db.Uuid
-  order_id   String
-  driver_id  String
+  order_id   String   @db.Uuid
+  driver_id  String   @db.Uuid
   accepted   Boolean  @default(false)
   created_at DateTime @default(now())
 
@@ -363,7 +364,7 @@ model DeliveryRequest {
 // -----------------------
 model PaymentProof {
   id         String   @id @default(uuid()) @db.Uuid
-  order_id   String   @unique
+  order_id   String   @unique @db.Uuid
   image_url  String
   created_at DateTime @default(now())
 
@@ -377,8 +378,8 @@ model PaymentProof {
 // -----------------------
 model PaymentTransaction {
   id                      String               @id @default(uuid()) @db.Uuid
-  order_id                String
-  provider_transaction_id String?
+  order_id                String               @db.Uuid
+  provider_transaction_id String?              @db.Uuid
   amount                  Int
   status                  PaymentGatewayStatus
   raw_response            Json?
@@ -394,11 +395,11 @@ model PaymentTransaction {
 //  DRIVER JOB STATUS
 // -----------------------
 model DriverJobStatus {
-  id         String             @id @default(uuid()) @db.Uuid
-  driver_id  String
-  order_id   String
+  id         String              @id @default(uuid()) @db.Uuid
+  driver_id  String              @db.Uuid
+  order_id   String              @db.Uuid
   status     DriverJobStatusEnum
-  updated_at DateTime           @default(now())
+  updated_at DateTime            @default(now())
 
   driver User  @relation(fields: [driver_id], references: [id])
   order  Order @relation(fields: [order_id], references: [id])
@@ -411,8 +412,8 @@ model DriverJobStatus {
 // -----------------------
 model Complaint {
   id         String   @id @default(uuid()) @db.Uuid
-  order_id   String
-  user_id    String
+  order_id   String   @db.Uuid
+  user_id    String   @db.Uuid
   message    String
   image_url  String?
   created_at DateTime @default(now())

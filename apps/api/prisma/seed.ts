@@ -6,22 +6,23 @@ async function main() {
   console.log("🌱 Seeding database...");
 
   // ----------------------------------------------------
-  // USERS
+  // SUPER ADMIN
   // ----------------------------------------------------
   const superAdmin = await prisma.user.create({
     data: {
-      id: "5fa1b20b-1111-4a1a-b111-000000000001",
       name: "Owner Laundry",
       email: "owner@laundry.com",
       role: "super_admin",
-      password: "$2b$10$abcdefghijklmnopqrstuv", // fake hashed password
+      password: "$2b$10$abcdefghijklmnopqrstuv", // fake hashed
       verified: true,
     },
   });
 
-  const outletAdmin1 = await prisma.user.create({
+  // ----------------------------------------------------
+  // OUTLET ADMINS
+  // ----------------------------------------------------
+  const outletAdminA = await prisma.user.create({
     data: {
-      id: "5fa1b20b-1111-4a1a-b111-000000000002",
       name: "Admin Outlet A",
       email: "outletA@laundry.com",
       role: "outlet_admin",
@@ -29,9 +30,8 @@ async function main() {
     },
   });
 
-  const outletAdmin2 = await prisma.user.create({
+  const outletAdminB = await prisma.user.create({
     data: {
-      id: "5fa1b20b-1111-4a1a-b111-000000000003",
       name: "Admin Outlet B",
       email: "outletB@laundry.com",
       role: "outlet_admin",
@@ -44,7 +44,6 @@ async function main() {
   // ----------------------------------------------------
   const outletA = await prisma.outlet.create({
     data: {
-      id: "9001a20b-aaaa-4a1a-a111-000000000001",
       name: "Outlet Laundry A",
       address: "Jl. Mawar No. 1",
       lat: -6.2001,
@@ -57,7 +56,6 @@ async function main() {
 
   const outletB = await prisma.outlet.create({
     data: {
-      id: "9001a20b-aaaa-4a1a-a111-000000000002",
       name: "Outlet Laundry B",
       address: "Jl. Melati No. 5",
       lat: -6.1801,
@@ -68,117 +66,130 @@ async function main() {
     },
   });
 
-  // Assign outlet admins
+  // update outlet admin
   await prisma.user.update({
-    where: { id: outletAdmin1.id },
+    where: { id: outletAdminA.id },
     data: { outlet_id: outletA.id },
   });
 
   await prisma.user.update({
-    where: { id: outletAdmin2.id },
+    where: { id: outletAdminB.id },
     data: { outlet_id: outletB.id },
   });
 
   // ----------------------------------------------------
-  // WORKERS
+  // WORKERS FOR OUTLET A
   // ----------------------------------------------------
-  const workers = await prisma.user.createMany({
-    data: [
-      {
-        id: "1111b20b-1111-4a1a-b111-000000000004",
-        name: "W Worker A",
-        email: "washA@laundry.com",
-        role: "worker",
-        worker_station: "washing",
-        outlet_id: outletA.id,
-        verified: true,
-      },
-      {
-        id: "1111b20b-1111-4a1a-b111-000000000005",
-        name: "I Worker A",
-        email: "ironA@laundry.com",
-        role: "worker",
-        worker_station: "ironing",
-        outlet_id: outletA.id,
-        verified: true,
-      },
-      {
-        id: "1111b20b-1111-4a1a-b111-000000000006",
-        name: "P Worker A",
-        email: "packA@laundry.com",
-        role: "worker",
-        worker_station: "packing",
-        outlet_id: outletA.id,
-        verified: true,
-      },
-      {
-        id: "2111b20b-1111-4a1a-b111-000000000004",
-        name: "W Worker B",
-        email: "washB@laundry.com",
-        role: "worker",
-        worker_station: "washing",
-        outlet_id: outletB.id,
-        verified: true,
-      },
-      {
-        id: "2111b20b-1111-4a1a-b111-000000000005",
-        name: "I Worker B",
-        email: "ironB@laundry.com",
-        role: "worker",
-        worker_station: "ironing",
-        outlet_id: outletB.id,
-        verified: true,
-      },
-      {
-        id: "2111b20b-1111-4a1a-b111-000000000006",
-        name: "P Worker B",
-        email: "packB@laundry.com",
-        role: "worker",
-        worker_station: "packing",
-        outlet_id: outletB.id,
-        verified: true,
-      },
-    ],
+  const workerA_Wash = await prisma.user.create({
+    data: {
+      name: "Worker A - Washing",
+      email: "washA@laundry.com",
+      role: "worker",
+      worker_station: "washing",
+      outlet_id: outletA.id,
+      verified: true,
+    },
+  });
+
+  const workerA_Iron = await prisma.user.create({
+    data: {
+      name: "Worker A - Ironing",
+      email: "ironA@laundry.com",
+      role: "worker",
+      worker_station: "ironing",
+      outlet_id: outletA.id,
+      verified: true,
+    },
+  });
+
+  const workerA_Pack = await prisma.user.create({
+    data: {
+      name: "Worker A - Packing",
+      email: "packA@laundry.com",
+      role: "worker",
+      worker_station: "packing",
+      outlet_id: outletA.id,
+      verified: true,
+    },
+  });
+
+  // ----------------------------------------------------
+  // WORKERS FOR OUTLET B
+  // ----------------------------------------------------
+  const workerB_Wash = await prisma.user.create({
+    data: {
+      name: "Worker B - Washing",
+      email: "washB@laundry.com",
+      role: "worker",
+      worker_station: "washing",
+      outlet_id: outletB.id,
+      verified: true,
+    },
+  });
+
+  const workerB_Iron = await prisma.user.create({
+    data: {
+      name: "Worker B - Ironing",
+      email: "ironB@laundry.com",
+      role: "worker",
+      worker_station: "ironing",
+      outlet_id: outletB.id,
+      verified: true,
+    },
+  });
+
+  const workerB_Pack = await prisma.user.create({
+    data: {
+      name: "Worker B - Packing",
+      email: "packB@laundry.com",
+      role: "worker",
+      worker_station: "packing",
+      outlet_id: outletB.id,
+      verified: true,
+    },
   });
 
   // ----------------------------------------------------
   // DRIVERS
   // ----------------------------------------------------
-  await prisma.user.createMany({
-    data: [
-      {
-        id: "3333b20b-2222-4a1a-b111-000000000001",
-        name: "Driver A1",
-        email: "driverA1@laundry.com",
-        role: "driver",
-        outlet_id: outletA.id,
-        verified: true,
-      },
-      {
-        id: "3333b20b-2222-4a1a-b111-000000000002",
-        name: "Driver A2",
-        email: "driverA2@laundry.com",
-        role: "driver",
-        outlet_id: outletA.id,
-        verified: true,
-      },
-      {
-        id: "3333b20b-2222-4a1a-b111-000000000003",
-        name: "Driver B1",
-        email: "driverB1@laundry.com",
-        role: "driver",
-        outlet_id: outletB.id,
-        verified: true,
-      },
-      {
-        id: "3333b20b-2222-4a1a-b111-000000000004",
-        name: "Driver B2",
-        email: "driverB2@laundry.com",
-        role: "driver",
-        outlet_id: outletB.id,
-        verified: true,
-      },
-    ],
+  const driverA1 = await prisma.user.create({
+    data: {
+      name: "Driver A1",
+      email: "driverA1@laundry.com",
+      role: "driver",
+      outlet_id: outletA.id,
+      verified: true,
+    },
+  });
+
+  const driverA2 = await prisma.user.create({
+    data: {
+      name: "Driver A2",
+      email: "driverA2@laundry.com",
+      role: "driver",
+      outlet_id: outletA.id,
+      verified: true,
+    },
+  });
+
+  const driverB1 = await prisma.user.create({
+    data: {
+      name: "Driver B1",
+      email: "driverB1@laundry.com",
+      role: "driver",
+      outlet_id: outletB.id,
+      verified: true,
+    },
+  });
+
+  const driverB2 = await prisma.user.create({
+    data: {
+      name: "Driver B2",
+      email: "driverB2@laundry.com",
+      role: "driver",
+      outlet_id: outletB.id,
+      verified: true,
+    },
   });
 
   // ----------------------------------------------------
@@ -186,7 +197,6 @@ async function main() {
   // ----------------------------------------------------
   const cust1 = await prisma.user.create({
     data: {
-      id: "4444b20b-1111-4a1a-b111-000000000001",
       name: "Budi",
       email: "budi@mail.com",
       role: "customer",
@@ -196,7 +206,6 @@ async function main() {
 
   const cust2 = await prisma.user.create({
     data: {
-      id: "4444b20b-1111-4a1a-b111-000000000002",
       name: "Sari",
       email: "sari@mail.com",
       role: "customer",
@@ -205,51 +214,42 @@ async function main() {
   });
 
   // ----------------------------------------------------
-  // USER ADDRESSES
+  // ADDRESSES
   // ----------------------------------------------------
-  await prisma.userAddress.createMany({
-    data: [
-      {
-        id: "addr001",
-        user_id: cust1.id,
-        label: "Rumah",
-        address: "Jl. Kenanga No. 12",
-        lat: -6.201,
-        lng: 106.817,
-        is_default: true,
-      },
-      {
-        id: "addr002",
-        user_id: cust2.id,
-        label: "Rumah",
-        address: "Jl. Flamboyan No. 8",
-        lat: -6.202,
-        lng: 106.818,
-        is_default: true,
-      },
-    ],
+  await prisma.userAddress.create({
+    data: {
+      user_id: cust1.id,
+      label: "Rumah",
+      address: "Jl. Kenanga No.12",
+      lat: -6.2011,
+      lng: 106.817,
+      is_default: true,
+    },
+  });
+
+  await prisma.userAddress.create({
+    data: {
+      user_id: cust2.id,
+      label: "Rumah",
+      address: "Jl. Flamboyan No.8",
+      lat: -6.2021,
+      lng: 106.8183,
+      is_default: true,
+    },
   });
 
   // ----------------------------------------------------
-  // ITEMS (master)
+  // ITEMS
   // ----------------------------------------------------
-  await prisma.item.createMany({
-    data: [
-      { id: "item01", name: "Kaos" },
-      { id: "item02", name: "Celana" },
-      { id: "item03", name: "Jaket" },
-      { id: "item04", name: "Handuk" },
-      { id: "item05", name: "Sprei" },
-      { id: "item06", name: "Celana Dalam" },
-    ],
-  });
+  const kaos = await prisma.item.create({ data: { name: "Kaos" } });
+  const celana = await prisma.item.create({ data: { name: "Celana" } });
+  const handuk = await prisma.item.create({ data: { name: "Handuk" } });
 
   // ----------------------------------------------------
-  // SAMPLE ORDER
+  // ORDER 1 (Outlet A)
   // ----------------------------------------------------
   const order1 = await prisma.order.create({
     data: {
-      id: "ord001",
       customer_id: cust1.id,
       outlet_id: outletA.id,
       pickup_fee: 8000,
@@ -265,58 +265,51 @@ async function main() {
   await prisma.orderItem.createMany({
     data: [
       {
-        id: "oi001",
         order_id: order1.id,
-        item_id: "item01",
+        item_id: kaos.id,
         quantity_initial: 2,
       },
       {
-        id: "oi002",
         order_id: order1.id,
-        item_id: "item06",
-        quantity_initial: 5,
+        item_id: celana.id,
+        quantity_initial: 3,
       },
     ],
   });
 
   // ----------------------------------------------------
-  // SAMPLE SHIFT
+  // SHIFT EXAMPLE
   // ----------------------------------------------------
-  await prisma.workerShift.createMany({
-    data: [
-      {
-        id: "shiftA1",
-        worker_id: "1111b20b-1111-4a1a-b111-000000000004",
-        outlet_id: outletA.id,
-        station: "washing",
-        day_of_week: "mon",
-        start_time: new Date("2023-01-01T08:00:00Z"),
-        end_time: new Date("2023-01-01T16:00:00Z"),
-      },
-    ],
-  });
-
-  // ----------------------------------------------------
-  // PAYMENT PROOF (manual)
-  // ----------------------------------------------------
-  await prisma.paymentProof.create({
+  await prisma.workerShift.create({
     data: {
-      id: "payproof01",
-      order_id: order1.id,
-      image_url: "https://fake-storage.com/payments/proof.png",
+      worker_id: workerA_Wash.id,
+      outlet_id: outletA.id,
+      station: "washing",
+      day_of_week: "mon",
+      start_time: new Date("2024-01-01T08:00:00Z"),
+      end_time: new Date("2024-01-01T16:00:00Z"),
     },
   });
 
   // ----------------------------------------------------
-  // PAYMENT GATEWAY (optional)
+  // PAYMENT PROOF
+  // ----------------------------------------------------
+  await prisma.paymentProof.create({
+    data: {
+      order_id: order1.id,
+      image_url: "https://example.com/payment-proof.jpg",
+    },
+  });
+
+  // ----------------------------------------------------
+  // PAYMENT GATEWAY TRANSACTION
   // ----------------------------------------------------
   await prisma.paymentTransaction.create({
     data: {
-      id: "pg001",
       order_id: order1.id,
       amount: 40000,
       status: "pending",
-      raw_response: { example: "waiting for callback" },
+      raw_response: { info: "waiting payment" },
     },
   });
 
@@ -325,7 +318,6 @@ async function main() {
   // ----------------------------------------------------
   await prisma.complaint.create({
     data: {
-      id: "cmp001",
       order_id: order1.id,
       user_id: cust1.id,
       message: "Kaos saya hilang 1.",
