@@ -1,8 +1,21 @@
+// /src/controllers/user.controller.ts
 import type { Request, Response, NextFunction } from "express";
 import { UserService } from "../services/user.service";
 
 export class UserController {
-  constructor(private userService: UserService) {}
+  // constructor(private userService: UserService) {}
+  // or
+  private userService: UserService;
+
+  constructor(userService: UserService) {
+    this.userService = userService;
+  }
+
+  //or (not rebase?)
+  // private userService = new UserService();
+  // constructor() {
+  //   this.userService = new UserService(); // controller creates its own service
+  // }
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
