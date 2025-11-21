@@ -14,6 +14,12 @@ export class UserRoute {
     this.register();
   }
 
+  // if use own service at controller(not rebase?)
+  // constructor() {
+  //   this.controller = new UserController();
+  //   this.register();
+  // }
+
   private register() {
     this.router.get("/", this.controller.getAll);
     this.router.get("/:id", this.controller.getById);

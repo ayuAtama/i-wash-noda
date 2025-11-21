@@ -7,9 +7,418 @@ datasource db {
   provider = "postgresql"
 }
 
+// -----------------------
+//  ENUMS
+// -----------------------
+enum Role {
+  super_admin
+  outlet_admin
+  worker
+  driver
+  customer
+}
+
+enum WorkerStation {
+  washing
+  ironing
+  packing
+}
+
+enum OrderStatus {
+  Menunggu_Penjemputan_Driver
+  Laundry_Sedang_Menuju_Outlet
+  Laundry_Telah_Sampai_Outlet
+  Laundry_Sedang_Dicuci
+  Laundry_Sedang_Disetrika
+  Laundry_Sedang_Dipacking
+  Menunggu_Pembayaran
+  Laundry_Sedang_Dikirim_Menuju_Customer
+  Laundry_Telah_Diterima_Customer
+}
+
+enum StationName {
+  washing
+  ironing
+  packing
+}
+
+enum MismatchStatus {
+  pending
+  approved
+  rejected
+}
+
+enum PaymentGatewayStatus {
+  pending
+  paid
+  failed
+  expired
+  cancelled
+}
+
+enum DriverJobStatusEnum {
+  in_transit
+  on_delivery
+  done
+}
+
+enum WorkerShiftDay {
+  mon
+  tue
+  wed
+  thu
+  fri
+  sat
+  sun
+}
+
+// -----------------------
+//  USERS
+// -----------------------
+
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id             String         @id @default(uuid()) @db.Uuid
+  name           String
+  email          String         @unique
+  pending_email  String?
+  password       String?
+  profile_image  String?
+  role           Role
+  worker_station WorkerStation?
+  outlet_id      String?
+  verified       Boolean        @default(false)
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+
+  // Relations
+  outlet         Outlet?              @relation(fields: [outlet_id], references: [id])
+  providers      UserProvider[]
+  resetTokens    PasswordResetToken[]
+  verifyTokens   VerificationToken[]
+  addresses      UserAddress[]
+  orders         Order[]              @relation("CustomerOrders")
+  pickupRequests PickupRequest[]
+  deliveryReqs   DeliveryRequest[]
+  stationLogs    OrderStationLog[]
+  workerShifts   WorkerShift[]
+  approvedLogs   OrderStationLog[]    @relation("ApprovedByRelation")
+  driverJobs     DriverJobStatus[]
+  complaints     Complaint[]
+
+  @@map("users")
+}
+
+// -----------------------
+//  SOCIAL LOGIN
+// -----------------------
+model UserProvider {
+  id             String   @id @default(uuid()) @db.Uuid
+  user_id        String
+  provider       String
+  providerUserId String
+  created_at     DateTime @default(now())
+
+  //relations
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("user_providers")
+}
+
+// -----------------------
+//  EMAIL VERIFICATION
+// -----------------------
+model VerificationToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String
+  token      String
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  //relations
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("verification_tokens")
+}
+
+// -----------------------
+//  RESET PASSWORD TOKEN
+// -----------------------
+model PasswordResetToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String
+  token      String
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  //relations
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("password_reset_tokens")
+}
+
+// -----------------------
+//  USER ADDRESSES
+// -----------------------
+model UserAddress {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String
+  label      String?
+  address    String
+  lat        Decimal  @db.Decimal(10, 7)
+  lng        Decimal  @db.Decimal(10, 7)
+  is_default Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("user_addresses")
+}
+
+// -----------------------
+//  OUTLETS + PRICING
+// -----------------------
+model Outlet {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  address         String
+  lat             Decimal  @db.Decimal(10, 7)
+  lng             Decimal  @db.Decimal(10, 7)
+  max_distance_km Int
+  price_per_km    Int
+  price_per_kg    Int
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  //relations
+  users  User[]
+  orders Order[]
+  shifts WorkerShift[]
+
+  @@map("outlets")
+}
+
+// -----------------------
+//  WORKER SHIFTS
+// -----------------------
+model WorkerShift {
+  id          String         @id @default(uuid()) @db.Uuid
+  worker_id   String
+  outlet_id   String
+  station     StationName
+  day_of_week WorkerShiftDay
+  start_time  DateTime       @db.Time()
+  end_time    DateTime       @db.Time()
+  created_at  DateTime       @default(now())
+
+  //relations
+  worker User   @relation(fields: [worker_id], references: [id])
+  outlet Outlet @relation(fields: [outlet_id], references: [id])
+
+  @@map("worker_shifts")
+}
+
+// -----------------------
+//  ITEMS
+// -----------------------
+model Item {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  created_at DateTime @default(now())
+
+  orderItems OrderItem[]
+  logs       OrderStationLog[]
+  summary    StationSummary[]
+
+  @@map("items")
+}
+
+// -----------------------
+//  ORDERS
+// -----------------------
+model Order {
+  id                 String      @id @default(uuid()) @db.Uuid
+  customer_id        String
+  outlet_id          String
+  driver_pickup_id   String?
+  driver_delivery_id String?
+  pickup_fee         Int
+  delivery_fee       Int
+  laundry_price      Int
+  total_amount       Int
+  total_kilo         Decimal     @db.Decimal(5, 2)
+  confirmed_at       DateTime?
+  status             OrderStatus
+  paid               Boolean     @default(false)
+  created_at         DateTime    @default(now())
+  updated_at         DateTime    @updatedAt
+
+  //relation
+  customer         User                 @relation("CustomerOrders", fields: [customer_id], references: [id])
+  outlet           Outlet               @relation(fields: [outlet_id], references: [id])
+  items            OrderItem[]
+  summary          StationSummary[]
+  stationLogs      OrderStationLog[]
+  paymentProof     PaymentProof?
+  pickupRequests   PickupRequest[]
+  deliveryRequests DeliveryRequest[]
+  transactions     PaymentTransaction[]
+  driverJobs       DriverJobStatus[]
+  complaints       Complaint[]
+
+  @@map("orders")
+}
+
+// -----------------------
+//  ORDER ITEMS
+// -----------------------
+model OrderItem {
+  id               String @id @default(uuid()) @db.Uuid
+  order_id         String
+  item_id          String
+  quantity_initial Int
+
+  order Order @relation(fields: [order_id], references: [id])
+  item  Item  @relation(fields: [item_id], references: [id])
+
+  @@map("order_items")
+}
+
+// -----------------------
+//  STATION SUMMARY
+// -----------------------
+model StationSummary {
+  id              String      @id @default(uuid()) @db.Uuid
+  order_id        String
+  item_id         String
+  station         StationName
+  latest_quantity Int
+  updated_at      DateTime    @default(now())
+
+  order Order @relation(fields: [order_id], references: [id])
+  item  Item  @relation(fields: [item_id], references: [id])
+
+  @@map("station_summary")
+}
+
+// -----------------------
+//  ORDER STATION LOGS (mismatch)
+// -----------------------
+model OrderStationLog {
+  id             String         @id @default(uuid()) @db.Uuid
+  order_id       String
+  item_id        String
+  station        StationName
+  worker_id      String
+  quantity_input Int
+  status         MismatchStatus
+  admin_note     String?
+  approved_by    String?
+  created_at     DateTime       @default(now())
+  approved_at    DateTime?
+
+  order      Order @relation(fields: [order_id], references: [id])
+  item       Item  @relation(fields: [item_id], references: [id])
+  worker     User  @relation(fields: [worker_id], references: [id])
+  approvedBy User? @relation("ApprovedByRelation", fields: [approved_by], references: [id])
+
+  @@map("order_station_logs")
+}
+
+// -----------------------
+//  PICKUP REQUEST
+// -----------------------
+model PickupRequest {
+  id         String   @id @default(uuid()) @db.Uuid
+  order_id   String
+  driver_id  String
+  accepted   Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  order  Order @relation(fields: [order_id], references: [id])
+  driver User  @relation(fields: [driver_id], references: [id])
+
+  @@map("pickup_requests")
+}
+
+// -----------------------
+//  DELIVERY REQUEST
+// -----------------------
+model DeliveryRequest {
+  id         String   @id @default(uuid()) @db.Uuid
+  order_id   String
+  driver_id  String
+  accepted   Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  order  Order @relation(fields: [order_id], references: [id])
+  driver User  @relation(fields: [driver_id], references: [id])
+
+  @@map("delivery_requests")
+}
+
+// -----------------------
+//  PAYMENT PROOF (manual transfer)
+// -----------------------
+model PaymentProof {
+  id         String   @id @default(uuid()) @db.Uuid
+  order_id   String   @unique
+  image_url  String
+  created_at DateTime @default(now())
+
+  order Order @relation(fields: [order_id], references: [id])
+
+  @@map("payment_proof")
+}
+
+// -----------------------
+//  PAYMENT GATEWAY (single provider)
+// -----------------------
+model PaymentTransaction {
+  id                      String               @id @default(uuid()) @db.Uuid
+  order_id                String
+  provider_transaction_id String?
+  amount                  Int
+  status                  PaymentGatewayStatus
+  raw_response            Json?
+  created_at              DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
+
+  order Order @relation(fields: [order_id], references: [id])
+
+  @@map("payment_transactions")
+}
+
+// -----------------------
+//  DRIVER JOB STATUS
+// -----------------------
+model DriverJobStatus {
+  id         String             @id @default(uuid()) @db.Uuid
+  driver_id  String
+  order_id   String
+  status     DriverJobStatusEnum
+  updated_at DateTime           @default(now())
+
+  driver User  @relation(fields: [driver_id], references: [id])
+  order  Order @relation(fields: [order_id], references: [id])
+
+  @@map("driver_job_status")
+}
+
+// -----------------------
+//  COMPLAINTS
+// -----------------------
+model Complaint {
+  id         String   @id @default(uuid()) @db.Uuid
+  order_id   String
+  user_id    String
+  message    String
+  image_url  String?
+  created_at DateTime @default(now())
+
+  order Order @relation(fields: [order_id], references: [id])
+  user  User  @relation(fields: [user_id], references: [id])
+
+  @@map("complaints")
 }
