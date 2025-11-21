@@ -11,15 +11,15 @@ export class UserService {
     return prisma.user.findMany();
   }
 
-  async getById(id: number) {
+  async getById(id: string) {
     return prisma.user.findUnique({ where: { id } });
   }
 
-  async create(data: CreateUserDto) {
+  async create(data: CreateUserDto | any) {
     return prisma.user.create({ data });
   }
 
-  async update(id: number, payload: UpdateUserDto) {
+  async update(id: number | any, payload: UpdateUserDto) {
     const data: Prisma.UserUpdateInput = {};
 
     if (payload.name !== undefined) {
@@ -36,7 +36,7 @@ export class UserService {
     });
   }
 
-  async delete(id: number) {
+  async delete(id: number | any) {
     return prisma.user.delete({ where: { id } });
   }
 }
