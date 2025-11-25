@@ -28,7 +28,7 @@ export class UserController {
 
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = Number(req.params.id);
+      const id = String(req.params.id); //uuid string
       const user = await this.userService.getById(id);
 
       if (!user) return res.status(404).json({ message: "User not found" });

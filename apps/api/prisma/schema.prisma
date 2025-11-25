@@ -5,12 +5,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url=""
 }
 
 // -----------------------
 //  ENUMS
 // -----------------------
+
 enum Role {
   super_admin
   outlet_admin
@@ -83,17 +83,16 @@ model User {
   email          String         @unique
   pending_email  String?
   password       String?
-  profile_image  String?
-  role           Role
+  //profile_image  String?  use from better auth
+  role           Role           @default(customer)
   worker_station WorkerStation?
   outlet_id      String?        @db.Uuid
-  verified       Boolean        @default(false)
-  created_at     DateTime       @default(now())
-  updated_at     DateTime       @updatedAt
+  //verified       Boolean        @default(false) use from better auth
+  //created_at     DateTime       @default(now()) use from better auth
+  //updated_at     DateTime       @updatedAt use from better auth
 
   // Relations
   outlet         Outlet?              @relation(fields: [outlet_id], references: [id])
-  providers      UserProvider[]
   resetTokens    PasswordResetToken[]
   verifyTokens   VerificationToken[]
   addresses      UserAddress[]
@@ -106,28 +105,20 @@ model User {
   driverJobs     DriverJobStatus[]
   complaints     Complaint[]
 
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
   @@map("users")
-}
-
-// -----------------------
-//  SOCIAL LOGIN
-// -----------------------
-model UserProvider {
-  id             String   @id @default(uuid()) @db.Uuid
-  user_id        String   @db.Uuid
-  provider       String
-  providerUserId String
-  created_at     DateTime @default(now())
-
-  //relations
-  user User @relation(fields: [user_id], references: [id])
-
-  @@map("user_providers")
 }
 
 // -----------------------
 //  EMAIL VERIFICATION
 // -----------------------
+
 model VerificationToken {
   id         String   @id @default(uuid()) @db.Uuid
   user_id    String   @db.Uuid
@@ -145,6 +136,7 @@ model VerificationToken {
 // -----------------------
 //  RESET PASSWORD TOKEN
 // -----------------------
+
 model PasswordResetToken {
   id         String   @id @default(uuid()) @db.Uuid
   user_id    String   @db.Uuid
@@ -162,6 +154,7 @@ model PasswordResetToken {
 // -----------------------
 //  USER ADDRESSES
 // -----------------------
+
 model UserAddress {
   id         String   @id @default(uuid()) @db.Uuid
   user_id    String   @db.Uuid
@@ -180,6 +173,7 @@ model UserAddress {
 // -----------------------
 //  OUTLETS + PRICING
 // -----------------------
+
 model Outlet {
   id              String   @id @default(uuid()) @db.Uuid
   name            String
@@ -203,14 +197,15 @@ model Outlet {
 // -----------------------
 //  WORKER SHIFTS
 // -----------------------
+
 model WorkerShift {
   id          String         @id @default(uuid()) @db.Uuid
   worker_id   String         @db.Uuid
   outlet_id   String         @db.Uuid
   station     StationName
   day_of_week WorkerShiftDay
-  start_time  DateTime       @db.Time()
-  end_time    DateTime       @db.Time()
+  start_time  DateTime       @db.Time
+  end_time    DateTime       @db.Time
   created_at  DateTime       @default(now())
 
   //relations
@@ -223,6 +218,7 @@ model WorkerShift {
 // -----------------------
 //  ITEMS
 // -----------------------
+
 model Item {
   id         String   @id @default(uuid()) @db.Uuid
   name       String
@@ -238,6 +234,7 @@ model Item {
 // -----------------------
 //  ORDERS
 // -----------------------
+
 model Order {
   id                 String      @id @default(uuid()) @db.Uuid
   customer_id        String      @db.Uuid
@@ -274,6 +271,7 @@ model Order {
 // -----------------------
 //  ORDER ITEMS
 // -----------------------
+
 model OrderItem {
   id               String @id @default(uuid()) @db.Uuid
   order_id         String @db.Uuid
@@ -289,6 +287,7 @@ model OrderItem {
 // -----------------------
 //  STATION SUMMARY
 // -----------------------
+
 model StationSummary {
   id              String      @id @default(uuid()) @db.Uuid
   order_id        String      @db.Uuid
@@ -306,6 +305,7 @@ model StationSummary {
 // -----------------------
 //  ORDER STATION LOGS (mismatch)
 // -----------------------
+
 model OrderStationLog {
   id             String         @id @default(uuid()) @db.Uuid
   order_id       String         @db.Uuid
@@ -330,6 +330,7 @@ model OrderStationLog {
 // -----------------------
 //  PICKUP REQUEST
 // -----------------------
+
 model PickupRequest {
   id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @db.Uuid
@@ -346,6 +347,7 @@ model PickupRequest {
 // -----------------------
 //  DELIVERY REQUEST
 // -----------------------
+
 model DeliveryRequest {
   id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @db.Uuid
@@ -362,6 +364,7 @@ model DeliveryRequest {
 // -----------------------
 //  PAYMENT PROOF (manual transfer)
 // -----------------------
+
 model PaymentProof {
   id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @unique @db.Uuid
@@ -376,6 +379,7 @@ model PaymentProof {
 // -----------------------
 //  PAYMENT GATEWAY (single provider)
 // -----------------------
+
 model PaymentTransaction {
   id                      String               @id @default(uuid()) @db.Uuid
   order_id                String               @db.Uuid
@@ -394,6 +398,7 @@ model PaymentTransaction {
 // -----------------------
 //  DRIVER JOB STATUS
 // -----------------------
+
 model DriverJobStatus {
   id         String              @id @default(uuid()) @db.Uuid
   driver_id  String              @db.Uuid
@@ -410,6 +415,7 @@ model DriverJobStatus {
 // -----------------------
 //  COMPLAINTS
 // -----------------------
+
 model Complaint {
   id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @db.Uuid
@@ -422,4 +428,53 @@ model Complaint {
   user  User  @relation(fields: [user_id], references: [id])
 
   @@map("complaints")
+}
+
+//// Better Auth
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }

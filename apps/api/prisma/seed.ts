@@ -14,7 +14,7 @@ async function main() {
       email: "owner@laundry.com",
       role: "super_admin",
       password: "$2b$10$abcdefghijklmnopqrstuv", // fake hashed
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -26,7 +26,7 @@ async function main() {
       name: "Admin Outlet A",
       email: "outletA@laundry.com",
       role: "outlet_admin",
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -35,7 +35,7 @@ async function main() {
       name: "Admin Outlet B",
       email: "outletB@laundry.com",
       role: "outlet_admin",
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -87,7 +87,7 @@ async function main() {
       role: "worker",
       worker_station: "washing",
       outlet_id: outletA.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -98,7 +98,7 @@ async function main() {
       role: "worker",
       worker_station: "ironing",
       outlet_id: outletA.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -109,7 +109,7 @@ async function main() {
       role: "worker",
       worker_station: "packing",
       outlet_id: outletA.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -123,7 +123,7 @@ async function main() {
       role: "worker",
       worker_station: "washing",
       outlet_id: outletB.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -134,7 +134,7 @@ async function main() {
       role: "worker",
       worker_station: "ironing",
       outlet_id: outletB.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -145,7 +145,7 @@ async function main() {
       role: "worker",
       worker_station: "packing",
       outlet_id: outletB.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -158,7 +158,7 @@ async function main() {
       email: "driverA1@laundry.com",
       role: "driver",
       outlet_id: outletA.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -168,7 +168,7 @@ async function main() {
       email: "driverA2@laundry.com",
       role: "driver",
       outlet_id: outletA.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -178,7 +178,7 @@ async function main() {
       email: "driverB1@laundry.com",
       role: "driver",
       outlet_id: outletB.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -188,7 +188,7 @@ async function main() {
       email: "driverB2@laundry.com",
       role: "driver",
       outlet_id: outletB.id,
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -200,7 +200,7 @@ async function main() {
       name: "Budi",
       email: "budi@mail.com",
       role: "customer",
-      verified: true,
+      emailVerified: true,
     },
   });
 
@@ -209,7 +209,7 @@ async function main() {
       name: "Sari",
       email: "sari@mail.com",
       role: "customer",
-      verified: true,
+      emailVerified: true,
     },
   });
 
