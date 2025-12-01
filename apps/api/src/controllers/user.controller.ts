@@ -50,8 +50,9 @@ export class UserController {
 
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = Number(req.params.id);
-      const updated = await this.userService.update(id, req.body);
+      const id = String(req.params.id);
+      const payload = req.body;
+      const updated = await this.userService.update(id, payload);
       res.json(updated);
     } catch (err) {
       next(err);

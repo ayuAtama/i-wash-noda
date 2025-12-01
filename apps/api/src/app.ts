@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth.routes";
 import listEndpoints from "express-list-endpoints";
 import cors from "cors";
 import "dotenv/config";
+import authUserRoutes from "./routes/authUser.routes";
 
 export class App {
   public app: Application;
@@ -20,6 +21,7 @@ export class App {
     this.initializeCors();
     this.initializeAuth();
     this.initializeMiddlewares();
+    this.initializeUserAndAuth();
     this.initializeRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
@@ -41,6 +43,10 @@ export class App {
 
   private initializeAuth() {
     this.app.use("/api/auth", authRoutes);
+  }
+
+  private initializeUserAndAuth() {
+    this.app.use("/api", authUserRoutes);
   }
 
   private initializeRoutes() {
