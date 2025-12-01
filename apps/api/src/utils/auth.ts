@@ -18,6 +18,16 @@ export const auth = betterAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET! as string,
       redirectURI: "http://localhost:3000/api/auth/callback/github",
     },
+    twitter: {
+      clientId: process.env.TWITTER_CLIENT_ID! as string,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET! as string,
+      redirectURI: "http://localhost:3000/api/auth/callback/twitter",
+    },
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID! as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET! as string,
+      redirectURI: "http://localhost:3000/api/auth/callback/google",
+    },
   },
 
   //cors error fix

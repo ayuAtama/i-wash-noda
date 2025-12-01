@@ -23,7 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/adapter-pg": "^7.0.0",
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^7.0.1",
     "better-auth": "^1.4.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
@@ -40,7 +40,7 @@
     "@types/pg": "^8.15.6",
     "@types/swagger-ui-express": "^4.1.8",
     "dotenv": "^17.2.3",
-    "prisma": "^7.0.0",
+    "prisma": "^7.0.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
