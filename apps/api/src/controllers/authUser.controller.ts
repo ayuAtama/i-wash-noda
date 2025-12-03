@@ -1,6 +1,6 @@
 // src/controllers/authUser.controller.ts
 import type { Request, Response, NextFunction } from "express";
-import { AuthUserService } from "../services/authUser";
+import { AuthUserService } from "../services/authUser.services";
 import { sendVerificationEmail } from "../utils/mail";
 
 export class AuthUserController {
@@ -13,16 +13,61 @@ export class AuthUserController {
   register = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // create user + token
-      const {user, rawToken} = await this.authUserService.register(req.body);
+      const { user, rawToken, hashedToken } =
+        await this.authUserService.register(req.body);
 
-      // send email 
-      await sendVerificationEmail(user.email, rawToken);
+      // send email
+      await sendVerificationEmail(user.email, rawToken, hashedToken);
 
       // return response
       return res.status(201).json({
         message: "User registered. Verification email sent.",
         user,
       });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  verify = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // store the hashed token or the raw token from body and params
+      const token = req.query.token || req.body.token || req.params.token;
+
+      //check if token is valid
+      if (!token) {
+        return res.status(400).json({ error: "Token required" });
+      }
+
+      // verify the token
+      const result = await this.authUserService.verify(token);
+
+      // return response
+      return res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  resendVerification = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const email = req.body.email;
+      if (!email) {
+        return res.status(400).json({ error: "Email required" });
+      }
+
+      // Service now returns: { rawToken, hashedToken, user }
+      const { rawToken, hashedToken, user } =
+        await this.authUserService.resendVerificationEmail(email);
+
+      // SEND EMAIL HERE
+      await sendVerificationEmail(user.email, rawToken, hashedToken);
+
+      return res.json({ message: "Verification email resent successfully" });
     } catch (err) {
       next(err);
     }
