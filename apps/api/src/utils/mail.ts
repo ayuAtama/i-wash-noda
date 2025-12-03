@@ -2,6 +2,8 @@ import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import "dotenv/config";
 
+const baseUrl: string = process.env.FRONTEND_URL || "http://localhost:3001";
+
 // 1. Email Configuration
 export const mailer = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
@@ -32,14 +34,20 @@ export async function sendMail({
 }
 
 // 3. Email verification
-export async function sendVerificationEmail(email: string, code: string) {
+export async function sendVerificationEmail(
+  email: string,
+  code: string,
+  hashedToken: string
+) {
   return sendMail({
     to: email,
     subject: "Verify Your Email",
     html: `
       <h2>Email Verification Code</h2>
       <p style="font-size: 20px; font-weight: bold;">${code}</p>
-      <p>This code expires in 10 minutes.</p>
+      <p>This code expires in 60 minutes.</p>
+      <p>You also verified your email from this link: </p>
+      <a href="${baseUrl}/verify?token=${hashedToken}">Here</a>
     `,
   });
 }
