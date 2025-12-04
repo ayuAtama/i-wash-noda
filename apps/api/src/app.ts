@@ -3,15 +3,15 @@ import express from "express";
 import type { Application } from "express";
 import swaggerUi from "swagger-ui-express";
 
-import userRoutes from "./routes/user.routes";
-import { openApiDocument } from "./docs/swagger";
-import { errorHandler } from "./middleware/error-handler";
-import authRoutes from "./routes/auth.routes";
+import userRoutes from "@/routes/user.routes";
+import { openApiDocument } from "@/docs/swagger";
+import { errorHandler } from "@/middleware/error-handler";
+import authRoutes from "@/routes/auth.routes";
 
 import listEndpoints from "express-list-endpoints";
 import cors from "cors";
 import "dotenv/config";
-import authUserRoutes from "./routes/authUser.routes";
+import authUserRoutes from "@/routes/authUser.routes";
 
 export class App {
   public app: Application;

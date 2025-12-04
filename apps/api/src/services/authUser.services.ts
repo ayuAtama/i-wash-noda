@@ -1,7 +1,8 @@
 // apps/api/src/services/authUser.ts
-import { prisma } from "../config/prisma";
-import type { Prisma } from "../generated/prisma/client";
-import { generate6DigitCode, hashToken } from "../utils/tokenGenerator";
+import { prisma } from "@/config/prisma";
+import type { Prisma } from "@/generated/prisma/client";
+import { generate6DigitCode, hashToken } from "@/utils/tokenGenerator";
+import { signAccessToken } from "@/utils/jwt";
 
 export class AuthUserService {
   async register(data: Prisma.UserCreateInput) {
