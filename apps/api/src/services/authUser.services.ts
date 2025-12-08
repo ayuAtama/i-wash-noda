@@ -1,13 +1,23 @@
 // apps/api/src/services/authUser.ts
 import { prisma } from "@/config/prisma";
-import type { Prisma } from "@/generated/prisma/client";
-import { generate6DigitCode, hashToken, hashPassword } from "@/utils/tokenGenerator";
+import { Prisma } from "@/generated/prisma/client";
+import {
+  generate6DigitCode,
+  hashToken,
+  hashPassword,
+} from "@/utils/tokenGenerator";
 import { signAccessToken } from "@/utils/jwt";
+import { HttpError } from "@/utils/httpError";
 
 export class AuthUserService {
   async register(data: Prisma.UserCreateInput) {
     try {
-      // add type checking later
+      // check if the email valid
+      if (!data.email || !data.email.includes("@")) {
+        throw new HttpError(400, "Invalid email format");
+      }
+
+      // handle it using transaction
       const result = await prisma.$transaction(async (tx) => {
         // 1. create user
         const user = await tx.user.create({
@@ -33,12 +43,13 @@ export class AuthUserService {
 
       // forward the result to the controller
       return result;
-    } catch (error: any) {
-      if (error.code === "P2002") {
-        throw new Error("Email already exist");
+    } catch (error) {
+      // expected user error
+      if (error instanceof HttpError) {
+        throw error;
       }
-      // throw error
-      throw new Error(error.message || "Registration failed");
+      // Otherwise: let Prisma error + others bubble up.
+      throw error;
     }
   }
 
@@ -65,7 +76,7 @@ export class AuthUserService {
 
       // throw error if not found
       if (!record) {
-        throw new Error("Invalid token or expired verification token");
+        throw new HttpError(400, "Invalid token or expired verification token");
       }
 
       // update token to used and verified the user
@@ -104,69 +115,84 @@ export class AuthUserService {
         message: "Email verified successfully",
         accessToken,
       };
-    } catch (error: any) {
-      // throw error
-      throw new Error(error.message || "Verification failed");
+    } catch (error) {
+      // expected user error
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      // Otherwise: let Prisma error + others bubble up.
+      throw error;
     }
   }
 
   async resendVerificationEmail(email: string) {
-    // normalize email
-    const normalizedEmail = email.toLowerCase().trim();
+    try {
+      // normalize email
+      const normalizedEmail = email.toLowerCase().trim();
 
-    // find the user
-    const user = await prisma.user.findUnique({
-      where: {
-        email: normalizedEmail,
-      },
-    });
+      // find the user
+      const user = await prisma.user.findUnique({
+        where: {
+          email: normalizedEmail,
+        },
+      });
 
-    if (!user) throw new Error("User not found");
-    if (user.emailVerified) throw new Error("Email already verified");
+      if (!user) throw new HttpError(404, "User not found");
+      if (user.emailVerified)
+        throw new HttpError(409, "Email already verified");
 
-    // Find the latest token for this user
-    const existingToken = await prisma.verificationToken.findFirst({
-      where: {
-        user_id: user.id,
-        used: false,
-        expires_at: { gt: new Date() },
-      },
-      orderBy: { created_at: "desc" },
-    });
+      // Find the latest token for this user
+      const existingToken = await prisma.verificationToken.findFirst({
+        where: {
+          user_id: user.id,
+          used: false,
+          expires_at: { gt: new Date() },
+        },
+        orderBy: { created_at: "desc" },
+      });
 
-    // Rate limiting: allow resend only every 60 seconds
-    if (existingToken) {
-      const secondsSinceLastToken =
-        (Date.now() - existingToken.created_at.getTime()) / 1000;
+      // Rate limiting: allow resend only every 60 seconds
+      if (existingToken) {
+        const secondsSinceLastToken =
+          (Date.now() - existingToken.created_at.getTime()) / 1000;
 
-      // Example limit: 60 seconds between sends
-      if (secondsSinceLastToken < 60) {
-        throw new Error(
-          `Please wait ${Math.ceil(60 - secondsSinceLastToken)} seconds before requesting another verification email.`
-        );
+        // Example limit: 60 seconds between sends
+        if (secondsSinceLastToken < 60) {
+          throw new HttpError(
+            429,
+            `Please wait ${Math.ceil(60 - secondsSinceLastToken)} seconds before requesting another verification email.`
+          );
+        }
+
+        // Optionally: mark old token as used or delete it
+        await prisma.verificationToken.update({
+          where: { id: existingToken.id },
+          data: { used: true },
+        });
       }
 
-      // Optionally: mark old token as used or delete it
-      await prisma.verificationToken.update({
-        where: { id: existingToken.id },
-        data: { used: true },
+      // Generate a new token
+      const rawToken = generate6DigitCode();
+      const hashedToken = hashToken(rawToken);
+
+      // Store new token
+      const newToken = await prisma.verificationToken.create({
+        data: {
+          user_id: user.id,
+          token: hashedToken,
+          expires_at: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
+        },
       });
+
+      return { user, rawToken, hashedToken: newToken.token };
+    } catch (error) {
+      // expected user error
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      // Otherwise: let Prisma error + others bubble up.
+      throw error;
     }
-
-    // Generate a new token
-    const rawToken = generate6DigitCode();
-    const hashedToken = hashToken(rawToken);
-
-    // Store new token
-    const newToken = await prisma.verificationToken.create({
-      data: {
-        user_id: user.id,
-        token: hashedToken,
-        expires_at: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
-      },
-    });
-
-    return { user, rawToken, hashedToken: newToken.token };
   }
 
   async updateUserDataRegistration(
@@ -175,9 +201,9 @@ export class AuthUserService {
     data: Prisma.UserCreateInput
   ) {
     try {
-      // temp_jwt
+      // temp_jwt check
       if (temp_jwt.email !== email) {
-        throw new Error("Invalid token");
+        throw new HttpError(400, "Invalid token");
       }
 
       // handle the password hasing
@@ -217,9 +243,13 @@ export class AuthUserService {
         message: "User data updated successfully",
         result,
       };
-    } catch (error: any) {
-      // throw error
-      throw new Error(error.message || "Verification failed");
+    } catch (error) {
+      // expected user error
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      // Otherwise: let Prisma error + others bubble up.
+      throw error;
     }
   }
 }

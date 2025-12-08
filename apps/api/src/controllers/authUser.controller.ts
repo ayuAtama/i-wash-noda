@@ -2,6 +2,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { AuthUserService } from "../services/authUser.services";
 import { sendVerificationEmail } from "../utils/mail";
+import { HttpError } from "@/utils/httpError";
 
 export class AuthUserController {
   private authUserService: AuthUserService;
@@ -36,7 +37,7 @@ export class AuthUserController {
 
       //check if token is valid
       if (!token) {
-        return res.status(400).json({ error: "Token required" });
+        throw new HttpError(400, "Token required");
       }
 
       // verify the token
@@ -52,7 +53,7 @@ export class AuthUserController {
       });
 
       // return response
-      return res.json(result).status(201);
+      return res.status(201).json(result);
     } catch (err) {
       next(err);
     }
@@ -66,7 +67,7 @@ export class AuthUserController {
     try {
       const email = req.body.email;
       if (!email) {
-        return res.status(400).json({ error: "Email required" });
+        throw new HttpError(400, "Email required");
       }
 
       // Service now returns: { rawToken, hashedToken, user }
@@ -76,7 +77,9 @@ export class AuthUserController {
       // SEND EMAIL HERE
       await sendVerificationEmail(user.email, rawToken, hashedToken);
 
-      return res.json({ message: "Verification email resent successfully" });
+      return res
+        .status(201)
+        .json({ message: "Verification email resent successfully" });
     } catch (err) {
       next(err);
     }
@@ -91,19 +94,15 @@ export class AuthUserController {
       // get the decoded jwt from middleware
       const tempJwt = req.temp_jwt;
 
-      if (!tempJwt) {
-        return res.status(400).json({ error: "Missing token" });
-      }
+      if (!tempJwt) throw new HttpError(400, "Missing token");
 
       // get the email
       const email = req.body.email;
-      if (!email) {
-        return res.status(400).json({ error: "Email required" });
-      }
+      if (!email) throw new HttpError(400, "Email required");
 
       // check if the email matches the temp jwt
       if (tempJwt.email !== email) {
-        return res.status(400).json({ error: "Invalid token" });
+        throw new HttpError(400, "Invalid token");
       }
 
       // get the data
@@ -117,7 +116,7 @@ export class AuthUserController {
       );
 
       // return response
-      return res.json(updatedUser).status(201);
+      return res.status(201).json(updatedUser);
     } catch (err) {
       next(err);
     }

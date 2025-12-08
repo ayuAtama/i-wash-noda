@@ -14,6 +14,7 @@ import "dotenv/config";
 import authUserRoutes from "@/routes/authUser.routes";
 
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 
 export class App {
   public app: Application;
@@ -40,6 +41,7 @@ export class App {
   }
 
   private initializeMiddlewares() {
+    this.app.use(helmet());
     this.app.use(express.json());
     this.app.use(cookieParser());
   }
@@ -78,5 +80,3 @@ export class App {
     });
   }
 }
-
-//export default new App().app;
