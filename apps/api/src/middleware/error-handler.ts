@@ -1,5 +1,8 @@
+//src/middleware/error-handler.ts
 import type { Request, Response, NextFunction } from "express";
 import { Prisma } from "../generated/prisma/client";
+import { HttpError } from "@/utils/httpError";
+import { mapPrismaError } from "@/utils/prismaError";
 
 export function errorHandler(
   err: any,
@@ -9,41 +12,32 @@ export function errorHandler(
 ) {
   console.error("ERROR:", err);
 
-  // Prisma unique constraint
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === "P2002") {
-      return res.status(409).json({
-        message: "Duplicate field",
-        fields: err.meta?.target,
-      });
-    }
-  }
-
-  if (err.code === "P2002") {
-    return res.status(409).json({
-      message: "Duplicate field",
-      fields: err.meta?.target,
+  // 1. Handle custom HttpError
+  if (err instanceof HttpError) {
+    return res.status(err.status).json({
+      message: err.message,
     });
   }
 
+  // 2. Prisma known errors
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    const mapped = mapPrismaError(err);
+    return res.status(mapped.status).json({
+      message: mapped.message,
+      fields: mapped.fields ?? undefined,
+    });
+  }
+
+  // 3. Body parse errors
   if (err.type === "entity.parse.failed") {
     return res.status(400).json({
-      message: "Validation failed",
-      errors: err.errors,
+      message: "Invalid JSON payload",
     });
   }
 
-  // Prisma not found
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === "P2025") {
-      return res.status(404).json({
-        message: "Record not found",
-      });
-    }
-  }
-
-  // Default
+  // 4. Unexpected server errors
   return res.status(500).json({
-    message: "AAWOO!!!!",
+    message: "Internal Server Error",
+    note: "Developers likes a femboy xD",
   });
 }
