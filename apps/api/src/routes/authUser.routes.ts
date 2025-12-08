@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { AuthUserService } from "../services/authUser.services";
 import { AuthUserController } from "../controllers/authUser.controller";
+import { requireAuth } from "@/middleware/completeRegistration";
 
 export class AuthUserRoute {
   public router = Router();
@@ -15,6 +16,11 @@ export class AuthUserRoute {
   private service() {
     this.router.post("/register", this.controller.register);
     this.router.post("/verify", this.controller.verify);
+    this.router.post(
+      "/complete-register",
+      requireAuth,
+      this.controller.completeRegistration
+    );
   }
 }
 

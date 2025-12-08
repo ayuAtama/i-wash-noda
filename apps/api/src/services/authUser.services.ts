@@ -1,7 +1,7 @@
 // apps/api/src/services/authUser.ts
 import { prisma } from "@/config/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { generate6DigitCode, hashToken } from "@/utils/tokenGenerator";
+import { generate6DigitCode, hashToken, hashPassword } from "@/utils/tokenGenerator";
 import { signAccessToken } from "@/utils/jwt";
 
 export class AuthUserService {
@@ -90,8 +90,20 @@ export class AuthUserService {
         });
       });
 
+      // make a temp access token to continue registration process
+      const tokenPayload = {
+        sub: record.user.id,
+        email: record.user.email,
+      };
+      // sign the access token using jose
+      const accessToken = await signAccessToken(tokenPayload);
+
       // return the result into controller
-      return { success: true, message: "Email verified successfully" };
+      return {
+        success: true,
+        message: "Email verified successfully",
+        accessToken,
+      };
     } catch (error: any) {
       // throw error
       throw new Error(error.message || "Verification failed");
@@ -155,5 +167,59 @@ export class AuthUserService {
     });
 
     return { user, rawToken, hashedToken: newToken.token };
+  }
+
+  async updateUserDataRegistration(
+    temp_jwt: any,
+    email: string,
+    data: Prisma.UserCreateInput
+  ) {
+    try {
+      // temp_jwt
+      if (temp_jwt.email !== email) {
+        throw new Error("Invalid token");
+      }
+
+      // handle the password hasing
+      const rawPassword = String(data.password);
+      const hashedPassword = hashPassword(rawPassword);
+
+      // update the user's data using hashed password
+      const updatedData = {
+        ...data,
+        password: hashedPassword,
+      };
+
+      // use transaction for safety
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Fetch user first
+        const user = await tx.user.findUnique({
+          where: { email },
+          select: { emailVerified: true },
+        });
+
+        if (!user || !user.emailVerified) return null;
+
+        // 2. Update only if verified
+        return tx.user.update({
+          where: { email },
+          data: updatedData,
+        });
+      });
+
+      // return failed if the email is not verified
+      if (!result) {
+        return { success: false, message: "Email not verified" };
+      }
+      // return the result to controller
+      return {
+        success: true,
+        message: "User data updated successfully",
+        result,
+      };
+    } catch (error: any) {
+      // throw error
+      throw new Error(error.message || "Verification failed");
+    }
   }
 }

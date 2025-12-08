@@ -13,6 +13,8 @@ import cors from "cors";
 import "dotenv/config";
 import authUserRoutes from "@/routes/authUser.routes";
 
+import cookieParser from "cookie-parser";
+
 export class App {
   public app: Application;
 
@@ -39,6 +41,7 @@ export class App {
 
   private initializeMiddlewares() {
     this.app.use(express.json());
+    this.app.use(cookieParser());
   }
 
   private initializeAuth() {

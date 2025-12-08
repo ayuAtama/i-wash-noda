@@ -42,8 +42,17 @@ export class AuthUserController {
       // verify the token
       const result = await this.authUserService.verify(token);
 
+      // set the temp jwt for continue registration (temp cookie)
+      res.cookie("temp_jwt", result.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        maxAge: 15 * 60 * 1000, // (15 minutes)
+        path: "/",
+      });
+
       // return response
-      return res.json(result);
+      return res.json(result).status(201);
     } catch (err) {
       next(err);
     }
@@ -68,6 +77,47 @@ export class AuthUserController {
       await sendVerificationEmail(user.email, rawToken, hashedToken);
 
       return res.json({ message: "Verification email resent successfully" });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  completeRegistration = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      // get the decoded jwt from middleware
+      const tempJwt = req.temp_jwt;
+
+      if (!tempJwt) {
+        return res.status(400).json({ error: "Missing token" });
+      }
+
+      // get the email
+      const email = req.body.email;
+      if (!email) {
+        return res.status(400).json({ error: "Email required" });
+      }
+
+      // check if the email matches the temp jwt
+      if (tempJwt.email !== email) {
+        return res.status(400).json({ error: "Invalid token" });
+      }
+
+      // get the data
+      const payload = req.body;
+
+      // update the user's data
+      const updatedUser = await this.authUserService.updateUserDataRegistration(
+        tempJwt,
+        email,
+        payload
+      );
+
+      // return response
+      return res.json(updatedUser).status(201);
     } catch (err) {
       next(err);
     }

@@ -1,6 +1,6 @@
 //api/src/utils/tokenGenerator
 import crypto from "crypto";
-//import bcrypt from "bcrypt";
+import bcrypt from "bcrypt";
 import "dotenv/config";
 
 const generate6DigitCode = () => {
@@ -18,9 +18,9 @@ const hashToken = (token: string) => {
 //   return bcrypt.hashSync(password, salt);
 // };
 
-// const hashToken0 = (token: string) => {
-//   const saltRounds = Number(process.env.BCRYPT_TOKEN);
-//   return bcrypt.hashSync(token, saltRounds); // bcrypt generates a new salt automatically
-// };
+const hashPassword = (token: string) => {
+  const saltRounds = Number(process.env.BCRYPT_TOKEN_PASSWORD);
+  return bcrypt.hashSync(token, saltRounds); // bcrypt generates a new salt automatically
+};
 
-export { generate6DigitCode, hashToken };
+export { generate6DigitCode, hashToken, hashPassword };
