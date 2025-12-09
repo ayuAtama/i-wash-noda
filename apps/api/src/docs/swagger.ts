@@ -1,7 +1,7 @@
 // src/docs/swagger.ts
 import { createDocument } from "zod-openapi";
 import { z } from "zod";
-import { UserValidation } from "../validations/user.validation.js";
+import { UserValidation } from "../validations/user.validation";
 
 const UserIdParam = z.object({
   id: z.string().meta({

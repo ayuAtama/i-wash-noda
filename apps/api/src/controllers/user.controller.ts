@@ -1,8 +1,21 @@
+// /src/controllers/user.controller.ts
 import type { Request, Response, NextFunction } from "express";
-import { UserService } from "../services/user.service.js";
+import { UserService } from "../services/user.service";
 
 export class UserController {
-  constructor(private userService: UserService) {}
+  // constructor(private userService: UserService) {}
+  // or
+  private userService: UserService;
+
+  constructor(userService: UserService) {
+    this.userService = userService;
+  }
+
+  //or (not rebase?)
+  // private userService = new UserService();
+  // constructor() {
+  //   this.userService = new UserService(); // controller creates its own service
+  // }
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -15,7 +28,7 @@ export class UserController {
 
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = Number(req.params.id);
+      const id = String(req.params.id); //uuid string
       const user = await this.userService.getById(id);
 
       if (!user) return res.status(404).json({ message: "User not found" });
@@ -37,8 +50,9 @@ export class UserController {
 
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = Number(req.params.id);
-      const updated = await this.userService.update(id, req.body);
+      const id = String(req.params.id);
+      const payload = req.body;
+      const updated = await this.userService.update(id, payload);
       res.json(updated);
     } catch (err) {
       next(err);
@@ -47,7 +61,7 @@ export class UserController {
 
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = Number(req.params.id);
+      const id = String(req.params.id);
       await this.userService.delete(id);
       res.json({ message: "User deleted" });
     } catch (err) {

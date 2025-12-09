@@ -1,5 +1,5 @@
 //src/server.ts
-import { App } from "./app.js";
+import { App } from "./app";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 

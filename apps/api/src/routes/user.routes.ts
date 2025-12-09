@@ -1,9 +1,9 @@
 //src/routes/user.routes.ts
 import { Router } from "express";
-import { UserService } from "../services/user.service.js";
-import { UserController } from "../controllers/user.controller.js";
-import { Validator } from "../middleware/validate.js";
-import { UserValidation } from "../validations/user.validation.js";
+import { UserService } from "../services/user.service";
+import { UserController } from "../controllers/user.controller";
+import { Validator } from "../middleware/validate";
+import { UserValidation } from "../validations/user.validation";
 
 export class UserRoute {
   public router = Router();
@@ -13,6 +13,12 @@ export class UserRoute {
     this.controller = new UserController(new UserService());
     this.register();
   }
+
+  // if use own service at controller(not rebase?)
+  // constructor() {
+  //   this.controller = new UserController();
+  //   this.register();
+  // }
 
   private register() {
     this.router.get("/", this.controller.getAll);
