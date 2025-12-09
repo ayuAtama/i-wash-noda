@@ -46,7 +46,7 @@ export async function sendVerificationEmail(
       <h2>Email Verification Code</h2>
       <p style="font-size: 20px; font-weight: bold;">${code}</p>
       <p>This code expires in 60 minutes.</p>
-      <p>You also verified your email from this link: </p>
+      <p>You can also verify your email from this link: </p>
       <a href="${baseUrl}/verify?token=${hashedToken}">Here</a>
     `,
   });

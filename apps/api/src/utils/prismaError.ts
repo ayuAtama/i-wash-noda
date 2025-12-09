@@ -120,6 +120,12 @@ export function mapPrismaError(
     case "P2024":
       return new HttpError(503, "Database connection issue");
 
+    // case "P2028":
+    //   return new HttpError(
+    //     400,
+    //     "Invalid email address, please use your real email address."
+    //   );
+
     default:
       return new HttpError(500, `Unmapped Prisma error: ${err.code}`);
   }

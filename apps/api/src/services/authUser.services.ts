@@ -6,6 +6,7 @@ import {
   hashToken,
   hashPassword,
 } from "@/utils/tokenGenerator";
+import { sendVerificationEmail } from "@/utils/mail";
 import { signAccessToken } from "@/utils/jwt";
 import { HttpError } from "@/utils/httpError";
 
@@ -38,11 +39,31 @@ export class AuthUserService {
           },
         });
 
-        return { user, rawToken: token, hashedToken };
+        return { user, token, hashedToken };
       });
 
+      // email sending inside transaction
+      await sendVerificationEmail(
+        result.user.email,
+        result.token,
+        result.hashedToken
+      );
+
+      // make a temp access token to continue registration process
+      const tokenPayload = {
+        sub: result.user.id,
+        email: result.user.email,
+      };
+      // sign the access token using jose
+      const accessToken = await signAccessToken(tokenPayload);
+
+      // finaldata
+      const finalData = {
+        ...result,
+        accessToken,
+      };
       // forward the result to the controller
-      return result;
+      return finalData;
     } catch (error) {
       // expected user error
       if (error instanceof HttpError) {
