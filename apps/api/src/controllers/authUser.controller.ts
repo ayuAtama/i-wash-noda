@@ -14,16 +14,32 @@ export class AuthUserController {
   register = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // create user + token
-      const { user, rawToken, hashedToken } =
-        await this.authUserService.register(req.body);
+      const { user, accessToken } = await this.authUserService.register(
+        req.body
+      );
 
-      // send email
-      await sendVerificationEmail(user.email, rawToken, hashedToken);
+      // set the next step for continue registration (temp cookie)
+      res.cookie("next_step", 1, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        maxAge: 365 * 24 * 60 * 60 * 1000, // (1 year)
+        path: "/",
+      });
+
+      // set the temp jwt for continue registration (temp cookie)
+      res.cookie("temp_jwt", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        maxAge: 60 * 60 * 1000, // (1 hour)
+        path: "/",
+      });
 
       // return response
       return res.status(201).json({
         message: "User registered. Verification email sent.",
-        user,
+        "email verified": user.emailVerified,
       });
     } catch (err) {
       next(err);
@@ -32,8 +48,8 @@ export class AuthUserController {
 
   verify = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // store the hashed token or the raw token from body and params
-      const token = req.query.token || req.body.token || req.params.token;
+      // store the hashed token from query or the raw token from body
+      const token = req.query.token || req.body.token;
 
       //check if token is valid
       if (!token) {
@@ -48,7 +64,16 @@ export class AuthUserController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none", // cross-site cookie
-        maxAge: 15 * 60 * 1000, // (15 minutes)
+        maxAge: 60 * 60 * 1000, // (1 hour)
+        path: "/",
+      });
+
+      // set the next step for complete registration (temp cookie)
+      res.cookie("next_step", 2, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        maxAge: 365 * 24 * 60 * 60 * 1000, // (1 year)
         path: "/",
       });
 
@@ -114,6 +139,15 @@ export class AuthUserController {
         email,
         payload
       );
+
+      // set the next step to empty for finishing registration (temp cookie)
+      res.cookie("next_step", "", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        maxAge: 365 * 24 * 60 * 60 * 1000 * 0, // (expires now)
+        path: "/",
+      });
 
       // return response
       return res.status(201).json(updatedUser);

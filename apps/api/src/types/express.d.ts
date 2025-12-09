@@ -5,5 +5,8 @@ declare module "express" {
     temp_jwt?: import("jose").JWTPayload & {
       email?: string;
     };
+    next_step?: {
+      next_step: number;
+    };
   }
 }
