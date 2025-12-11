@@ -23,4 +23,18 @@ const hashPassword = (token: string) => {
   return bcrypt.hashSync(token, saltRounds); // bcrypt generates a new salt automatically
 };
 
-export { generate6DigitCode, hashToken, hashPassword };
+const generateSessionId = (): string => {
+  return crypto.randomBytes(32).toString("hex");
+};
+
+const hashSessionId = (token: string) => {
+  return crypto.createHash("sha256").update(token).digest("hex");
+};
+
+export {
+  generate6DigitCode,
+  generateSessionId,
+  hashToken,
+  hashSessionId,
+  hashPassword,
+};

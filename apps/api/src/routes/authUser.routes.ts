@@ -21,6 +21,7 @@ export class AuthUserRoute {
       requireStep(2),
       this.controller.completeRegistration
     );
+    this.router.post("/resend", this.controller.resendVerification);
   }
 }
 
