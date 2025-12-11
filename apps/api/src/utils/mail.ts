@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import "dotenv/config";
+import { HttpError } from "./httpError";
 
 const baseUrl: string = process.env.FRONTEND_URL || "http://localhost:3001";
 
@@ -25,12 +26,20 @@ export async function sendMail({
   subject: string;
   html: string;
 }) {
-  return mailer.sendMail({
-    from: process.env.MAIL_FROM,
-    to,
-    subject,
-    html,
-  });
+  try {
+    const res = await mailer.sendMail({
+      from: process.env.MAIL_FROM,
+      to,
+      subject,
+      html,
+    });
+    if (!res.accepted || res.accepted.length === 0) {
+      throw new HttpError(500, "SMTP server did not accept the email.");
+    }
+    return res;
+  } catch (error) {
+    throw error;
+  }
 }
 
 // 3. Email verification
@@ -47,7 +56,7 @@ export async function sendVerificationEmail(
       <p style="font-size: 20px; font-weight: bold;">${code}</p>
       <p>This code expires in 60 minutes.</p>
       <p>You can also verify your email from this link: </p>
-      <a href="${baseUrl}/verify?token=${hashedToken}">Here</a>
+      <a href="${baseUrl}/verify?token=${hashedToken}">Verify here!</a>
     `,
   });
 }

@@ -233,4 +233,26 @@ export class AuthUserController {
       next(err);
     }
   };
+
+  logout = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // get the decoded jwt from middleware
+      const userId = req.access_token?.sub;
+      if (!userId) throw new HttpError(400, "You're already logout");
+
+      // logout
+      const logout = await this.authUserService.logout(userId);
+
+      // clear the cookies
+      res.clearCookie("access_token");
+      res.clearCookie("refresh_token");
+
+      // return response
+      return res
+        .status(200)
+        .json({ success: logout, message: "Logout successful" });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
