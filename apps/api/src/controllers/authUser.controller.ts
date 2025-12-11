@@ -1,8 +1,8 @@
 // src/controllers/authUser.controller.ts
 import type { Request, Response, NextFunction } from "express";
 import { AuthUserService } from "../services/authUser.services";
-import { sendVerificationEmail } from "../utils/mail";
 import { HttpError } from "@/utils/httpError";
+import { addDays, addMinutes, addYears, format } from "date-fns";
 
 export class AuthUserController {
   private authUserService: AuthUserService;
@@ -23,7 +23,7 @@ export class AuthUserController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none", // cross-site cookie
-        maxAge: 365 * 24 * 60 * 60 * 1000, // (1 year)
+        expires: addYears(new Date(), 1), // (1 year)
         path: "/",
       });
 
@@ -32,7 +32,7 @@ export class AuthUserController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none", // cross-site cookie
-        maxAge: 60 * 60 * 1000, // (1 hour)
+        expires: addYears(new Date(), 1), // (1 years)
         path: "/",
       });
 
@@ -51,20 +51,24 @@ export class AuthUserController {
       // store the hashed token from query or the raw token from body
       const token = req.query.token || req.body.token;
 
+      // get the decoded jwt from middleware
+      const tempJwt = req.temp_jwt?.email;
+      if (!tempJwt) throw new HttpError(400, "Missing temp jwt");
+
       //check if token is valid
       if (!token) {
         throw new HttpError(400, "Token required");
       }
 
       // verify the token
-      const result = await this.authUserService.verify(token);
+      const result = await this.authUserService.verify(token, tempJwt);
 
       // set the temp jwt for continue registration (temp cookie)
       res.cookie("temp_jwt", result.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none", // cross-site cookie
-        maxAge: 60 * 60 * 1000, // (1 hour)
+        expires: addYears(new Date(), 1), // (1 hour)
         path: "/",
       });
 
@@ -73,12 +77,15 @@ export class AuthUserController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none", // cross-site cookie
-        maxAge: 365 * 24 * 60 * 60 * 1000, // (1 year)
+        expires: addYears(new Date(), 1), // (1 year)
         path: "/",
       });
 
       // return response
-      return res.status(201).json(result);
+      return res.status(201).json({
+        success: result.success,
+        message: result.message,
+      });
     } catch (err) {
       next(err);
     }
@@ -91,20 +98,64 @@ export class AuthUserController {
   ) => {
     try {
       const email = req.body.email;
-      if (!email) {
+      if (!email || (!email.includes("@") && !email.includes("."))) {
         throw new HttpError(400, "Email required");
       }
 
-      // Service now returns: { rawToken, hashedToken, user }
-      const { rawToken, hashedToken, user } =
+      // check status
+      const { success, status, accessToken } =
         await this.authUserService.resendVerificationEmail(email);
 
-      // SEND EMAIL HERE
-      await sendVerificationEmail(user.email, rawToken, hashedToken);
+      // if the user not verified yet (resend email)
+      if (status === "unverified") {
+        // set the next step for continue registration (temp cookie)
+        res.cookie("next_step", 1, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "none", // cross-site cookie
+          expires: addYears(new Date(), 1), // (1 year)
+          path: "/",
+        });
+
+        // set the temp jwt for continue registration (temp cookie)
+        res.cookie("temp_jwt", accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "none", // cross-site cookie
+          expires: addYears(new Date(), 1), // (1 years)
+          path: "/",
+        });
+
+        // return a response
+        return res.status(201).json({
+          success: success,
+          message: "Verification email resent successfully",
+        });
+      }
+
+      if (status === "verified") {
+        // set the temp jwt for continue registration (temp cookie)
+        res.cookie("temp_jwt", accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "none", // cross-site cookie
+          expires: addYears(new Date(), 1), // (1 years)
+          path: "/",
+        });
+
+        // set the next step for complete registration (temp cookie)
+        res.cookie("next_step", 2, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "none", // cross-site cookie
+          expires: addYears(new Date(), 1), // (1 year)
+          path: "/",
+        });
+      }
 
       return res
         .status(201)
-        .json({ message: "Verification email resent successfully" });
+        .json({ message: "Email Verified, You can continue registration" });
     } catch (err) {
       next(err);
     }
@@ -127,30 +178,57 @@ export class AuthUserController {
 
       // check if the email matches the temp jwt
       if (tempJwt.email !== email) {
-        throw new HttpError(400, "Invalid token");
+        throw new HttpError(400, "Email does not match jwt");
       }
 
       // get the data
       const payload = req.body;
+      // get the user Agent
+      const userAgent = req.get("user-agent") || null; // if the user agent is not set, return null
 
-      // update the user's data
-      const updatedUser = await this.authUserService.updateUserDataRegistration(
-        tempJwt,
-        email,
-        payload
-      );
+      // complete register
+      const { success, message, dataUser, accessToken, refreshToken } =
+        await this.authUserService.completeUserDataRegistration(
+          tempJwt,
+          email,
+          payload,
+          userAgent
+        );
 
       // set the next step to empty for finishing registration (temp cookie)
-      res.cookie("next_step", "", {
+      res.clearCookie("next_step");
+
+      // delete temp cookies
+      res.clearCookie("temp_jwt");
+
+      // set the complete full cookie (accesstoken)
+      res.cookie("access_token", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none", // cross-site cookie
-        maxAge: 365 * 24 * 60 * 60 * 1000 * 0, // (expires now)
+        expires: addMinutes(new Date(), 30), // (30 minutes)
         path: "/",
       });
 
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        expires: addDays(new Date(), 7), // (7 days)
+        path: "/",
+      });
+
+      // format the response
+      const response = {
+        success: success,
+        message: message,
+        "email verified": dataUser.emailVerified,
+        role: dataUser.role,
+        "created at": format(dataUser.createdAt, "PP HH:mm"),
+      };
+
       // return response
-      return res.status(201).json(updatedUser);
+      return res.status(201).json(response);
     } catch (err) {
       next(err);
     }
