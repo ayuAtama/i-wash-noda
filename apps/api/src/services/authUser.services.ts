@@ -18,6 +18,7 @@ import {
   formatDistanceStrict,
 } from "date-fns";
 import { access } from "fs";
+import { validateMXRecord } from "@/utils/mxRecordValidatior";
 
 export class AuthUserService {
   async register(data: Prisma.UserCreateInput) {
@@ -42,6 +43,14 @@ export class AuthUserService {
             409,
             "User already exist but not completed registration"
           );
+        }
+
+        // 0.5. check the email's domain (mx record)
+        const validDomain = await validateMXRecord(
+          data.email.toLocaleLowerCase().trim()
+        );
+        if (!validDomain) {
+          throw new HttpError(422, "Please retry with real email address");
         }
 
         // 1. create user
@@ -395,6 +404,24 @@ export class AuthUserService {
         throw error;
       }
       // Otherwise: let Prisma error + others bubble up.
+      throw error;
+    }
+  }
+
+  async logout(sub: string) {
+    try {
+      // store the userId first
+      const userId = sub;
+
+      // prisma session clear
+      await prisma.session.deleteMany({
+        where: {
+          userId: userId,
+        },
+      });
+
+      return true;
+    } catch (error) {
       throw error;
     }
   }

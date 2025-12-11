@@ -8,5 +8,14 @@ declare module "express" {
     next_step?: {
       next_step: number;
     };
+    access_token?: import("jose").JWTPayload & {
+      sub?: string;
+      email?: string;
+      role?: string;
+    };
+    refresh_token?: import("jose").JWTPayload & {
+      sub?: string;
+      sid?: string;
+    };
   }
 }

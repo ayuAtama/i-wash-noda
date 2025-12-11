@@ -128,7 +128,7 @@ model VerificationToken {
   created_at DateTime @default(now())
 
   //relations
-  user User @relation(fields: [user_id], references: [id])
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("verification_tokens")
 }
