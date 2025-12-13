@@ -255,4 +255,96 @@ export class AuthUserController {
       next(err);
     }
   };
+
+  login = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // get the email and password and also the user agent
+      if (!req.body) throw new HttpError(400, "Email and password required");
+      const { email, password } = req.body;
+      const userAgent = req.get("user-agent") || null;
+      const ipAddress = req.ip || "";
+      if (!email || !password)
+        throw new HttpError(400, "Email and password required");
+
+      // login
+      const { accessToken, refreshToken, success, message } =
+        await this.authUserService.login(email, password, userAgent, ipAddress);
+
+      // set the jwt cookie httponly
+      // access token 30 minute expires (jwt 15 minutes)
+      res.cookie("access_token", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        expires: addMinutes(new Date(), 30), // (30 minutes)
+        path: "/",
+      });
+
+      // refresh token 7 days expires
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        expires: addDays(new Date(), 7), // (7 days)
+        path: "/",
+      });
+
+      // return the response
+      const response = {
+        success: success,
+        message: message,
+      };
+      return res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  refresh = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // get the decoded jwt from middleware
+      const refreshToken = req.refresh_token;
+      if (!refreshToken) throw new HttpError(401, "Unauthorized, login first");
+      const sub = refreshToken.sub;
+      const sid = refreshToken.sid;
+
+      // check if the token is missing
+      if (!sub || !sid) {
+        throw new HttpError(401, "Unauthorized, sid and sub missing");
+      }
+
+      // refresh the access token
+      const {
+        success,
+        accessToken,
+        refreshToken: newRefreshToken,
+      } = await this.authUserService.refreshAccessToken(sub, sid);
+
+      // send the new access token cookie
+      res.cookie("access_token", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none", // cross-site cookie
+        expires: addMinutes(new Date(), 30), // (30 minutes)
+        path: "/",
+      });
+
+      // send the new refresh token cookie
+      res.cookie("refresh_token", newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
+        expires: addDays(new Date(), 7),
+        path: "/",
+      });
+
+      // return the response
+      return res.status(200).json({
+        success: success,
+        message: "Access token refreshed! and Refresh token updated !",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

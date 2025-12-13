@@ -10,6 +10,7 @@ import {
   commpleteRegisterEndpointRateLimiter,
 } from "@/middleware/rateLimitter";
 import { authenticationMiddleware } from "@/middleware/authentication";
+import { refreshTokenMiddleware } from "@/middleware/refreshToken";
 
 export class AuthUserRoute {
   public router = Router();
@@ -18,7 +19,9 @@ export class AuthUserRoute {
   constructor() {
     this.controller = new AuthUserController(new AuthUserService());
     this.register();
+    this.login();
     this.logout();
+    this.refresh();
   }
 
   private register() {
@@ -51,6 +54,18 @@ export class AuthUserRoute {
       "/logout",
       authenticationMiddleware,
       this.controller.logout
+    );
+  }
+
+  private login() {
+    this.router.post("/login", this.controller.login);
+  }
+
+  private refresh() {
+    this.router.get(
+      "/refresh",
+      refreshTokenMiddleware,
+      this.controller.refresh
     );
   }
 }

@@ -7,6 +7,7 @@ import {
   hashPassword,
   generateSessionId,
   hashSessionId,
+  comparePassword,
 } from "@/utils/tokenGenerator";
 import { sendVerificationEmail } from "@/utils/mail";
 import { signToken } from "@/utils/jwt";
@@ -19,6 +20,7 @@ import {
 } from "date-fns";
 import { access } from "fs";
 import { validateMXRecord } from "@/utils/mxRecordValidatior";
+import { success } from "zod";
 
 export class AuthUserService {
   async register(data: Prisma.UserCreateInput) {
@@ -421,6 +423,172 @@ export class AuthUserService {
       });
 
       return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async login(
+    email: string,
+    password: string,
+    userAgent: string | null,
+    ip: string
+  ) {
+    try {
+      // check if there're the user and password first
+      const userPassword = password;
+      const userEmail = email.toLocaleLowerCase().trim();
+      if (!userEmail && !userPassword) {
+        throw new HttpError(400, "Invalid email or password");
+      }
+
+      // get the user data in database first
+      const userData = await prisma.user.findUnique({
+        where: {
+          email: userEmail,
+        },
+      });
+
+      // throw error if the user not found
+      if (!userData) {
+        throw new HttpError(404, "User not found");
+      }
+
+      // ask the user to continue register first if the password is null or not verified
+      if (!userData.password || !userData.emailVerified) {
+        throw new HttpError(400, "Please complete your registration first");
+      }
+
+      // check if the password match with the database
+      const isPasswordMatch = comparePassword(userPassword, userData.password);
+
+      // throw error if the password not match
+      if (!isPasswordMatch) {
+        throw new HttpError(400, "Invalid password please try again");
+      }
+
+      // if the password match, create the access token and refresh token
+      // generate the session id and store it in database using tx
+      const { sessionId } = await prisma.$transaction(async (tx) => {
+        // generate sessionid and hash it
+        const sessionId = generateSessionId();
+        const hashedSessionId = hashSessionId(sessionId);
+        const uA = userAgent;
+
+        //store it in database
+        await tx.session.create({
+          data: {
+            userId: userData.id,
+            token: hashedSessionId,
+            expiresAt: addDays(new Date(), 7), // 7 days
+            userAgent: uA,
+            ipAddress: ip,
+          },
+        });
+
+        // return the session id
+        return { sessionId };
+      });
+
+      // make a jwt access token first
+      const accessTokenPayload = {
+        sub: userData.id,
+        email: userData.email,
+        role: userData.role,
+      };
+      const accessToken = await signToken(accessTokenPayload, "15m");
+
+      // make a refresh token then
+      const refreshTokenPayload = {
+        sub: userData.id,
+        sid: sessionId,
+      };
+      const refreshToken = await signToken(refreshTokenPayload, "7d");
+
+      // return the result to controller
+      return {
+        success: true,
+        message: `Login with email ${userData.email} was successfull`,
+        accessToken,
+        refreshToken,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async refreshAccessToken(sub: string, sid: string) {
+    try {
+      // hash the session id
+      const hashedSessionId = hashSessionId(sid);
+
+      // get the user data first
+      const userData = await prisma.user.findUnique({
+        where: {
+          id: sub,
+        },
+      });
+
+      // throw error if the user not found
+      if (!userData) {
+        throw new HttpError(404, "User not found");
+      }
+
+      // check if the session id is valid
+      const sessionId = await prisma.session.findUnique({
+        where: {
+          userId: userData.id,
+          token: hashedSessionId,
+        },
+      });
+      if (!sessionId) {
+        throw new HttpError(401, "Unauthorized no session id in database");
+      }
+
+      // make a new fresh access token
+      const accessTokenPayload = {
+        sub: userData.id,
+        email: userData.email,
+        role: userData.role,
+      };
+      const accessToken = await signToken(accessTokenPayload, "15m");
+
+      // rotate a refresh token after make a new access token
+      const { newRefreshToken } = await prisma.$transaction(async (tx) => {
+        // generate new session id and hash it
+        const newSessionId = generateSessionId();
+        const newHashedSessionId = hashSessionId(newSessionId);
+
+        // store it in database
+        await tx.session.update({
+          where: {
+            id: sessionId.id,
+            token: hashedSessionId,
+          },
+          data: {
+            userId: userData.id,
+            token: newHashedSessionId,
+            expiresAt: addDays(new Date(), 7), // 7 days
+          },
+        });
+
+        // return the new refresh session id
+        return { newRefreshToken: newSessionId };
+      });
+
+      // make a new payload for rortated refresh token
+      const newRefreshTokenPayload = {
+        sub: userData.id,
+        sid: newRefreshToken,
+      };
+      const refreshToken = await signToken(newRefreshTokenPayload, "7d");
+
+      // return the result to controller
+      return {
+        success: true,
+        accessToken,
+        refreshToken,
+      };
     } catch (error) {
       throw error;
     }
