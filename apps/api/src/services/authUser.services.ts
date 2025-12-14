@@ -9,7 +9,7 @@ import {
   hashSessionId,
   comparePassword,
 } from "@/utils/tokenGenerator";
-import { sendVerificationEmail } from "@/utils/mail";
+import { sendPasswordResetEmail, sendVerificationEmail } from "@/utils/mail";
 import { signToken } from "@/utils/jwt";
 import { HttpError } from "@/utils/httpError";
 import {
@@ -21,6 +21,7 @@ import {
 import { access } from "fs";
 import { validateMXRecord } from "@/utils/mxRecordValidatior";
 import { success } from "zod";
+import e from "express";
 
 export class AuthUserService {
   async register(data: Prisma.UserCreateInput) {
@@ -588,6 +589,146 @@ export class AuthUserService {
         success: true,
         accessToken,
         refreshToken,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async resetRequest(email: string) {
+    try {
+      // get the user data using email
+      const userData = await prisma.user.findUnique({
+        where: {
+          email: email,
+          password: {
+            not: null,
+          },
+          emailVerified: true,
+        },
+      });
+
+      // throw error if the user not found
+      if (!userData) {
+        throw new HttpError(404, "User not found");
+      }
+
+      // generate random token and hash it
+      const resetToken = generateSessionId();
+      const hashedResetToken = hashSessionId(resetToken);
+
+      // store it in database
+      const { token } = await prisma.passwordResetToken.create({
+        data: {
+          user_id: userData.id,
+          token: hashedResetToken,
+          expires_at: addHours(new Date(), 1),
+          used: false,
+        },
+      });
+
+      // send the reset email
+      await sendPasswordResetEmail(email, token);
+
+      // generate temp jwt for reset password
+      const payload = {
+        sub: userData.id,
+        email: userData.email,
+      };
+
+      // generate temp jwt
+      const tempJwt = await signToken(payload);
+
+      // return the result to controller
+      return {
+        success: true,
+        message: `Password reset link sent to ${email}`,
+        userData,
+        tempJwt,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async resetPassword(
+    jwt_email: string,
+    email: string,
+    verificationToken: string,
+    password: string
+  ) {
+    try {
+      // check if the email valid and match with jwt email
+      if (email !== jwt_email) {
+        throw new HttpError(401, "Unauthorized, email not match");
+      }
+
+      // get the user data using email
+      const userData = await prisma.user.findUnique({
+        where: {
+          email: email,
+          password: {
+            not: null,
+          },
+          emailVerified: true,
+        },
+      });
+
+      // throw error if the user not found
+      if (!userData) {
+        throw new HttpError(404, "User not found");
+      }
+
+      // check if the verification token avlid
+      const record = await prisma.passwordResetToken.findFirst({
+        where: {
+          user_id: userData.id,
+          expires_at: { gt: new Date() },
+          used: false,
+          token: verificationToken,
+        },
+      });
+      if (!record) {
+        throw new HttpError(401, "Unauthorized, verification token not found");
+      }
+      if (record.token !== verificationToken) {
+        throw new HttpError(401, "Unauthorized, verification token not match");
+      }
+
+      // revoke the token (in transaction)
+      await prisma.$transaction(async (tx) => {
+        await tx.passwordResetToken.update({
+          where: {
+            id: record.id,
+          },
+          data: {
+            used: true,
+          },
+        });
+      });
+
+      // hash the password
+      const hashedPassword = hashPassword(password);
+
+      // update the password (use transaction for safety)
+      await prisma.$transaction(async (tx) => {
+        // update the user's password
+        await tx.user.update({
+          where: {
+            email: email,
+            id: userData.id,
+            emailVerified: true,
+          },
+          data: {
+            password: hashedPassword,
+          },
+        });
+      });
+
+      // return the result to controller
+      return {
+        success: true,
+        message: "Password reset successfully",
       };
     } catch (error) {
       throw error;

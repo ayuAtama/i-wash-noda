@@ -22,6 +22,7 @@ export class AuthUserRoute {
     this.login();
     this.logout();
     this.refresh();
+    this.resetPassword();
   }
 
   private register() {
@@ -66,6 +67,15 @@ export class AuthUserRoute {
       "/refresh",
       refreshTokenMiddleware,
       this.controller.refresh
+    );
+  }
+
+  private resetPassword() {
+    this.router.post("/reset-request", this.controller.resetPasswordRequest);
+    this.router.post(
+      "/reset-confirm",
+      requireStep(69),
+      this.controller.setResetPassword
     );
   }
 }

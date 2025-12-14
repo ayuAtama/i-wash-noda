@@ -13,7 +13,9 @@ export function requireStep(step: number) {
       if (!tokenNextStep || !tokenTempJwt)
         return res
           .status(401)
-          .json({ error: "Please go to resend page to continue registration" });
+          .json({
+            error: "Please go to resend/reset page to continue the process",
+          });
 
       // check if the step is correct (it's not encoded)
       if (Number(tokenNextStep) !== step) {

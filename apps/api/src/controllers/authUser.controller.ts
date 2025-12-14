@@ -2,7 +2,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { AuthUserService } from "../services/authUser.services";
 import { HttpError } from "@/utils/httpError";
-import { addDays, addMinutes, addYears, format } from "date-fns";
+import { addDays, addHours, addMinutes, addYears, format } from "date-fns";
+import { success } from "zod";
 
 export class AuthUserController {
   private authUserService: AuthUserService;
@@ -343,6 +344,91 @@ export class AuthUserController {
         success: success,
         message: "Access token refreshed! and Refresh token updated !",
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  resetPasswordRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      // grab and check the email
+      const { email } = req.body;
+      if (!email) throw new HttpError(400, "Email required");
+
+      // reset password request
+      const result = await this.authUserService.resetRequest(email);
+
+      // make tempporary cookie for set new password
+      res.cookie("next_step", 69, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
+        expires: addYears(new Date(), 1),
+        path: "/",
+      });
+
+      // make the temporary jwt to verify the user
+      res.cookie("temp_jwt", result.tempJwt, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
+        expires: addYears(new Date(), 1),
+        path: "/",
+      });
+
+      // return the response
+      return res.status(200).json({
+        success: result.success,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  setResetPassword = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      // get the decoded jwt from middleware
+      const { temp_jwt, next_step } = req;
+      // check if the token is missing
+      if (!temp_jwt || !next_step) {
+        throw new HttpError(
+          401,
+          "Unauthorized, verify your reset password link first at your email"
+        );
+      }
+
+      // get the email and password
+      const { email, password, token } = req.body;
+
+      // check if the email valid and match with jwt email
+      const jwt_email = temp_jwt.email!;
+      if (email !== jwt_email) {
+        throw new HttpError(401, "Unauthorized, email not match");
+      }
+
+      // set the new password
+      const result = await this.authUserService.resetPassword(
+        jwt_email,
+        email,
+        token,
+        password
+      );
+
+      // clear all unused temp cookie
+      res.clearCookie("temp_jwt");
+      res.clearCookie("next_step");
+
+      // return the response
+      return res.status(200).json(result);
     } catch (error) {
       next(error);
     }
