@@ -80,9 +80,13 @@ export async function sendPasswordResetEmail(email: string, code: string) {
     to: email,
     subject: "Reset Your Password",
     html: `
-      <h2>Password Reset Code</h2>
-      <p style="font-size: 20px; font-weight: bold;">${code}</p>
-      <p>This code expires in 10 minutes.</p>
+      <h2>Password Reset Link!</h2>
+      <p style="font-size: 20px; font-weight: bold;">
+      Click the link below to reset your password:
+      <br/>
+      <a href="${baseUrl}/reset-password?token=${code}">Reset Password!</a>
+      </p>
+      <p>This code expires in 1 hour.</p>
     `,
   });
 }

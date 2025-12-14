@@ -3,6 +3,7 @@ import "express";
 declare module "express" {
   interface Request {
     temp_jwt?: import("jose").JWTPayload & {
+      sub?: string;
       email?: string;
     };
     next_step?: {
