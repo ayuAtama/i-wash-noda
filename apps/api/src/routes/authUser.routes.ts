@@ -23,6 +23,7 @@ export class AuthUserRoute {
     this.logout();
     this.refresh();
     this.resetPassword();
+    this.userData();
   }
 
   private register() {
@@ -76,6 +77,22 @@ export class AuthUserRoute {
       "/reset-confirm",
       requireStep(69),
       this.controller.setResetPassword
+    );
+  }
+
+  private userData() {
+    this.router.get("/me", authenticationMiddleware, this.controller.fetchMe);
+    this.router.put("/me", authenticationMiddleware, this.controller.updateMe);
+    this.router.post(
+      "/change-email-request",
+      authenticationMiddleware,
+      this.controller.emailChangeRequest
+    );
+    this.router.put(
+      "/change-email",
+      requireStep(67),
+      authenticationMiddleware,
+      this.controller.setNewEmail
     );
   }
 }

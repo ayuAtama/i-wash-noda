@@ -1,4 +1,4 @@
-// apps/api/src/services/authUser.ts
+// apps/api/src/services/authUser.services.ts
 import { prisma } from "@/config/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import {
@@ -9,13 +9,18 @@ import {
   hashSessionId,
   comparePassword,
 } from "@/utils/tokenGenerator";
-import { sendPasswordResetEmail, sendVerificationEmail } from "@/utils/mail";
+import {
+  sendEmailChangeVerification,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "@/utils/mail";
 import { signToken } from "@/utils/jwt";
 import { HttpError } from "@/utils/httpError";
 import {
   addDays,
   addHours,
   differenceInSeconds,
+  formatDate,
   formatDistanceStrict,
 } from "date-fns";
 import { access } from "fs";
@@ -444,24 +449,27 @@ export class AuthUserService {
       }
 
       // get the user data in database first
-      const userData = await prisma.user.findUnique({
+      const updateData = await prisma.user.findUnique({
         where: {
           email: userEmail,
         },
       });
 
       // throw error if the user not found
-      if (!userData) {
+      if (!updateData) {
         throw new HttpError(404, "User not found");
       }
 
       // ask the user to continue register first if the password is null or not verified
-      if (!userData.password || !userData.emailVerified) {
+      if (!updateData.password || !updateData.emailVerified) {
         throw new HttpError(400, "Please complete your registration first");
       }
 
       // check if the password match with the database
-      const isPasswordMatch = comparePassword(userPassword, userData.password);
+      const isPasswordMatch = comparePassword(
+        userPassword,
+        updateData.password
+      );
 
       // throw error if the password not match
       if (!isPasswordMatch) {
@@ -479,7 +487,7 @@ export class AuthUserService {
         //store it in database
         await tx.session.create({
           data: {
-            userId: userData.id,
+            userId: updateData.id,
             token: hashedSessionId,
             expiresAt: addDays(new Date(), 7), // 7 days
             userAgent: uA,
@@ -493,15 +501,15 @@ export class AuthUserService {
 
       // make a jwt access token first
       const accessTokenPayload = {
-        sub: userData.id,
-        email: userData.email,
-        role: userData.role,
+        sub: updateData.id,
+        email: updateData.email,
+        role: updateData.role,
       };
       const accessToken = await signToken(accessTokenPayload, "15m");
 
       // make a refresh token then
       const refreshTokenPayload = {
-        sub: userData.id,
+        sub: updateData.id,
         sid: sessionId,
       };
       const refreshToken = await signToken(refreshTokenPayload, "7d");
@@ -509,7 +517,7 @@ export class AuthUserService {
       // return the result to controller
       return {
         success: true,
-        message: `Login with email ${userData.email} was successfull`,
+        message: `Login with email ${updateData.email} was successfull`,
         accessToken,
         refreshToken,
       };
@@ -524,21 +532,21 @@ export class AuthUserService {
       const hashedSessionId = hashSessionId(sid);
 
       // get the user data first
-      const userData = await prisma.user.findUnique({
+      const updateData = await prisma.user.findUnique({
         where: {
           id: sub,
         },
       });
 
       // throw error if the user not found
-      if (!userData) {
+      if (!updateData) {
         throw new HttpError(404, "User not found");
       }
 
       // check if the session id is valid
       const sessionId = await prisma.session.findUnique({
         where: {
-          userId: userData.id,
+          userId: updateData.id,
           token: hashedSessionId,
         },
       });
@@ -548,9 +556,9 @@ export class AuthUserService {
 
       // make a new fresh access token
       const accessTokenPayload = {
-        sub: userData.id,
-        email: userData.email,
-        role: userData.role,
+        sub: updateData.id,
+        email: updateData.email,
+        role: updateData.role,
       };
       const accessToken = await signToken(accessTokenPayload, "15m");
 
@@ -567,7 +575,7 @@ export class AuthUserService {
             token: hashedSessionId,
           },
           data: {
-            userId: userData.id,
+            userId: updateData.id,
             token: newHashedSessionId,
             expiresAt: addDays(new Date(), 7), // 7 days
           },
@@ -579,7 +587,7 @@ export class AuthUserService {
 
       // make a new payload for rortated refresh token
       const newRefreshTokenPayload = {
-        sub: userData.id,
+        sub: updateData.id,
         sid: newRefreshToken,
       };
       const refreshToken = await signToken(newRefreshTokenPayload, "7d");
@@ -598,7 +606,7 @@ export class AuthUserService {
   async resetRequest(email: string) {
     try {
       // get the user data using email
-      const userData = await prisma.user.findUnique({
+      const updateData = await prisma.user.findUnique({
         where: {
           email: email,
           password: {
@@ -609,7 +617,7 @@ export class AuthUserService {
       });
 
       // throw error if the user not found
-      if (!userData) {
+      if (!updateData) {
         throw new HttpError(404, "User not found");
       }
 
@@ -620,7 +628,7 @@ export class AuthUserService {
       // store it in database
       const { token } = await prisma.passwordResetToken.create({
         data: {
-          user_id: userData.id,
+          user_id: updateData.id,
           token: hashedResetToken,
           expires_at: addHours(new Date(), 1),
           used: false,
@@ -632,8 +640,8 @@ export class AuthUserService {
 
       // generate temp jwt for reset password
       const payload = {
-        sub: userData.id,
-        email: userData.email,
+        sub: updateData.id,
+        email: updateData.email,
       };
 
       // generate temp jwt
@@ -643,7 +651,7 @@ export class AuthUserService {
       return {
         success: true,
         message: `Password reset link sent to ${email}`,
-        userData,
+        updateData,
         tempJwt,
       };
     } catch (error) {
@@ -664,7 +672,7 @@ export class AuthUserService {
       }
 
       // get the user data using email
-      const userData = await prisma.user.findUnique({
+      const updateData = await prisma.user.findUnique({
         where: {
           email: email,
           password: {
@@ -675,14 +683,14 @@ export class AuthUserService {
       });
 
       // throw error if the user not found
-      if (!userData) {
+      if (!updateData) {
         throw new HttpError(404, "User not found");
       }
 
       // check if the verification token avlid
       const record = await prisma.passwordResetToken.findFirst({
         where: {
-          user_id: userData.id,
+          user_id: updateData.id,
           expires_at: { gt: new Date() },
           used: false,
           token: verificationToken,
@@ -716,7 +724,7 @@ export class AuthUserService {
         await tx.user.update({
           where: {
             email: email,
-            id: userData.id,
+            id: updateData.id,
             emailVerified: true,
           },
           data: {
@@ -730,6 +738,207 @@ export class AuthUserService {
         success: true,
         message: "Password reset successfully",
       };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async fetchMe(sub: string) {
+    try {
+      // get the user data in database
+      const updateData = await prisma.user.findUnique({
+        where: {
+          id: sub,
+        },
+      });
+      if (!updateData) throw new HttpError(404, "User not found");
+
+      // format the data
+      const user = {
+        name: updateData.name,
+        email: updateData.email,
+        "pending email": updateData.pending_email,
+        "email verified": updateData.emailVerified,
+        role: updateData.role,
+        image: updateData.image,
+        "created at": formatDate(updateData.createdAt, "PP HH:mm"),
+        "updated at": formatDate(updateData.updatedAt, "PP HH:mm"),
+      };
+
+      //return the result to controller
+      return { message: "User fetched successfully", success: true, user };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateMe(sub: string, data: Prisma.UserUpdateInput) {
+    try {
+      // get the data
+      const updateData = await prisma.user.update({
+        where: {
+          id: sub,
+        },
+        data: data,
+      });
+
+      // format the data
+      const user = {
+        name: updateData.name,
+        email: updateData.email,
+        "pending email": updateData.pending_email,
+        "email verified": updateData.emailVerified,
+        role: updateData.role,
+        image: updateData.image,
+        "created at": formatDate(updateData.createdAt, "PP HH:mm"),
+        "updated at": formatDate(updateData.updatedAt, "PP HH:mm"),
+      };
+
+      // return the result to controller
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async emailRequestChange(sub: string, email: string) {
+    try {
+      // get the user data first
+      const user = await prisma.user.findUnique({
+        where: {
+          id: sub,
+        },
+      });
+      if (!user) throw new HttpError(404, "User not found");
+
+      // store the new email to database (in transaction)
+      const { token, tempJwt } = await prisma.$transaction(async (tx) => {
+        // generate random token and hash it
+        const newEmailToken = generateSessionId();
+        const hashedNewEmailToken = hashSessionId(newEmailToken);
+
+        // update the user's pending email
+        const userNewEmail = await tx.user.update({
+          where: {
+            id: user.id,
+            emailVerified: true,
+          },
+          data: {
+            pending_email: email,
+          },
+        });
+
+        // store the hashed token into database for verification
+        const token = await tx.verificationToken.create({
+          data: {
+            user_id: userNewEmail.id,
+            token: hashedNewEmailToken,
+            used: false,
+            expires_at: addHours(new Date(), 1),
+          },
+        });
+
+        // set temp_jwt to confirm real user
+        const tempJwtPayload = {
+          sub: userNewEmail.id,
+          email: email,
+        };
+
+        // sign the temp_jwt payload
+        const tempJwt = await signToken(tempJwtPayload, "1h");
+
+        // return the token
+        return { token: token.token, tempJwt: tempJwt };
+      });
+
+      // send the email
+      await sendEmailChangeVerification(email, token);
+
+      // return the result to controller
+      return {
+        success: true,
+        message: `Email change request to ${email} sent successfully`,
+        tempJwt,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async setNewEmail(
+    jwt_email: string,
+    newEmail: string,
+    oldEmail: string,
+    verificationToken: string
+  ) {
+    try {
+      //log temp
+      console.log(jwt_email, newEmail, oldEmail, verificationToken);
+      // get the user using email
+      const user = await prisma.user.findUnique({
+        where: {
+          email: oldEmail,
+          password: {
+            not: null,
+          },
+          emailVerified: true,
+        },
+      });
+      if (!user) throw new HttpError(404, "User not found");
+
+      // check if the verification token valid
+      const tokenRecord = await prisma.verificationToken.findFirst({
+        where: {
+          user_id: user.id,
+          expires_at: { gt: new Date() },
+          used: false,
+          token: verificationToken,
+        },
+      });
+      if (!tokenRecord)
+        throw new HttpError(400, "Invalid token, please retry again later");
+
+      // revoke the token and change the email to pending email
+      const { userNewEmail } = await prisma.$transaction(async (tx) => {
+        // revoke the token
+        await tx.verificationToken.update({
+          where: {
+            id: tokenRecord.id,
+          },
+          data: {
+            used: true,
+          },
+        });
+
+        // change the email to pending email and delete the old one
+        const userNewEmail = await tx.user.update({
+          where: {
+            id: user.id,
+            emailVerified: true,
+          },
+          data: {
+            email: newEmail,
+            pending_email: null,
+          },
+        });
+
+        return { userNewEmail };
+      });
+
+      // format the result
+      const result = {
+        name: userNewEmail.name,
+        email: userNewEmail.email,
+        "pending email": userNewEmail.pending_email,
+        "email verified": userNewEmail.emailVerified,
+        role: userNewEmail.role,
+        image: userNewEmail.image,
+        "created at": formatDate(userNewEmail.createdAt, "PP HH:mm"),
+        "updated at": formatDate(userNewEmail.updatedAt, "PP HH:mm"),
+      };
+
+      // return to controller
+      return result;
     } catch (error) {
       throw error;
     }
