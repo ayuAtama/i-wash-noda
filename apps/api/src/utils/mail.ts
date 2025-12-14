@@ -68,8 +68,13 @@ export async function sendEmailChangeVerification(email: string, code: string) {
     subject: "Confirm Email Change",
     html: `
       <h2>Confirm Your New Email Address</h2>
-      <p style="font-size: 20px; font-weight: bold;">${code}</p>
-      <p>This code expires in 10 minutes.</p>
+      <p style="font-size: 20px; font-weight: bold;">
+      Click the link below to change your email address:
+      <br/>
+      <a href="${baseUrl}/reset-password?token=${code}">Change to New Email!</a>
+      </p>
+      </p>
+      <p>This code expires in 1 hour.</p>
     `,
   });
 }

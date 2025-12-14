@@ -364,7 +364,7 @@ export class AuthUserController {
 
       // make tempporary cookie for set new password
       res.cookie("next_step", 69, {
-        httpOnly: false,
+        httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none",
         expires: addYears(new Date(), 1),
@@ -373,7 +373,7 @@ export class AuthUserController {
 
       // make the temporary jwt to verify the user
       res.cookie("temp_jwt", result.tempJwt, {
-        httpOnly: false,
+        httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "none",
         expires: addYears(new Date(), 1),
@@ -429,6 +429,144 @@ export class AuthUserController {
 
       // return the response
       return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchMe = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // get the decoded userid from middleware
+      const id = req.access_token?.sub;
+      if (!id) throw new HttpError(401, "Unauthorized, login first");
+
+      // get the user by id
+      const { message, success, user } = await this.authUserService.fetchMe(id);
+      if (!user) throw new HttpError(404, "User not found");
+
+      return res.status(200).json({
+        success: success,
+        message: message,
+        user: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateMe = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // get the decoded userid from middleware
+      const id = req.access_token?.sub;
+      if (!id) throw new HttpError(401, "Unauthorized, login first");
+
+      // get the data from body
+      const data = req.body;
+
+      // update the user
+      const updatedUser = await this.authUserService.updateMe(id, data);
+
+      // return the response
+      return res.status(200).json({
+        success: true,
+        message: "User updated",
+        user: updatedUser,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  emailChangeRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      // get the decoded userid from middleware
+      const id = req.access_token?.sub;
+      if (!id) throw new HttpError(401, "Unauthorized, login first");
+
+      // get the new email from body
+      if (!req.body) throw new HttpError(400, "Email required");
+      const { email } = req.body;
+      if (!email) throw new HttpError(400, "Email required");
+
+      // request the new email chacnge
+      const { tempJwt, success, message } =
+        await this.authUserService.emailRequestChange(id, email);
+
+      // temp log
+      console.log(tempJwt, success, message);
+      // make temp next step cookie
+      res.cookie("next_step", 67, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
+        expires: addYears(new Date(), 1),
+        path: "/",
+      });
+
+      // set the temp_jwt cookie to verify real user
+      res.cookie("temp_jwt", tempJwt, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
+        expires: addYears(new Date(), 1),
+        path: "/",
+      });
+
+      return res.status(200).json({
+        success: success,
+        message: message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  setNewEmail = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      //get the decoded temp_jwt from middleware
+      const { temp_jwt, access_token } = req;
+      if (!temp_jwt)
+        throw new HttpError(
+          401,
+          "Unauthorized, verify your new email link first at your email"
+        );
+      if (!access_token) throw new HttpError(401, "Unauthorized, login first");
+
+      // get the email and password
+      const { email, token } = req.body;
+      const jwt_email = temp_jwt.email!;
+      const newEmail = email;
+      const oldEmail = access_token.email!;
+
+      // check if the email valid and match with jwt email
+      if (!email) throw new HttpError(400, "Email required");
+      if (!token) throw new HttpError(400, "Token required");
+      if (newEmail !== jwt_email)
+        throw new HttpError(401, "Unauthorized, email not matched");
+
+      // set the new email
+      const result = await this.authUserService.setNewEmail(
+        jwt_email,
+        newEmail,
+        oldEmail,
+        token
+      );
+
+      // reset cookies
+      res.clearCookie("temp_jwt");
+      res.clearCookie("next_step");
+      res.clearCookie("access_token");
+      res.clearCookie("refresh_token");
+
+      return res.status(200).json({
+        success: true,
+        message: "Email updated successfully",
+        user: result,
+      });
     } catch (error) {
       next(error);
     }
