@@ -6,9 +6,9 @@ export default function LoginPage() {
   const loginGithub = () => {
     authClient.signIn.social({
       provider: "github",
-      callbackURL: "http://localhost:3001/dashboard",
+      callbackURL: "http://localhost:3001/me",
       errorCallbackURL: "http://localhost:3001/error",
-      newUserCallbackURL: "http://localhost:3001/new-user",
+      newUserCallbackURL: "http://localhost:3001/",
     });
   };
 

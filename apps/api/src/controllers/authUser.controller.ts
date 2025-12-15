@@ -238,7 +238,7 @@ export class AuthUserController {
   logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // get the decoded jwt from middleware
-      const userId = req.access_token?.sub;
+      const userId = req.access_token?.sub || req.user?.id;
       if (!userId) throw new HttpError(400, "You're already logout");
 
       // logout
@@ -247,6 +247,7 @@ export class AuthUserController {
       // clear the cookies
       res.clearCookie("access_token");
       res.clearCookie("refresh_token");
+      res.clearCookie("better-auth.session_token"); // better auth social login
 
       // return response
       return res
@@ -437,7 +438,7 @@ export class AuthUserController {
   fetchMe = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // get the decoded userid from middleware
-      const id = req.access_token?.sub;
+      const id = req.access_token?.sub || req.user?.id;
       if (!id) throw new HttpError(401, "Unauthorized, login first");
 
       // get the user by id
@@ -457,7 +458,7 @@ export class AuthUserController {
   updateMe = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // get the decoded userid from middleware
-      const id = req.access_token?.sub;
+      const id = req.access_token?.sub || req.user?.id;
       if (!id) throw new HttpError(401, "Unauthorized, login first");
 
       // get the data from body
