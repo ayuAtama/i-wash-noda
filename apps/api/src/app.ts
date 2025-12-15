@@ -33,7 +33,7 @@ export class App {
   private initializeCors() {
     this.app.use(
       cors({
-        origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001/",
+        origin: process.env.NEXT_PUBLIC_APP_URL,
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       })

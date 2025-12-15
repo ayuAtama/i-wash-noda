@@ -1,4 +1,5 @@
 import "express";
+import { AuthUser } from "@/types/auth";
 
 declare module "express" {
   interface Request {
@@ -18,5 +19,6 @@ declare module "express" {
       sub?: string;
       sid?: string;
     };
+    user?: AuthUser;
   }
 }
