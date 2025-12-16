@@ -15,6 +15,7 @@ import authUserRoutes from "@/routes/authUser.routes";
 
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import AddressRoute from "@/routes/address.routes";
 
 export class App {
   public app: Application;
@@ -25,6 +26,7 @@ export class App {
     this.initializeAuth();
     this.initializeMiddlewares();
     this.initializeUserAndAuth();
+    this.initializeAddressRoutes();
     this.initializeRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
@@ -52,6 +54,10 @@ export class App {
 
   private initializeUserAndAuth() {
     this.app.use("/api", authUserRoutes);
+  }
+
+  private initializeAddressRoutes() {
+    this.app.use("/api", AddressRoute);
   }
 
   private initializeRoutes() {
