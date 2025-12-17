@@ -87,6 +87,7 @@ model User {
   role           Role           @default(customer)
   worker_station WorkerStation?
   outlet_id      String?        @db.Uuid
+  is_deleted     Boolean        @default(false)
   //verified       Boolean        @default(false) use from better auth
   //created_at     DateTime       @default(now()) use from better auth
   //updated_at     DateTime       @updatedAt use from better auth
@@ -163,6 +164,7 @@ model UserAddress {
   lat        Decimal  @db.Decimal(10, 7)
   lng        Decimal  @db.Decimal(10, 7)
   is_default Boolean  @default(false)
+  is_deleted Boolean  @default(false)
   created_at DateTime @default(now())
 
   user User @relation(fields: [user_id], references: [id])
@@ -183,6 +185,7 @@ model Outlet {
   max_distance_km Int
   price_per_km    Int
   price_per_kg    Int
+  is_deleted      Boolean  @default(false)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
@@ -206,6 +209,7 @@ model WorkerShift {
   day_of_week WorkerShiftDay
   start_time  DateTime       @db.Time
   end_time    DateTime       @db.Time
+  is_deleted  Boolean        @default(false)
   created_at  DateTime       @default(now())
 
   //relations

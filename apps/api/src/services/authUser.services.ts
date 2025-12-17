@@ -13,6 +13,7 @@ import {
   sendEmailChangeVerification,
   sendPasswordResetEmail,
   sendVerificationEmail,
+  sendVerifyEmailbyAdmin,
 } from "@/utils/mail";
 import { signToken } from "@/utils/jwt";
 import { HttpError } from "@/utils/httpError";
@@ -23,10 +24,8 @@ import {
   formatDate,
   formatDistanceStrict,
 } from "date-fns";
-import { access } from "fs";
 import { validateMXRecord } from "@/utils/mxRecordValidatior";
-import { success } from "zod";
-import e from "express";
+import { Role } from "@/generated/prisma/client";
 
 export class AuthUserService {
   async register(data: Prisma.UserCreateInput) {
@@ -36,6 +35,72 @@ export class AuthUserService {
         throw new HttpError(400, "Invalid email format");
       }
 
+      // if role included (made by Admin)
+      if (data.role) {
+        const { result, userId, hashedToken, email, role } =
+          await prisma.$transaction(async (tx) => {
+            // 0. handle register error
+            const existingUserNotCompleted = await tx.user.findUnique({
+              where: {
+                email: data.email.toLocaleLowerCase().trim(),
+                password: null,
+                is_deleted: false,
+              },
+            });
+
+            if (existingUserNotCompleted) {
+              throw new HttpError(
+                409,
+                "User already exist but not completed registration"
+              );
+            }
+
+            // 0.5. check the email's domain (mx record)
+            const validDomain = await validateMXRecord(
+              data.email.toLocaleLowerCase().trim()
+            );
+            if (!validDomain) {
+              throw new HttpError(422, "Please retry with real email address");
+            }
+
+            // create user
+            const user = await tx.user.create({
+              data,
+            });
+
+            // Generate and store verification token
+            const token = generate6DigitCode();
+            const hashedToken = hashToken(token);
+
+            const hashedTokenRecord = await tx.verificationToken.create({
+              data: {
+                token: hashedToken,
+                user_id: user.id,
+                expires_at: addHours(new Date(), 1),
+              },
+            });
+
+            return {
+              result: { user },
+              userId: user.id,
+              hashedToken: hashedTokenRecord.token,
+              email: user.email,
+              role: user.role,
+            };
+          });
+
+        // email sending
+        await sendVerifyEmailbyAdmin(email, userId, hashedToken, role);
+
+        const finalData = {
+          ...result,
+          accessToken: null,
+        };
+
+        // return to controller
+        return finalData;
+      }
+
       // handle it using transaction
       const result = await prisma.$transaction(async (tx) => {
         // 0. handle register error
@@ -43,6 +108,7 @@ export class AuthUserService {
           where: {
             email: data.email.toLocaleLowerCase().trim(),
             password: null,
+            is_deleted: false,
           },
         });
 
@@ -62,10 +128,9 @@ export class AuthUserService {
         }
 
         // 1. create user
+        // receive role for admin make a user
         const user = await tx.user.create({
-          data: {
-            email: data.email.toLowerCase().trim(),
-          },
+          data,
         });
 
         // 2. Generate and store verification token
@@ -115,7 +180,7 @@ export class AuthUserService {
     }
   }
 
-  async verify(token: string, tempJwt: string) {
+  async verify(token: string, tempJwtEmail: string | null, userId?: string) {
     try {
       // check if token valid
       if (!token || token.length < 6) {
@@ -125,20 +190,15 @@ export class AuthUserService {
       //check if it is a hashed token
       const normalizedToken = token.length > 10 ? token : hashToken(token);
 
-      //get the user id from database
-      const user = await prisma.user.findUniqueOrThrow({
-        where: {
-          email: tempJwt,
-        },
-      });
-
       // check if token matched with hashed token in database
       const record = await prisma.verificationToken.findFirst({
         where: {
-          user_id: user.id,
           token: normalizedToken,
+          //user_id: userId,
+          ...(userId ? { user_id: userId } : {}), // by admin
           used: false,
           expires_at: { gt: new Date() },
+          ...(tempJwtEmail ? { user: { email: tempJwtEmail } } : {}), // by themself
         },
         include: {
           user: true,
