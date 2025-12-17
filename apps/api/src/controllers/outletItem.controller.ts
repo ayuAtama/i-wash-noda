@@ -22,7 +22,10 @@ export class OutletItemController {
         );
 
       // fetch it
-      const outletCoverage = await this.outletItemService.getAll(lat, lng);
+      const outletCoverage = await this.outletItemService.outletCoverage(
+        lat,
+        lng
+      );
 
       if (outletCoverage.length === 0) {
         throw new HttpError(
@@ -35,6 +38,94 @@ export class OutletItemController {
         success: true,
         message: "Outlet coverage fetched successfully",
         data: outletCoverage,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getAll = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const outlets = await this.outletItemService.getAll();
+      res.json({
+        success: true,
+        message: "Outlets fetched successfully",
+        data: outlets,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  createOutlet = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const role = req.access_token?.role ?? req.user?.role;
+      // more safety
+      if (role !== "super_admin") throw new HttpError(403, "Forbidden");
+      if (!userId) throw new HttpError(401, "Invalid user id");
+      const outlet = await this.outletItemService.createOutlet(
+        userId,
+        req.body
+      );
+      res.status(201).json({
+        success: true,
+        message: "Outlet created successfully",
+        data: outlet,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateOutlet = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.params.id || !req.body)
+      throw new HttpError(400, "Missing id or body");
+    const updateOutet = await this.outletItemService.updateOutet(
+      req.params.id,
+      req.body
+    );
+    res.status(200).json({
+      status: true,
+      message: "Outlet updated successfully",
+      data: updateOutet,
+    });
+  };
+
+  deleteOutlet = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.params.id) throw new HttpError(400, "Missing id");
+    const deletedOutlet = await this.outletItemService.deleteOutlet(
+      req.params.id
+    );
+    res.status(200).json({
+      status: true,
+      message: "Outlet deleted successfully",
+      data: deletedOutlet,
+    });
+  };
+
+  getAllItems = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const items = await this.outletItemService.getAllItems();
+      res.json({
+        success: true,
+        message: "Items fetched successfully",
+        data: items,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  createItem = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const item = await this.outletItemService.createItem({
+        name: req.body.name,
+      });
+      res.status(201).json({
+        success: true,
+        message: "Item created successfully",
+        data: item,
       });
     } catch (error) {
       next(error);

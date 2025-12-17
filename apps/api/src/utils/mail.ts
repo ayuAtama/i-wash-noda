@@ -95,3 +95,24 @@ export async function sendPasswordResetEmail(email: string, code: string) {
     `,
   });
 }
+
+// 6. Verify account made by admin (worker and driver)
+export async function sendVerifyEmailbyAdmin(
+  email: string,
+  userId: string,
+  hashedToken: string,
+  role: string
+) {
+  return sendMail({
+    to: email,
+    subject: `Verify Your ${role} Account`,
+    html: `
+      <h2>Verify Your Account</h2>
+      <p style="font-size: 20px; font-weight: bold;">
+      Click the link below to verify your account:</p>
+      <br/>
+      <a href="${baseUrl}/verify?token=${hashedToken}?userId=${userId}">Verify here!</a>
+      <p>This code expires in 1 hour.</p>
+    `,
+  });
+}

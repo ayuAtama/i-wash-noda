@@ -3,7 +3,8 @@ import type { Request, Response, NextFunction } from "express";
 import { AuthUserService } from "../services/authUser.services";
 import { HttpError } from "@/utils/httpError";
 import { addDays, addHours, addMinutes, addYears, format } from "date-fns";
-import { success } from "zod";
+import { isUserRole } from "@/types/role";
+import { verifyToken } from "@/utils/jwt";
 
 export class AuthUserController {
   private authUserService: AuthUserService;
@@ -14,10 +15,55 @@ export class AuthUserController {
 
   register = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // Register for another user (admin)
+      const jwtToken = req.cookies?.access_token;
+      const refreshToken = req.cookies?.refresh_token;
+      if (jwtToken || refreshToken) {
+        const decoded = await verifyToken(jwtToken);
+        if (!decoded)
+          throw new HttpError(401, "Token Expired, Please login first");
+        const userRole = decoded.role;
+
+        // Ensure role is valid
+        if (!isUserRole(userRole)) {
+          throw new HttpError(403, "Invalid role");
+        }
+
+        const canAssignRole =
+          userRole === "super_admin" || userRole === "outlet_admin";
+        // destructure only role and email
+        const { role, email } = req.body;
+
+        // Ensure role is valid
+        if (!isUserRole(role)) {
+          throw new HttpError(403, "Invalid role");
+        }
+
+        const registerPayload = {
+          email,
+          ...(canAssignRole && role ? { role } : {}),
+        };
+
+        const { user } = await this.authUserService.register(registerPayload);
+
+        // return response
+        return res.status(201).json({
+          message: "User registered. Verification email sent.",
+          "email verified": user.emailVerified,
+          role: registerPayload.role,
+        });
+      }
+
+      // register for new user (regular user (costumer))
+      // destructure only role and email
+      const { email } = req.body;
+      const payload = {
+        email: email,
+      };
+
       // create user + token
-      const { user, accessToken } = await this.authUserService.register(
-        req.body
-      );
+      const { user, accessToken } =
+        await this.authUserService.register(payload);
 
       // set the next step for continue registration (temp cookie)
       res.cookie("next_step", 1, {
@@ -51,18 +97,18 @@ export class AuthUserController {
     try {
       // store the hashed token from query or the raw token from body
       const token = req.query.token || req.body.token;
-
-      // get the decoded jwt from middleware
-      const tempJwt = req.temp_jwt?.email;
-      if (!tempJwt) throw new HttpError(400, "Missing temp jwt");
+      const userId = String(req.query.userId);
 
       //check if token is valid
       if (!token) {
         throw new HttpError(400, "Token required");
       }
 
+      // get the decoded jwt from middleware (for self register)
+      const tempJwtEmail = req.temp_jwt?.email ?? null;
+
       // verify the token
-      const result = await this.authUserService.verify(token, tempJwt);
+      const result = await this.authUserService.verify(token, tempJwtEmail, userId);
 
       // set the temp jwt for continue registration (temp cookie)
       res.cookie("temp_jwt", result.accessToken, {
