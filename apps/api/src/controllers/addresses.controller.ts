@@ -2,7 +2,6 @@
 import { AddressService } from "@/services/addresses.services";
 import { HttpError } from "@/utils/httpError";
 import type { Request, Response, NextFunction } from "express";
-import { success } from "zod";
 
 export class AddressController {
   private addressService: AddressService;

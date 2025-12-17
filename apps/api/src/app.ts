@@ -16,6 +16,7 @@ import authUserRoutes from "@/routes/authUser.routes";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import AddressRoute from "@/routes/address.routes";
+import OutletItemRoute from "./routes/outletItem.routes";
 
 export class App {
   public app: Application;
@@ -61,6 +62,7 @@ export class App {
   }
 
   private initializeRoutes() {
+    this.app.use("/api", OutletItemRoute);
     this.app.use("/users", userRoutes);
     //better-auth endpoints
     // this.app.use("/api/auth", authRoutes);
