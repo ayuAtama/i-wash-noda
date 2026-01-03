@@ -19,6 +19,7 @@ import AddressRoute from "@/routes/address.routes";
 import OutletItemRoute from "@/routes/outletItem.routes";
 import adminRoutes from "@/routes/admin.routes";
 import workerShiftRoutes from "@/routes/workerShift.routes";
+import pickupRequstRoutes from "./routes/pickupRequst.routes";
 
 export class App {
   public app: Application;
@@ -31,6 +32,7 @@ export class App {
     this.initializeAdminRoutes();
     this.initializeUserAndAuth();
     this.initializeAddressRoutes();
+    this.initializePickupRoutes();
     this.initializeRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
@@ -67,6 +69,10 @@ export class App {
   private initializeAdminRoutes() {
     this.app.use("/api/admin", adminRoutes);
     this.app.use("/api/admin", workerShiftRoutes); // test
+  }
+
+  private initializePickupRoutes() {
+    this.app.use("/api/", pickupRequstRoutes);
   }
 
   private initializeRoutes() {
