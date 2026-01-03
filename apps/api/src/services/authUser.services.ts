@@ -35,71 +35,71 @@ export class AuthUserService {
         throw new HttpError(400, "Invalid email format");
       }
 
-      // if role included (made by Admin)
-      if (data.role) {
-        const { result, userId, hashedToken, email, role } =
-          await prisma.$transaction(async (tx) => {
-            // 0. handle register error
-            const existingUserNotCompleted = await tx.user.findUnique({
-              where: {
-                email: data.email.toLocaleLowerCase().trim(),
-                password: null,
-                is_deleted: false,
-              },
-            });
+      // // if role included (made by Admin)
+      // if (data.role) {
+      //   const { result, userId, hashedToken, email, role } =
+      //     await prisma.$transaction(async (tx) => {
+      //       // 0. handle register error
+      //       const existingUserNotCompleted = await tx.user.findUnique({
+      //         where: {
+      //           email: data.email.toLocaleLowerCase().trim(),
+      //           password: null,
+      //           is_deleted: false,
+      //         },
+      //       });
 
-            if (existingUserNotCompleted) {
-              throw new HttpError(
-                409,
-                "User already exist but not completed registration"
-              );
-            }
+      //       if (existingUserNotCompleted) {
+      //         throw new HttpError(
+      //           409,
+      //           "User already exist but not completed registration"
+      //         );
+      //       }
 
-            // 0.5. check the email's domain (mx record)
-            const validDomain = await validateMXRecord(
-              data.email.toLocaleLowerCase().trim()
-            );
-            if (!validDomain) {
-              throw new HttpError(422, "Please retry with real email address");
-            }
+      //       // 0.5. check the email's domain (mx record)
+      //       const validDomain = await validateMXRecord(
+      //         data.email.toLocaleLowerCase().trim()
+      //       );
+      //       if (!validDomain) {
+      //         throw new HttpError(422, "Please retry with real email address");
+      //       }
 
-            // create user
-            const user = await tx.user.create({
-              data,
-            });
+      //       // create user
+      //       const user = await tx.user.create({
+      //         data,
+      //       });
 
-            // Generate and store verification token
-            const token = generate6DigitCode();
-            const hashedToken = hashToken(token);
+      //       // Generate and store verification token
+      //       const token = generate6DigitCode();
+      //       const hashedToken = hashToken(token);
 
-            const hashedTokenRecord = await tx.verificationToken.create({
-              data: {
-                token: hashedToken,
-                user_id: user.id,
-                expires_at: addHours(new Date(), 1),
-              },
-            });
+      //       const hashedTokenRecord = await tx.verificationToken.create({
+      //         data: {
+      //           token: hashedToken,
+      //           user_id: user.id,
+      //           expires_at: addHours(new Date(), 1),
+      //         },
+      //       });
 
-            return {
-              result: { user },
-              userId: user.id,
-              hashedToken: hashedTokenRecord.token,
-              email: user.email,
-              role: user.role,
-            };
-          });
+      //       return {
+      //         result: { user },
+      //         userId: user.id,
+      //         hashedToken: hashedTokenRecord.token,
+      //         email: user.email,
+      //         role: user.role,
+      //       };
+      //     });
 
-        // email sending
-        await sendVerifyEmailbyAdmin(email, userId, hashedToken, role);
+      //   // email sending
+      //   await sendVerifyEmailbyAdmin(email, userId, hashedToken, role);
 
-        const finalData = {
-          ...result,
-          accessToken: null,
-        };
+      //   const finalData = {
+      //     ...result,
+      //     accessToken: null,
+      //   };
 
-        // return to controller
-        return finalData;
-      }
+      //   // return to controller
+      //   return finalData;
+      // }
 
       // handle it using transaction
       const result = await prisma.$transaction(async (tx) => {
@@ -322,8 +322,20 @@ export class AuthUserService {
           },
         });
 
-        // resend the email to user
-        await sendVerificationEmail(user.email, rawToken, newToken.token);
+        // resend the email to user (self registered)
+        if (user.role === "customer") {
+          await sendVerificationEmail(user.email, rawToken, newToken.token);
+        }
+
+        // resend the email to user (admin registered)
+        if (user.role !== "customer") {
+          await sendVerifyEmailbyAdmin(
+            user.email,
+            user.id,
+            newToken.token,
+            user.role
+          );
+        }
 
         // make a temp access token to continue registration process
         const tokenPayload = {

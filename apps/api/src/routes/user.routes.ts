@@ -26,13 +26,17 @@ export class UserRoute {
 
     this.router.post(
       "/",
-      Validator.validate(UserValidation.CreateUserSchema),
+      Validator.validate({
+        body: UserValidation.CreateUserSchema,
+      }),
       this.controller.create
     );
 
     this.router.put(
       "/:id",
-      Validator.validate(UserValidation.UpdateUserSchema),
+      Validator.validate({
+        body: UserValidation.UpdateUserSchema,
+      }),
       this.controller.update
     );
 

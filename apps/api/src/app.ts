@@ -16,7 +16,9 @@ import authUserRoutes from "@/routes/authUser.routes";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import AddressRoute from "@/routes/address.routes";
-import OutletItemRoute from "./routes/outletItem.routes";
+import OutletItemRoute from "@/routes/outletItem.routes";
+import adminRoutes from "@/routes/admin.routes";
+import workerShiftRoutes from "@/routes/workerShift.routes";
 
 export class App {
   public app: Application;
@@ -26,6 +28,7 @@ export class App {
     this.initializeCors();
     this.initializeAuth();
     this.initializeMiddlewares();
+    this.initializeAdminRoutes();
     this.initializeUserAndAuth();
     this.initializeAddressRoutes();
     this.initializeRoutes();
@@ -59,6 +62,11 @@ export class App {
 
   private initializeAddressRoutes() {
     this.app.use("/api", AddressRoute);
+  }
+
+  private initializeAdminRoutes() {
+    this.app.use("/api/admin", adminRoutes);
+    this.app.use("/api/admin", workerShiftRoutes); // test
   }
 
   private initializeRoutes() {

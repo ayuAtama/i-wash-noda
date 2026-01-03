@@ -68,11 +68,16 @@ export async function authenticationMiddleware(
   next: NextFunction
 ) {
   try {
-    /* ===== JWT PATH ===== */
     // get the token from cookies
     const jwtToken = req.cookies?.access_token;
 
+    /* ===== JWT PATH ===== */
     if (jwtToken) {
+      // double check to prevent csrf attack
+      // const authorization = req.headers.authorization;
+      // if (authorization !== jwtToken) {
+      //   throw new HttpError(401, "Unauthorized");
+      // }
       // decode the token
       const decoded = await verifyToken(jwtToken);
       if (!decoded) throw new HttpError(401, "Unauthorized Please login first");
@@ -87,38 +92,38 @@ export async function authenticationMiddleware(
 
       // next middlewere
       return next();
+    } else {
+      /* ===== BETTER AUTH PATH ===== */
+
+      // get the session from better auth
+      const session = await auth.api.getSession({
+        headers: fromNodeHeaders(req.headers),
+      });
+
+      // throw error if the session and the jwt access token missing
+      if (!session) {
+        throw new HttpError(401, "Unauthorized Please login first");
+      }
+
+      // normalize the role
+      const { user } = session;
+      if (!isUserRole(user.role)) {
+        throw new HttpError(403, "Invalid role");
+      }
+
+      // attach the user data from session match into express' request
+      req.user = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        image: user.image ?? null,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+      return next();
     }
-
-    /* ===== BETTER AUTH PATH ===== */
-    // get the session from better auth
-    const session = await auth.api.getSession({
-      headers: fromNodeHeaders(req.headers),
-    });
-
-    // throw error if the session and the jwt access token missing
-    if (!session) {
-      throw new HttpError(401, "Unauthorized Please login first");
-    }
-
-    // normalize the role
-    const { user } = session;
-    if (!isUserRole(user.role)) {
-      throw new HttpError(403, "Invalid role");
-    }
-
-    // attach the user data from session match into express' request
-    req.user = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      emailVerified: user.emailVerified,
-      image: user.image ?? null,
-      role: user.role,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-
-    return next();
   } catch (error) {
     next(error);
   }

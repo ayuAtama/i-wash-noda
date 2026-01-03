@@ -1,5 +1,3 @@
-import { Decimal } from "@/generated/prisma/internal/prismaNamespace";
-
 export default function calculateDistance(
   lat1: number,
   lng1: number,
