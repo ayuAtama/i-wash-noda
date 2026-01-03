@@ -26,15 +26,15 @@ enum WorkerStation {
 }
 
 enum OrderStatus {
-  Menunggu_Penjemputan_Driver
-  Laundry_Sedang_Menuju_Outlet
-  Laundry_Telah_Sampai_Outlet
-  Laundry_Sedang_Dicuci
-  Laundry_Sedang_Disetrika
-  Laundry_Sedang_Dipacking
-  Menunggu_Pembayaran
-  Laundry_Sedang_Dikirim_Menuju_Customer
-  Laundry_Telah_Diterima_Customer
+  waiting_for_driver_pickup
+  in_transit_to_outlet
+  arrived_at_outlet
+  washing_in_progress
+  ironing_in_progress
+  packing_in_progrees
+  waiting_for_payment
+  out_for_delivery
+  delivered
 }
 
 enum StationName {
@@ -338,12 +338,12 @@ model OrderStationLog {
 model PickupRequest {
   id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @db.Uuid
-  driver_id  String   @db.Uuid
+  driver_id  String?  @db.Uuid
   accepted   Boolean  @default(false)
   created_at DateTime @default(now())
 
   order  Order @relation(fields: [order_id], references: [id])
-  driver User  @relation(fields: [driver_id], references: [id])
+  driver User? @relation(fields: [driver_id], references: [id])
 
   @@map("pickup_requests")
 }
@@ -355,12 +355,12 @@ model PickupRequest {
 model DeliveryRequest {
   id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @db.Uuid
-  driver_id  String   @db.Uuid
+  driver_id  String?  @db.Uuid
   accepted   Boolean  @default(false)
   created_at DateTime @default(now())
 
   order  Order @relation(fields: [order_id], references: [id])
-  driver User  @relation(fields: [driver_id], references: [id])
+  driver User? @relation(fields: [driver_id], references: [id])
 
   @@map("delivery_requests")
 }

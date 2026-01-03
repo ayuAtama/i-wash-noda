@@ -20,5 +20,10 @@ declare module "express" {
       sid?: string;
     };
     user?: AuthUser;
+    validated?: {
+      body?: unknown;
+      params?: unknown;
+      query?: unknown;
+    };
   }
 }

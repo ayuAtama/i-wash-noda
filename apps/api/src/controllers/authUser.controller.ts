@@ -16,47 +16,50 @@ export class AuthUserController {
   register = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Register for another user (admin)
-      const jwtToken = req.cookies?.access_token;
-      const refreshToken = req.cookies?.refresh_token;
-      if (jwtToken || refreshToken) {
-        const decoded = await verifyToken(jwtToken);
-        if (!decoded)
-          throw new HttpError(401, "Token Expired, Please login first");
-        const userRole = decoded.role;
+      // const jwtToken = req.cookies?.access_token;
+      // const refreshToken = req.cookies?.refresh_token;
+      // if (jwtToken || refreshToken) {
+      //   const decoded = await verifyToken(jwtToken);
+      //   if (!decoded)
+      //     throw new HttpError(401, "Token Expired, Please login first");
+      //   const userRole = decoded.role;
 
-        // Ensure role is valid
-        if (!isUserRole(userRole)) {
-          throw new HttpError(403, "Invalid role");
-        }
+      //   // Ensure role is valid
+      //   if (!isUserRole(userRole)) {
+      //     throw new HttpError(403, "Invalid role");
+      //   }
 
-        const canAssignRole =
-          userRole === "super_admin" || userRole === "outlet_admin";
-        // destructure only role and email
-        const { role, email } = req.body;
+      //   const canAssignRole =
+      //     userRole === "super_admin" || userRole === "outlet_admin";
+      //   // destructure only role and email
+      //   const { role, email } = req.body;
 
-        // Ensure role is valid
-        if (!isUserRole(role)) {
-          throw new HttpError(403, "Invalid role");
-        }
+      //   // Ensure role is valid
+      //   if (!isUserRole(role)) {
+      //     throw new HttpError(403, "Invalid role");
+      //   }
 
-        const registerPayload = {
-          email,
-          ...(canAssignRole && role ? { role } : {}),
-        };
+      //   const registerPayload = {
+      //     email,
+      //     ...(canAssignRole && role ? { role } : {}),
+      //   };
 
-        const { user } = await this.authUserService.register(registerPayload);
+      //   const { user } = await this.authUserService.register(registerPayload);
 
-        // return response
-        return res.status(201).json({
-          message: "User registered. Verification email sent.",
-          "email verified": user.emailVerified,
-          role: registerPayload.role,
-        });
-      }
+      //   // return response
+      //   return res.status(201).json({
+      //     message: "User registered. Verification email sent.",
+      //     "email verified": user.emailVerified,
+      //     role: registerPayload.role,
+      //   });
+      // }
 
       // register for new user (regular user (costumer))
       // destructure only role and email
       const { email } = req.body;
+      if (!email) {
+        throw new HttpError(400, "Email required");
+      }
       const payload = {
         email: email,
       };
@@ -97,7 +100,7 @@ export class AuthUserController {
     try {
       // store the hashed token from query or the raw token from body
       const token = req.query.token || req.body.token;
-      const userId = String(req.query.userId);
+      const userId = String(req.query.userId) ?? req.access_token?.sub;
 
       //check if token is valid
       if (!token) {
@@ -105,10 +108,14 @@ export class AuthUserController {
       }
 
       // get the decoded jwt from middleware (for self register)
-      const tempJwtEmail = req.temp_jwt?.email ?? null;
+      const tempJwtEmail = req.temp_jwt?.email ?? null; // null if verifying account created by admin
 
       // verify the token
-      const result = await this.authUserService.verify(token, tempJwtEmail, userId);
+      const result = await this.authUserService.verify(
+        token,
+        tempJwtEmail,
+        userId
+      );
 
       // set the temp jwt for continue registration (temp cookie)
       res.cookie("temp_jwt", result.accessToken, {

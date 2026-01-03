@@ -1,0 +1,28 @@
+import { z } from "zod";
+
+export const DayEnum = z.enum([
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+  "sun",
+]);
+
+export const StationNameEnum = z.enum(["washing", "ironing", "packing"]);
+
+export const ScheduleItemSchema = z.object({
+  day: DayEnum,
+  start: z.string().regex(/^\d{2}:\d{2}$/, "Invalid start time"),
+  end: z.string().regex(/^\d{2}:\d{2}$/, "Invalid end time"),
+});
+
+export const CreateWorkerShiftSchema = z.object({
+  outletId: z.uuid(),
+  workerId: z.uuid(),
+  station: StationNameEnum, // you can refine this to enum later
+  schedules: z
+    .array(ScheduleItemSchema)
+    .min(1, "At least one day must be selected"),
+});
