@@ -25,5 +25,8 @@ declare module "express" {
       params?: unknown;
       query?: unknown;
     };
+    context?: {
+      outlet_id?: string;
+    };
   }
 }

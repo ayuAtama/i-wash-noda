@@ -20,6 +20,7 @@ import OutletItemRoute from "@/routes/outletItem.routes";
 import adminRoutes from "@/routes/admin.routes";
 import workerShiftRoutes from "@/routes/workerShift.routes";
 import pickupRequstRoutes from "./routes/pickupRequst.routes";
+import pickupOrderRoutes from "./routes/pickupOrder.routes";
 
 export class App {
   public app: Application;
@@ -73,6 +74,7 @@ export class App {
 
   private initializePickupRoutes() {
     this.app.use("/api/", pickupRequstRoutes);
+    this.app.use("/api/", pickupOrderRoutes);
   }
 
   private initializeRoutes() {

@@ -47,7 +47,7 @@ export class PickupRequestController {
       const userId = req.user?.id ?? req.access_token?.sub;
       if (!userId) throw new HttpError(401, "Invalid user id");
 
-      // from frontend form
+      // from frontend form (from previous function)
       if(!req.body) throw new HttpError(400, "Missing body");
       const { addressId, outletId } = req.body;
       if (!addressId || !outletId)
