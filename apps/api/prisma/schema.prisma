@@ -167,7 +167,8 @@ model UserAddress {
   is_deleted Boolean  @default(false)
   created_at DateTime @default(now())
 
-  user User @relation(fields: [user_id], references: [id])
+  user   User    @relation(fields: [user_id], references: [id])
+  orders Order[]
 
   @@map("user_addresses")
 }
@@ -242,6 +243,7 @@ model Item {
 model Order {
   id                 String      @id @default(uuid()) @db.Uuid
   customer_id        String      @db.Uuid
+  pickup_address_id  String?     @db.Uuid
   outlet_id          String      @db.Uuid
   driver_pickup_id   String?     @db.Uuid
   driver_delivery_id String?     @db.Uuid
@@ -258,6 +260,7 @@ model Order {
 
   //relation
   customer         User                 @relation("CustomerOrders", fields: [customer_id], references: [id])
+  pickupAddress    UserAddress?         @relation(fields: [pickup_address_id], references: [id])
   outlet           Outlet               @relation(fields: [outlet_id], references: [id])
   items            OrderItem[]
   summary          StationSummary[]
@@ -266,7 +269,6 @@ model Order {
   pickupRequests   PickupRequest[]
   deliveryRequests DeliveryRequest[]
   transactions     PaymentTransaction[]
-  driverJobs       DriverJobStatus[]
   complaints       Complaint[]
 
   @@map("orders")
@@ -342,8 +344,9 @@ model PickupRequest {
   accepted   Boolean  @default(false)
   created_at DateTime @default(now())
 
-  order  Order @relation(fields: [order_id], references: [id])
-  driver User? @relation(fields: [driver_id], references: [id])
+  order             Order             @relation(fields: [order_id], references: [id])
+  driver            User?             @relation(fields: [driver_id], references: [id])
+  driverJobStatuses DriverJobStatus[]
 
   @@map("pickup_requests")
 }
@@ -359,8 +362,9 @@ model DeliveryRequest {
   accepted   Boolean  @default(false)
   created_at DateTime @default(now())
 
-  order  Order @relation(fields: [order_id], references: [id])
-  driver User? @relation(fields: [driver_id], references: [id])
+  order             Order             @relation(fields: [order_id], references: [id])
+  driver            User?             @relation(fields: [driver_id], references: [id])
+  driverJobStatuses DriverJobStatus[]
 
   @@map("delivery_requests")
 }
@@ -404,15 +408,19 @@ model PaymentTransaction {
 // -----------------------
 
 model DriverJobStatus {
-  id         String              @id @default(uuid()) @db.Uuid
-  driver_id  String              @db.Uuid
-  order_id   String              @db.Uuid
-  status     DriverJobStatusEnum
-  updated_at DateTime            @default(now())
+  id                  String              @id @default(uuid()) @db.Uuid
+  driver_id           String              @db.Uuid
+  pickup_request_id   String?             @db.Uuid
+  delivery_request_id String?             @db.Uuid
+  status              DriverJobStatusEnum
+  updated_at          DateTime            @default(now())
 
-  driver User  @relation(fields: [driver_id], references: [id])
-  order  Order @relation(fields: [order_id], references: [id])
+  driver          User             @relation(fields: [driver_id], references: [id])
+  pickupRequest   PickupRequest?   @relation(fields: [pickup_request_id], references: [id])
+  deliveryRequest DeliveryRequest? @relation(fields: [delivery_request_id], references: [id])
 
+  @@unique([pickup_request_id])
+  @@unique([delivery_request_id])
   @@map("driver_job_status")
 }
 

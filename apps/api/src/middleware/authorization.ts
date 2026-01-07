@@ -5,6 +5,7 @@ import { isUserRole } from "@/types/role";
 /**
  * Authorization middleware
  * @param allowedRoles - roles that are allowed to access the route
+ * super_admin, outlet_admin, worker, driver
  */
 export function authorizationMiddleware(...allowedRoles: string[]) {
   return (req: Request, _res: Response, next: NextFunction) => {

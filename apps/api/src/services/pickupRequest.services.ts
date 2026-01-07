@@ -62,9 +62,10 @@ export class PickupRequestService {
         // eliminate the outlets that are not within coverage
         .filter((outlet) => outlet.within_coverage);
       return {
-        withinCoverage,
         success: true,
         message: "Available outlets found",
+        withinCoverage,
+        address,
       };
     } catch (error) {
       throw error;
@@ -111,6 +112,7 @@ export class PickupRequestService {
         const order = await tx.order.create({
           data: {
             customer_id: user.id,
+            pickup_address_id: address.id,
             outlet_id: outlet.id,
             pickup_fee: pickupPrice,
             delivery_fee: deliverPrice,
