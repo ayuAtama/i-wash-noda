@@ -139,18 +139,46 @@ export class PickupOrderService {
     status: DriverJobStatusEnum
   ) {
     try {
-      // update status
-      const updateStatus = await prisma.driverJobStatus.update({
-        where: {
-          pickup_request_id: pickupOrderId,
-          driver_id: userId,
-        },
-        data: {
-          status,
-        },
+      // run all db operations in a single transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // update status
+        const updateStatus = await tx.driverJobStatus.update({
+          where: {
+            pickup_request_id: pickupOrderId,
+            driver_id: userId,
+          },
+          data: {
+            status,
+          },
+        });
+
+        // update the order status if the status is done
+        if (status === "done") {
+          // fetch the order id
+          const order = await tx.pickupRequest.findUnique({
+            where: {
+              id: pickupOrderId,
+              driver_id: userId,
+            },
+          });
+
+          // update the order status into arrived at outlet
+          if (order?.order_id) {
+            await tx.order.update({
+              where: {
+                id: order.order_id,
+              },
+              data: {
+                status: "arrived_at_outlet",
+              },
+            });
+          }
+        }
+
+        return updateStatus;
       });
 
-      return updateStatus;
+      return result;
     } catch (error) {
       throw error;
     }
