@@ -40,7 +40,7 @@ export class PickupOrderRoute {
 
   private listJobs() {
     this.router.get(
-      "/alamak",
+      "/pickup-request/jobs",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,

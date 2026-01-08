@@ -102,7 +102,11 @@ export class PickupOrderController {
         pickupRequestId,
         status
       );
-      res.status(200).json({ result });
+      res.status(200).json({
+        status: "success",
+        message: "Job status updated successfully",
+        result,
+      });
     } catch (error) {
       next(error);
     }
