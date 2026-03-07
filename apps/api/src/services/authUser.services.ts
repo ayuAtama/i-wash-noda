@@ -115,13 +115,13 @@ export class AuthUserService {
         if (existingUserNotCompleted) {
           throw new HttpError(
             409,
-            "User already exist but not completed registration"
+            "User already exist but not completed registration",
           );
         }
 
         // 0.5. check the email's domain (mx record)
         const validDomain = await validateMXRecord(
-          data.email.toLocaleLowerCase().trim()
+          data.email.toLocaleLowerCase().trim(),
         );
         if (!validDomain) {
           throw new HttpError(422, "Please retry with real email address");
@@ -152,7 +152,7 @@ export class AuthUserService {
       await sendVerificationEmail(
         result.user.email,
         result.token,
-        result.hashedToken
+        result.hashedToken,
       );
 
       // make a temp access token to continue registration process
@@ -161,7 +161,7 @@ export class AuthUserService {
         email: result.user.email,
       };
       // sign the access token using jose (register)
-      const accessToken = await signToken(tokenPayload, "365d");
+      const accessToken = await signToken(tokenPayload, "15m");
 
       // finaldata
       const finalData = {
@@ -238,7 +238,7 @@ export class AuthUserService {
         email: record.user.email,
       };
       // sign the access token using jose (verify)
-      const accessToken = await signToken(tokenPayload, "365d");
+      const accessToken = await signToken(tokenPayload, "15m");
 
       // return the result into controller
       return {
@@ -290,7 +290,7 @@ export class AuthUserService {
         if (existingToken) {
           const secondsSinceLastToken = differenceInSeconds(
             new Date(),
-            existingToken.created_at
+            existingToken.created_at,
           );
 
           // Example limit: 60 seconds between sends
@@ -298,7 +298,7 @@ export class AuthUserService {
             const wait = 60 - secondsSinceLastToken;
             throw new HttpError(
               429,
-              `Please wait ${formatDistanceStrict(0, wait * 1000)} before requesting another verification email.`
+              `Please wait ${formatDistanceStrict(0, wait * 1000)} before requesting another verification email.`,
             );
           }
 
@@ -333,7 +333,7 @@ export class AuthUserService {
             user.email,
             user.id,
             newToken.token,
-            user.role
+            user.role,
           );
         }
 
@@ -343,7 +343,7 @@ export class AuthUserService {
           email: user.email,
         };
         // sign the access token using jose(resend)
-        const accessToken = await signToken(tokenPayload, "365d");
+        const accessToken = await signToken(tokenPayload, "15m");
 
         // return the result into controller
         return {
@@ -361,7 +361,7 @@ export class AuthUserService {
           email: user.email,
         };
         // sign the access token using jose(resend)
-        const accessToken = await signToken(tokenPayload, "365d");
+        const accessToken = await signToken(tokenPayload, "15m");
 
         // return the result into controller
         return {
@@ -393,7 +393,7 @@ export class AuthUserService {
     },
     email: string,
     data: Prisma.UserCreateInput,
-    userAgent: string | null
+    userAgent: string | null,
   ) {
     try {
       // temp_jwt check
@@ -449,7 +449,7 @@ export class AuthUserService {
 
           // return the result
           return { updatedUser, sessionId };
-        }
+        },
       );
 
       // make a full jwt access token
@@ -457,6 +457,7 @@ export class AuthUserService {
         sub: updatedUser.id,
         email: updatedUser.email,
         role: updatedUser.role,
+        outlet_id: updatedUser.outlet_id,
       };
 
       const accessToken = await signToken(accessTokenPayload, "15m");
@@ -510,7 +511,7 @@ export class AuthUserService {
     email: string,
     password: string,
     userAgent: string | null,
-    ip: string
+    ip: string,
   ) {
     try {
       // check if there're the user and password first
@@ -540,7 +541,7 @@ export class AuthUserService {
       // check if the password match with the database
       const isPasswordMatch = comparePassword(
         userPassword,
-        updateData.password
+        updateData.password,
       );
 
       // throw error if the password not match
@@ -576,6 +577,7 @@ export class AuthUserService {
         sub: updateData.id,
         email: updateData.email,
         role: updateData.role,
+        outlet_id: updateData.outlet_id,
       };
       const accessToken = await signToken(accessTokenPayload, "15m");
 
@@ -735,7 +737,7 @@ export class AuthUserService {
     jwt_email: string,
     email: string,
     verificationToken: string,
-    password: string
+    password: string,
   ) {
     try {
       // check if the email valid and match with jwt email
@@ -941,7 +943,7 @@ export class AuthUserService {
     jwt_email: string,
     newEmail: string,
     oldEmail: string,
-    verificationToken: string
+    verificationToken: string,
   ) {
     try {
       //log temp

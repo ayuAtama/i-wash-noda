@@ -14,6 +14,7 @@ declare module "express" {
       sub?: string;
       email?: string;
       role?: string;
+      outlet_id?: string;
     };
     refresh_token?: import("jose").JWTPayload & {
       sub?: string;

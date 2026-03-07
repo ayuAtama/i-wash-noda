@@ -5,6 +5,8 @@ import { authorizationMiddleware } from "@/middleware/authorization";
 import { resolveContext } from "@/middleware/resolveContext";
 import { PickupOrderService } from "@/services/pickupOrder.services";
 import { Router } from "express";
+import { Validator } from "@/middleware/validate";
+import { PickupOrderValidation } from "@/validations/pickupOrder.validation";
 
 export class PickupOrderRoute {
   public router = Router();
@@ -24,7 +26,7 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.getAllPickupRequests
+      this.controller.getAllPickupRequests,
     );
   }
 
@@ -34,7 +36,7 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.acceptPickupRequest
+      this.controller.acceptPickupRequest,
     );
   }
 
@@ -44,7 +46,7 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.getAcceptedPickupRequests
+      this.controller.getAcceptedPickupRequests,
     );
   }
 
@@ -54,7 +56,10 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.updateStatus
+      Validator.validate({
+        body: PickupOrderValidation.UpdateStatusSchema,
+      }),
+      this.controller.updateStatus,
     );
   }
 }

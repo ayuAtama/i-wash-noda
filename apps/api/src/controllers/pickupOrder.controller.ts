@@ -14,7 +14,7 @@ export class PickupOrderController {
   getAllPickupRequests = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const outletId = req.context?.outlet_id;
@@ -34,7 +34,7 @@ export class PickupOrderController {
   acceptPickupRequest = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const pickupRequestId = req.params.id;
@@ -49,7 +49,7 @@ export class PickupOrderController {
         await this.pickupOrderService.acceptPickupRequest(
           outletId,
           pickupRequestId,
-          userId
+          userId,
         );
       res.status(200).json({
         success: success,
@@ -64,7 +64,7 @@ export class PickupOrderController {
   getAcceptedPickupRequests = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const userId = req.access_token?.sub;
@@ -75,7 +75,7 @@ export class PickupOrderController {
 
       const result = await this.pickupOrderService.getAcceptedPickupRequests(
         userId,
-        outletId
+        outletId,
       );
       res.status(200).json({
         status: "success",
@@ -91,7 +91,9 @@ export class PickupOrderController {
     try {
       const pickupRequestId = req.params.id;
       const userId = req.access_token?.sub;
-      const status = req.body.status;
+      const validatedBody = req.validated?.body as { status?: string };
+      const status = validatedBody?.status;
+
       if (!userId) throw new HttpError(401, "User id not found");
       if (!pickupRequestId)
         throw new HttpError(400, "Pickup request id not found");
@@ -100,7 +102,7 @@ export class PickupOrderController {
       const result = await this.pickupOrderService.upateStatusDriver(
         userId,
         pickupRequestId,
-        status
+        status as any,
       );
       res.status(200).json({
         status: "success",

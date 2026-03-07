@@ -25,13 +25,13 @@ export class AdminService {
           if (existingUserNotCompleted) {
             throw new HttpError(
               409,
-              "User already exist but not completed registration"
+              "User already exist but not completed registration",
             );
           }
 
           // 0.5. check the email's domain (mx record)
           const validDomain = await validateMXRecord(
-            data.email.toLocaleLowerCase().trim()
+            data.email.toLocaleLowerCase().trim(),
           );
           if (!validDomain) {
             throw new HttpError(422, "Please retry with real email address");
@@ -71,26 +71,74 @@ export class AdminService {
     }
   }
 
-  async deleteUser(id: string) {
+  async deleteUser(id: string, adminRole: string, adminOutletId?: string) {
     try {
+      const userToDelete = await prisma.user.findUnique({
+        where: { id },
+        select: { role: true, outlet_id: true },
+      });
+
+      if (!userToDelete) {
+        throw new HttpError(404, "User not found");
+      }
+
+      if (adminRole === "outlet_admin" && userToDelete.role === "super_admin") {
+        throw new HttpError(403, "Cannot delete super_admin");
+      }
+
+      if (
+        adminRole === "outlet_admin" &&
+        userToDelete.outlet_id !== adminOutletId
+      ) {
+        throw new HttpError(403, "Cannot delete users from other outlets");
+      }
+
       return await prisma.user.update({
-        where: { id: id },
+        where: { id },
         data: { is_deleted: true },
         select: { id: true, name: true, email: true },
       });
     } catch (error) {
+      if (error instanceof HttpError) throw error;
       throw error;
     }
   }
 
-  async changeRole(userId: string, role: Role) {
+  async changeRole(
+    userId: string,
+    role: Role,
+    adminRole: string,
+    adminOutletId?: string,
+  ) {
     try {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true, outlet_id: true },
+      });
+
+      if (!targetUser) {
+        throw new HttpError(404, "User not found");
+      }
+
+      if (adminRole === "outlet_admin") {
+        if (role === "super_admin" || role === "outlet_admin") {
+          throw new HttpError(
+            403,
+            "outlet_admin cannot assign super_admin or outlet_admin roles",
+          );
+        }
+        if (targetUser.outlet_id !== adminOutletId) {
+          throw new HttpError(403, "Cannot modify users from other outlets");
+        }
+      }
+
       return await prisma.user.update({
         where: { id: userId },
-        data: { role: role },
+        data: { role },
         select: { id: true, name: true, email: true, role: true },
       });
     } catch (error) {
+      if (error instanceof HttpError) throw error;
       throw error;
     }
   }

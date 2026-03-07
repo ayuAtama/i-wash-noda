@@ -27,8 +27,19 @@ export const resendOTPEndpointRateLimiter = rateLimit({
 
 export const commpleteRegisterEndpointRateLimiter = rateLimit({
   windowMs: ms("1m"),
-  max: 3  ,
+  max: 3,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
+});
+
+export const loginEndpointRateLimiter = rateLimit({
+  windowMs: ms("15m"),
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, please try again later." },
+  keyGenerator: (req) => {
+    return req.ip || req.socket.remoteAddress || "unknown";
+  },
 });

@@ -20,15 +20,22 @@ export class WorkerShiftRoute {
   private createSchedule() {
     this.router.post(
       "/schedule",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
       Validator.validate({
         body: CreateWorkerShiftSchema,
       }),
-      this.controller.createSchedule
+      this.controller.createSchedule,
     );
   }
 
   private getSchedule() {
-    this.router.get("/schedule/:id", this.controller.getScheduleById);
+    this.router.get(
+      "/schedule/:id",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin", "worker"),
+      this.controller.getScheduleById,
+    );
   }
 }
 

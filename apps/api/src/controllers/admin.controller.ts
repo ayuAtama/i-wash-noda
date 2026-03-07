@@ -33,7 +33,7 @@ export class AdminController {
       ) {
         throw new HttpError(
           403,
-          "Forbidden, only super_admin can create outlet_admin or super_admin"
+          "Forbidden, only super_admin can create outlet_admin or super_admin",
         );
       }
 
@@ -64,11 +64,19 @@ export class AdminController {
 
   changeRole = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const userRole = (req.user?.role ?? req.access_token?.role) as string;
+      const userOutletId = req.access_token?.outlet_id as string | undefined;
+
       const { userId, role } = req.body;
       if (!userId || !role) {
         throw new HttpError(400, "Missing userId or role");
       }
-      const result = await this.adminService.changeRole(userId, role);
+      const result = await this.adminService.changeRole(
+        userId,
+        role,
+        userRole,
+        userOutletId,
+      );
       return res.status(200).json({
         message: "Role changed successfully",
         data: result,
@@ -80,11 +88,18 @@ export class AdminController {
 
   removeUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const userRole = (req.user?.role ?? req.access_token?.role) as string;
+      const userOutletId = req.access_token?.outlet_id as string | undefined;
+
       const { userId } = req.body;
       if (!userId) {
         throw new HttpError(400, "Missing userId");
       }
-      const result = await this.adminService.deleteUser(userId);
+      const result = await this.adminService.deleteUser(
+        userId,
+        userRole,
+        userOutletId,
+      );
       return res.status(200).json({
         message: "User removed successfully",
         data: result,

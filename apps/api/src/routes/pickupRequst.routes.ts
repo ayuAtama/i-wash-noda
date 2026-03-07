@@ -4,6 +4,8 @@ import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { PickupRequestService } from "@/services/pickupRequest.services";
 import { Router } from "express";
+import { Validator } from "@/middleware/validate";
+import { PickupRequestValidation } from "@/validations/pickupRequest.validation";
 
 export class PickupRequestRoute {
   public router = Router();
@@ -21,7 +23,7 @@ export class PickupRequestRoute {
       "/check/pickup-request",
       authenticationMiddleware,
       authorizationMiddleware("customer"),
-      this.controller.checkAddressFirst
+      this.controller.checkAddressFirst,
     );
   }
 
@@ -30,7 +32,10 @@ export class PickupRequestRoute {
       "/pickup-request",
       authenticationMiddleware,
       authorizationMiddleware("customer"),
-      this.controller.createPickupRequest
+      Validator.validate({
+        body: PickupRequestValidation.CreatePickupRequestSchema,
+      }),
+      this.controller.createPickupRequest,
     );
   }
 }
