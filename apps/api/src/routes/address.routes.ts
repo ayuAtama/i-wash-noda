@@ -1,7 +1,6 @@
 import { AddressController } from "@/controllers/addresses.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { AddressService } from "@/services/addresses.services";
-import { auth } from "@/utils/auth";
 import { Router } from "express";
 
 export class AddressRoute {
@@ -21,7 +20,7 @@ export class AddressRoute {
     this.router.get(
       "/addresses",
       authenticationMiddleware,
-      this.controller.getAll
+      this.controller.getAll,
     );
   }
 
@@ -29,7 +28,7 @@ export class AddressRoute {
     this.router.post(
       "/addresses",
       authenticationMiddleware,
-      this.controller.create
+      this.controller.create,
     );
   }
 
@@ -37,7 +36,7 @@ export class AddressRoute {
     this.router.put(
       "/addresses/:id",
       authenticationMiddleware,
-      this.controller.update
+      this.controller.update,
     );
   }
 
@@ -45,7 +44,7 @@ export class AddressRoute {
     this.router.delete(
       "/addresses/:id",
       authenticationMiddleware,
-      this.controller.delete
+      this.controller.delete,
     );
   }
 
@@ -53,7 +52,7 @@ export class AddressRoute {
     this.router.post(
       "/addresses/:id/set-default",
       authenticationMiddleware,
-      this.controller.setDefault
+      this.controller.setDefault,
     );
   }
 }

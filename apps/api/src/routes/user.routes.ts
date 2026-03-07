@@ -29,7 +29,7 @@ export class UserRoute {
       Validator.validate({
         body: UserValidation.CreateUserSchema,
       }),
-      this.controller.create
+      this.controller.create,
     );
 
     this.router.put(
@@ -37,7 +37,7 @@ export class UserRoute {
       Validator.validate({
         body: UserValidation.UpdateUserSchema,
       }),
-      this.controller.update
+      this.controller.update,
     );
 
     this.router.delete("/:id", this.controller.delete);
