@@ -25,13 +25,13 @@ export class AdminService {
           if (existingUserNotCompleted) {
             throw new HttpError(
               409,
-              "User already exist but not completed registration"
+              "User already exist but not completed registration",
             );
           }
 
           // 0.5. check the email's domain (mx record)
           const validDomain = await validateMXRecord(
-            data.email.toLocaleLowerCase().trim()
+            data.email.toLocaleLowerCase().trim(),
           );
           if (!validDomain) {
             throw new HttpError(422, "Please retry with real email address");

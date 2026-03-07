@@ -5,6 +5,7 @@ import { HttpError } from "@/utils/httpError";
 import { addDays, addHours, addMinutes, addYears, format } from "date-fns";
 import { isUserRole } from "@/types/role";
 import { verifyToken } from "@/utils/jwt";
+import { RegisterDto } from "@/validations/auth.validation";
 
 export class AuthUserController {
   private authUserService: AuthUserService;
@@ -56,13 +57,12 @@ export class AuthUserController {
 
       // register for new user (regular user (costumer))
       // destructure only role and email
-      const { email } = req.body;
-      if (!email) {
+
+      // validate request body from validation midleware zod
+      const payload = req.validated?.body as RegisterDto;
+      if (!payload.email) {
         throw new HttpError(400, "Email required");
       }
-      const payload = {
-        email: email,
-      };
 
       // create user + token
       const { user, accessToken } =

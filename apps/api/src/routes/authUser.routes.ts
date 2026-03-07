@@ -11,6 +11,8 @@ import {
 } from "@/middleware/rateLimitter";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { refreshTokenMiddleware } from "@/middleware/refreshToken";
+import { Validator } from "@/middleware/validate";
+import { AuthValidation } from "@/validations/auth.validation";
 
 export class AuthUserRoute {
   public router = Router();
@@ -30,24 +32,27 @@ export class AuthUserRoute {
     this.router.post(
       "/register",
       registerEndpointRateLimiter,
-      this.controller.register
+      Validator.validate({
+        body: AuthValidation.RegisterSchema,
+      }),
+      this.controller.register,
     );
     this.router.post(
       "/verify",
       verifyOTPEndpointRateLimiter,
       requireStep(1),
-      this.controller.verify
+      this.controller.verify,
     );
     this.router.post(
       "/complete-register",
       commpleteRegisterEndpointRateLimiter,
       requireStep(2),
-      this.controller.completeRegistration
+      this.controller.completeRegistration,
     );
     this.router.post(
       "/resend",
       resendOTPEndpointRateLimiter,
-      this.controller.resendVerification
+      this.controller.resendVerification,
     );
   }
 
@@ -55,7 +60,7 @@ export class AuthUserRoute {
     this.router.get(
       "/logout",
       authenticationMiddleware,
-      this.controller.logout
+      this.controller.logout,
     );
   }
 
@@ -67,7 +72,7 @@ export class AuthUserRoute {
     this.router.get(
       "/refresh",
       refreshTokenMiddleware,
-      this.controller.refresh
+      this.controller.refresh,
     );
   }
 
@@ -76,7 +81,7 @@ export class AuthUserRoute {
     this.router.post(
       "/reset-confirm",
       requireStep(69),
-      this.controller.setResetPassword
+      this.controller.setResetPassword,
     );
   }
 
@@ -86,13 +91,13 @@ export class AuthUserRoute {
     this.router.post(
       "/change-email-request",
       authenticationMiddleware,
-      this.controller.emailChangeRequest
+      this.controller.emailChangeRequest,
     );
     this.router.put(
       "/change-email",
       requireStep(67),
       authenticationMiddleware,
-      this.controller.setNewEmail
+      this.controller.setNewEmail,
     );
   }
 }

@@ -4,7 +4,7 @@ import "zod-openapi";
 export class AuthValidation {
   static RegisterSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "User email address",
         example: "user@example.com",
       }),
@@ -34,7 +34,7 @@ export class AuthValidation {
 
   static CompleteRegisterSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "User email address",
         example: "user@example.com",
       }),
@@ -69,7 +69,7 @@ export class AuthValidation {
 
   static LoginSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "User email address",
         example: "user@example.com",
       }),
@@ -89,7 +89,7 @@ export class AuthValidation {
 
   static ResendSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "User email address",
         example: "user@example.com",
       }),
@@ -104,7 +104,7 @@ export class AuthValidation {
 
   static ResetRequestSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "User email address",
         example: "user@example.com",
       }),
@@ -119,7 +119,7 @@ export class AuthValidation {
 
   static ResetConfirmSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "User email address",
         example: "user@example.com",
       }),
@@ -164,7 +164,7 @@ export class AuthValidation {
 
   static EmailChangeRequestSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "New email address",
         example: "newemail@example.com",
       }),
@@ -179,7 +179,7 @@ export class AuthValidation {
 
   static EmailChangeConfirmSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "New email address",
         example: "newemail@example.com",
       }),
