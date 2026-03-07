@@ -27,6 +27,7 @@ declare module "express" {
     };
     context?: {
       outlet_id?: string;
+      worker_station?: string;
     };
   }
 }
