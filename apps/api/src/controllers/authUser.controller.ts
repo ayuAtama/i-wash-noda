@@ -72,7 +72,7 @@ export class AuthUserController {
       res.cookie("next_step", 1, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addYears(new Date(), 1), // (1 year)
         path: "/",
       });
@@ -81,7 +81,7 @@ export class AuthUserController {
       res.cookie("temp_jwt", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addYears(new Date(), 1), // (1 years)
         path: "/",
       });
@@ -114,14 +114,14 @@ export class AuthUserController {
       const result = await this.authUserService.verify(
         token,
         tempJwtEmail,
-        userId
+        userId,
       );
 
       // set the temp jwt for continue registration (temp cookie)
       res.cookie("temp_jwt", result.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addYears(new Date(), 1), // (1 hour)
         path: "/",
       });
@@ -130,7 +130,7 @@ export class AuthUserController {
       res.cookie("next_step", 2, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addYears(new Date(), 1), // (1 year)
         path: "/",
       });
@@ -148,7 +148,7 @@ export class AuthUserController {
   resendVerification = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const email = req.body.email;
@@ -166,7 +166,7 @@ export class AuthUserController {
         res.cookie("next_step", 1, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "none", // cross-site cookie
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
           expires: addYears(new Date(), 1), // (1 year)
           path: "/",
         });
@@ -175,7 +175,7 @@ export class AuthUserController {
         res.cookie("temp_jwt", accessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "none", // cross-site cookie
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
           expires: addYears(new Date(), 1), // (1 years)
           path: "/",
         });
@@ -192,7 +192,7 @@ export class AuthUserController {
         res.cookie("temp_jwt", accessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "none", // cross-site cookie
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
           expires: addYears(new Date(), 1), // (1 years)
           path: "/",
         });
@@ -201,7 +201,7 @@ export class AuthUserController {
         res.cookie("next_step", 2, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "none", // cross-site cookie
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
           expires: addYears(new Date(), 1), // (1 year)
           path: "/",
         });
@@ -218,7 +218,7 @@ export class AuthUserController {
   completeRegistration = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       // get the decoded jwt from middleware
@@ -246,7 +246,7 @@ export class AuthUserController {
           tempJwt,
           email,
           payload,
-          userAgent
+          userAgent,
         );
 
       // set the next step to empty for finishing registration (temp cookie)
@@ -259,7 +259,7 @@ export class AuthUserController {
       res.cookie("access_token", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addMinutes(new Date(), 30), // (30 minutes)
         path: "/",
       });
@@ -267,7 +267,7 @@ export class AuthUserController {
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addDays(new Date(), 7), // (7 days)
         path: "/",
       });
@@ -330,7 +330,7 @@ export class AuthUserController {
       res.cookie("access_token", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addMinutes(new Date(), 30), // (30 minutes)
         path: "/",
       });
@@ -339,7 +339,7 @@ export class AuthUserController {
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addDays(new Date(), 7), // (7 days)
         path: "/",
       });
@@ -379,7 +379,7 @@ export class AuthUserController {
       res.cookie("access_token", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none", // cross-site cookie
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-site cookie
         expires: addMinutes(new Date(), 30), // (30 minutes)
         path: "/",
       });
@@ -388,7 +388,7 @@ export class AuthUserController {
       res.cookie("refresh_token", newRefreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         expires: addDays(new Date(), 7),
         path: "/",
       });
@@ -406,7 +406,7 @@ export class AuthUserController {
   resetPasswordRequest = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       // grab and check the email
@@ -420,7 +420,7 @@ export class AuthUserController {
       res.cookie("next_step", 69, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         expires: addYears(new Date(), 1),
         path: "/",
       });
@@ -429,7 +429,7 @@ export class AuthUserController {
       res.cookie("temp_jwt", result.tempJwt, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         expires: addYears(new Date(), 1),
         path: "/",
       });
@@ -447,7 +447,7 @@ export class AuthUserController {
   setResetPassword = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       // get the decoded jwt from middleware
@@ -456,7 +456,7 @@ export class AuthUserController {
       if (!temp_jwt || !next_step) {
         throw new HttpError(
           401,
-          "Unauthorized, verify your reset password link first at your email"
+          "Unauthorized, verify your reset password link first at your email",
         );
       }
 
@@ -474,7 +474,7 @@ export class AuthUserController {
         jwt_email,
         email,
         token,
-        password
+        password,
       );
 
       // clear all unused temp cookie
@@ -534,7 +534,7 @@ export class AuthUserController {
   emailChangeRequest = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       // get the decoded userid from middleware
@@ -556,7 +556,7 @@ export class AuthUserController {
       res.cookie("next_step", 67, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         expires: addYears(new Date(), 1),
         path: "/",
       });
@@ -565,7 +565,7 @@ export class AuthUserController {
       res.cookie("temp_jwt", tempJwt, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         expires: addYears(new Date(), 1),
         path: "/",
       });
@@ -586,7 +586,7 @@ export class AuthUserController {
       if (!temp_jwt)
         throw new HttpError(
           401,
-          "Unauthorized, verify your new email link first at your email"
+          "Unauthorized, verify your new email link first at your email",
         );
       if (!access_token) throw new HttpError(401, "Unauthorized, login first");
 
@@ -607,7 +607,7 @@ export class AuthUserController {
         jwt_email,
         newEmail,
         oldEmail,
-        token
+        token,
       );
 
       // reset cookies
