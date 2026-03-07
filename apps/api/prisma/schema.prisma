@@ -105,6 +105,11 @@ model User {
   approvedLogs   OrderStationLog[]    @relation("ApprovedByRelation")
   driverJobs     DriverJobStatus[]
   complaints     Complaint[]
+  pickupOrders   Order[]              @relation("PickupDriver")
+  deliveryOrders Order[]              @relation("DeliveryDriver")
+  washingOrders  Order[]              @relation("WashingWorker")
+  ironingOrders  Order[]              @relation("IroningWorker")
+  packingOrders  Order[]              @relation("PackingWorker")
 
   emailVerified Boolean   @default(false)
   image         String?
@@ -241,25 +246,36 @@ model Item {
 // -----------------------
 
 model Order {
-  id                 String      @id @default(uuid()) @db.Uuid
-  customer_id        String      @db.Uuid
-  pickup_address_id  String?     @db.Uuid
-  outlet_id          String      @db.Uuid
-  driver_pickup_id   String?     @db.Uuid
-  driver_delivery_id String?     @db.Uuid
-  pickup_fee         Int
-  delivery_fee       Int
-  laundry_price      Int
-  total_amount       Int
-  total_kilo         Decimal     @db.Decimal(5, 2)
-  confirmed_at       DateTime?
-  status             OrderStatus
-  paid               Boolean     @default(false)
-  created_at         DateTime    @default(now())
-  updated_at         DateTime    @updatedAt
+  id                   String      @id @default(uuid()) @db.Uuid
+  customer_id          String      @db.Uuid
+  pickup_address_id    String?     @db.Uuid
+  outlet_id            String      @db.Uuid
+  driver_pickup_id     String?     @db.Uuid
+  driver_delivery_id   String?     @db.Uuid
+  washing_worker_id    String?     @db.Uuid
+  ironing_worker_id    String?     @db.Uuid
+  packing_worker_id    String?     @db.Uuid
+  washing_completed_at DateTime?
+  ironing_completed_at DateTime?
+  packing_completed_at DateTime?
+  pickup_fee           Int
+  delivery_fee         Int
+  laundry_price        Int
+  total_amount         Int
+  total_kilo           Decimal     @db.Decimal(5, 2)
+  confirmed_at         DateTime?
+  status               OrderStatus
+  paid                 Boolean     @default(false)
+  created_at           DateTime    @default(now())
+  updated_at           DateTime    @updatedAt
 
   //relation
   customer         User                 @relation("CustomerOrders", fields: [customer_id], references: [id])
+  pickupDriver     User?                @relation("PickupDriver", fields: [driver_pickup_id], references: [id])
+  deliveryDriver   User?                @relation("DeliveryDriver", fields: [driver_delivery_id], references: [id])
+  washingWorker    User?                @relation("WashingWorker", fields: [washing_worker_id], references: [id])
+  ironingWorker    User?                @relation("IroningWorker", fields: [ironing_worker_id], references: [id])
+  packingWorker    User?                @relation("PackingWorker", fields: [packing_worker_id], references: [id])
   pickupAddress    UserAddress?         @relation(fields: [pickup_address_id], references: [id])
   outlet           Outlet               @relation(fields: [outlet_id], references: [id])
   items            OrderItem[]
@@ -305,6 +321,7 @@ model StationSummary {
   order Order @relation(fields: [order_id], references: [id])
   item  Item  @relation(fields: [item_id], references: [id])
 
+  @@unique([order_id, item_id, station])
   @@map("station_summary")
 }
 
