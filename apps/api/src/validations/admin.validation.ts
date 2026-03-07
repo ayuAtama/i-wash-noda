@@ -1,0 +1,70 @@
+import { z } from "zod";
+import "zod-openapi";
+
+export class AdminValidation {
+  static RegisterInternalUserSchema = z
+    .object({
+      email: z.string().email().meta({
+        description: "User email address",
+        example: "staff@example.com",
+      }),
+      role: z.enum(["super_admin", "outlet_admin", "driver", "customer"]).meta({
+        description: "User role",
+        example: "driver",
+      }),
+      outlet_id: z.string().uuid().optional().meta({
+        description: "Outlet ID (required for driver, outlet_admin)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "RegisterInternalUser",
+      description: "Payload for registering an internal user",
+      example: {
+        email: "driver@example.com",
+        role: "driver",
+        outlet_id: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
+
+  static ChangeRoleSchema = z
+    .object({
+      userId: z.string().uuid().meta({
+        description: "UUID of the user to change role",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      role: z.enum(["super_admin", "outlet_admin", "driver", "customer"]).meta({
+        description: "New role for the user",
+        example: "outlet_admin",
+      }),
+    })
+    .meta({
+      id: "ChangeRole",
+      description: "Payload for changing user role",
+      example: {
+        userId: "123e4567-e89b-12d3-a456-426614174000",
+        role: "outlet_admin",
+      },
+    });
+
+  static RemoveUserSchema = z
+    .object({
+      userId: z.string().uuid().meta({
+        description: "UUID of the user to remove",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "RemoveUser",
+      description: "Payload for removing a user",
+      example: {
+        userId: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
+}
+
+export type RegisterInternalUserDto = z.infer<
+  typeof AdminValidation.RegisterInternalUserSchema
+>;
+export type ChangeRoleDto = z.infer<typeof AdminValidation.ChangeRoleSchema>;
+export type RemoveUserDto = z.infer<typeof AdminValidation.RemoveUserSchema>;
