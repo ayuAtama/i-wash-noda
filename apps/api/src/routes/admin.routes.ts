@@ -19,7 +19,7 @@ export class AdminRoute {
       "/register",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
-      this.controller.register
+      this.controller.register,
     );
   }
 
@@ -28,21 +28,21 @@ export class AdminRoute {
       "/users",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
-      this.controller.getAllUser
+      this.controller.getAllUser,
     );
 
     this.router.put(
       "/users",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
-      this.controller.changeRole
+      this.controller.changeRole,
     );
 
     this.router.delete(
       "/users",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
-      this.controller.removeUser
+      this.controller.removeUser,
     );
   }
 }
