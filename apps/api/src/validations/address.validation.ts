@@ -88,6 +88,21 @@ export class AddressValidation {
         province: "Jawa Barat",
       },
     });
+
+  static ParamsAddressSchema = z
+    .object({
+      id: z.uuid().meta({
+        description: "Address ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "ParamsAddress",
+      description: "Payload for getting an address by ID",
+      example: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
 }
 
 export type CreateAddressDto = z.infer<
@@ -95,4 +110,7 @@ export type CreateAddressDto = z.infer<
 >;
 export type UpdateAddressDto = z.infer<
   typeof AddressValidation.UpdateAddressSchema
+>;
+export type ParamsAddressDto = z.infer<
+  typeof AddressValidation.ParamsAddressSchema
 >;

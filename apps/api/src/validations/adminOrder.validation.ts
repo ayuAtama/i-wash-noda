@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi";
 
 export const ItemOrderSchema = z.object({
-  id: z.string().uuid().meta({
+  id: z.uuid().meta({
     description: "Item ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
@@ -42,8 +42,24 @@ export const AdminOrderSchema = z
     },
   });
 
+export const AdminOrderParamsSchema = z
+  .object({
+    id: z.uuid().meta({
+      description: "Order ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  })
+  .meta({
+    id: "AdminOrderParams",
+    description: "Payload for updating an order",
+    example: {
+      id: "123e4567-e89b-12d3-a456-426614174000",
+    },
+  });
+
 export class AdminOrderValidation {
   static AdminOrderSchema = AdminOrderSchema;
+  static AdminOrderParamsSchema = AdminOrderParamsSchema;
 }
-
-export type AdminOrderInput = z.infer<typeof AdminOrderSchema>;
+export type AdminOrderInputDTO = z.infer<typeof AdminOrderSchema>;
+export type AdminOrderParamsSchemaDTO = z.infer<typeof AdminOrderParamsSchema>;

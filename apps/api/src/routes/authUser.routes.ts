@@ -40,18 +40,27 @@ export class AuthUserRoute {
     this.router.post(
       "/verify",
       verifyOTPEndpointRateLimiter,
+      Validator.validate({
+        body: AuthValidation.VerifySchema,
+      }),
       requireStep(1),
       this.controller.verify,
     );
     this.router.post(
       "/complete-register",
       commpleteRegisterEndpointRateLimiter,
+      Validator.validate({
+        body: AuthValidation.CompleteRegisterSchema,
+      }),
       requireStep(2),
       this.controller.completeRegistration,
     );
     this.router.post(
       "/resend",
       resendOTPEndpointRateLimiter,
+      Validator.validate({
+        body: AuthValidation.ResendSchema,
+      }),
       this.controller.resendVerification,
     );
   }
@@ -65,7 +74,13 @@ export class AuthUserRoute {
   }
 
   private login() {
-    this.router.post("/login", this.controller.login);
+    this.router.post(
+      "/login",
+      Validator.validate({
+        body: AuthValidation.LoginSchema,
+      }),
+      this.controller.login,
+    );
   }
 
   private refresh() {
@@ -77,9 +92,18 @@ export class AuthUserRoute {
   }
 
   private resetPassword() {
-    this.router.post("/reset-request", this.controller.resetPasswordRequest);
+    this.router.post(
+      "/reset-request",
+      Validator.validate({
+        body: AuthValidation.ResetRequestSchema,
+      }),
+      this.controller.resetPasswordRequest,
+    );
     this.router.post(
       "/reset-confirm",
+      Validator.validate({
+        body: AuthValidation.ResetConfirmSchema,
+      }),
       requireStep(69),
       this.controller.setResetPassword,
     );
@@ -87,16 +111,29 @@ export class AuthUserRoute {
 
   private userData() {
     this.router.get("/me", authenticationMiddleware, this.controller.fetchMe);
-    this.router.put("/me", authenticationMiddleware, this.controller.updateMe);
+    this.router.put(
+      "/me",
+      authenticationMiddleware,
+      Validator.validate({
+        body: AuthValidation.UpdateMeSchema,
+      }),
+      this.controller.updateMe,
+    );
     this.router.post(
       "/change-email-request",
       authenticationMiddleware,
+      Validator.validate({
+        body: AuthValidation.EmailChangeRequestSchema,
+      }),
       this.controller.emailChangeRequest,
     );
     this.router.put(
       "/change-email",
       requireStep(67),
       authenticationMiddleware,
+      Validator.validate({
+        body: AuthValidation.EmailChangeConfirmSchema,
+      }),
       this.controller.setNewEmail,
     );
   }

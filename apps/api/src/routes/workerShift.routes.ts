@@ -1,11 +1,15 @@
 // apps/api/src/routes/workerShift.services.ts
-import { WorkerShiftController } from "@/controllers/workerShift.controller";
 import { Router } from "express";
+import { z } from "zod";
+import { WorkerShiftController } from "@/controllers/workerShift.controller";
 import { WorkerShiftService } from "@/services/workerShift.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
-import { CreateWorkerShiftSchema } from "@/validations/workerShift.validation";
+import {
+  CreateWorkerShiftSchema,
+  WorkerShiftIdParamsSechema,
+} from "@/validations/workerShift.validation";
 
 export class WorkerShiftRoute {
   public router = Router();
@@ -23,12 +27,18 @@ export class WorkerShiftRoute {
       Validator.validate({
         body: CreateWorkerShiftSchema,
       }),
-      this.controller.createSchedule
+      this.controller.createSchedule,
     );
   }
 
   private getSchedule() {
-    this.router.get("/schedule/:id", this.controller.getScheduleById);
+    this.router.get(
+      "/schedule/:id",
+      Validator.validate({
+        params: WorkerShiftIdParamsSechema,
+      }),
+      this.controller.getScheduleById,
+    );
   }
 }
 

@@ -1,8 +1,10 @@
-import { AdminController } from "@/controllers/admin.controller";
-import { AdminService } from "@/services/admin.services";
 import { Router } from "express";
+import { AdminController } from "@/controllers/admin.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
+import { Validator } from "@/middleware/validate";
+import { AdminValidation } from "@/validations/admin.validation";
+import { AdminService } from "@/services/admin.services";
 
 export class AdminRoute {
   public router = Router();
@@ -19,6 +21,9 @@ export class AdminRoute {
       "/register",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
+      Validator.validate({
+        body: AdminValidation.RegisterInternalUserSchema,
+      }),
       this.controller.register,
     );
   }
@@ -35,13 +40,19 @@ export class AdminRoute {
       "/users",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
+      Validator.validate({
+        body: AdminValidation.ChangeRoleSchema,
+      }),
       this.controller.changeRole,
     );
 
     this.router.delete(
-      "/users",
+      "/users/:userId",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
+      Validator.validate({
+        params: AdminValidation.RemoveUserSchema,
+      }),
       this.controller.removeUser,
     );
   }

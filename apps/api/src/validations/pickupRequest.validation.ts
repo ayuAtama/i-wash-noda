@@ -4,11 +4,11 @@ import "zod-openapi";
 export class PickupRequestValidation {
   static CreatePickupRequestSchema = z
     .object({
-      addressId: z.string().uuid().meta({
+      addressId: z.uuid().meta({
         description: "UUID of the address",
         example: "123e4567-e89b-12d3-a456-426614174000",
       }),
-      outletId: z.string().uuid().meta({
+      outletId: z.uuid().meta({
         description: "UUID of the outlet",
         example: "123e4567-e89b-12d3-a456-426614174001",
       }),

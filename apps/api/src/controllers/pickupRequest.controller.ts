@@ -2,6 +2,7 @@
 import { PickupRequestService } from "@/services/pickupRequest.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
+import { CreatePickupRequestDto } from "@/validations/pickupRequest.validation";
 
 export class PickupRequestController {
   private pickupRequestService: PickupRequestService;
@@ -14,7 +15,7 @@ export class PickupRequestController {
   checkAddressFirst = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       // get the id from middlewere
@@ -40,7 +41,7 @@ export class PickupRequestController {
   createPickupRequest = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       // from middlewere
@@ -48,8 +49,10 @@ export class PickupRequestController {
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       // from frontend form (from previous function)
-      if(!req.body) throw new HttpError(400, "Missing body");
-      const { addressId, outletId } = req.body;
+      // if(!req.body) throw new HttpError(400, "Missing body");
+      // const { addressId, outletId } = req.body;
+      const { addressId, outletId } = req.validated!
+        .body as CreatePickupRequestDto;
       if (!addressId || !outletId)
         throw new HttpError(400, "Missing addressId or outletId");
 
@@ -57,7 +60,7 @@ export class PickupRequestController {
       const pickupRequest = await this.pickupRequestService.createPickupRequest(
         userId,
         addressId,
-        outletId
+        outletId,
       );
       res.status(201).json(pickupRequest);
     } catch (error) {

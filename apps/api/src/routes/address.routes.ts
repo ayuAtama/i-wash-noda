@@ -1,7 +1,9 @@
+import { Router } from "express";
 import { AddressController } from "@/controllers/addresses.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
+import { Validator } from "@/middleware/validate";
+import { AddressValidation } from "@/validations/address.validation";
 import { AddressService } from "@/services/addresses.services";
-import { Router } from "express";
 
 export class AddressRoute {
   public router = Router();
@@ -28,6 +30,9 @@ export class AddressRoute {
     this.router.post(
       "/addresses",
       authenticationMiddleware,
+      Validator.validate({
+        body: AddressValidation.CreateAddressSchema,
+      }),
       this.controller.create,
     );
   }
@@ -36,6 +41,10 @@ export class AddressRoute {
     this.router.put(
       "/addresses/:id",
       authenticationMiddleware,
+      Validator.validate({
+        body: AddressValidation.UpdateAddressSchema,
+        params: AddressValidation.ParamsAddressSchema,
+      }),
       this.controller.update,
     );
   }
@@ -44,6 +53,9 @@ export class AddressRoute {
     this.router.delete(
       "/addresses/:id",
       authenticationMiddleware,
+      Validator.validate({
+        params: AddressValidation.ParamsAddressSchema,
+      }),
       this.controller.delete,
     );
   }
@@ -52,6 +64,9 @@ export class AddressRoute {
     this.router.post(
       "/addresses/:id/set-default",
       authenticationMiddleware,
+      Validator.validate({
+        params: AddressValidation.ParamsAddressSchema,
+      }),
       this.controller.setDefault,
     );
   }

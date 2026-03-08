@@ -71,10 +71,10 @@ export class AdminService {
     }
   }
 
-  async deleteUser(id: string) {
+  async deleteUser(userId: string) {
     try {
       return await prisma.user.update({
-        where: { id: id },
+        where: { id: userId },
         data: { is_deleted: true },
         select: { id: true, name: true, email: true },
       });

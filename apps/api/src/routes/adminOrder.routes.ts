@@ -1,9 +1,9 @@
 // apps/api/src/routes/adminOrder.routes.ts
+import { Router } from "express";
 import { AdminOrderController } from "@/controllers/adminOrder.controller";
 import { Validator } from "@/middleware/validate";
 import { AdminOrderService } from "@/services/adminOrder.services";
-import { AdminOrderSchema } from "@/validations/adminOrder.validation";
-import { Router } from "express";
+import { AdminOrderValidation } from "@/validations/adminOrder.validation";
 
 export class AdminOrderRoute {
   public router = Router();
@@ -18,9 +18,10 @@ export class AdminOrderRoute {
     this.router.put(
       "/order/:id",
       Validator.validate({
-        body: AdminOrderSchema,
+        body: AdminOrderValidation.AdminOrderSchema,
+        params: AdminOrderValidation.AdminOrderParamsSchema,
       }),
-      this.controller.createOrder
+      this.controller.createOrder,
     );
   }
 }

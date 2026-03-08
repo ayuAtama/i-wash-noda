@@ -26,11 +26,11 @@ export const ScheduleItemSchema = z.object({
 
 export const CreateWorkerShiftSchema = z
   .object({
-    outletId: z.string().uuid().meta({
+    outletId: z.uuid().meta({
       description: "Outlet ID (UUID)",
       example: "123e4567-e89b-12d3-a456-426614174000",
     }),
-    workerId: z.string().uuid().meta({
+    workerId: z.uuid().meta({
       description: "Worker ID (UUID)",
       example: "123e4567-e89b-12d3-a456-426614174001",
     }),
@@ -63,8 +63,25 @@ export const CreateWorkerShiftSchema = z
     },
   });
 
+export const WorkerShiftIdParamsSechema = z
+  .object({
+    id: z.uuid().meta({
+      description: "Worker Shift ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  })
+  .meta({
+    id: "WorkerShiftIdParams",
+    description: "Payload for updating a worker shift",
+    example: {
+      id: "123e4567-e89b-12d3-a456-426614174000",
+    },
+  });
+
 export class WorkerShiftValidation {
   static CreateWorkerShiftSchema = CreateWorkerShiftSchema;
+  static WorkerShiftIdParamsSchema = WorkerShiftIdParamsSechema;
 }
 
-export type CreateWorkerShiftInput = z.infer<typeof CreateWorkerShiftSchema>;
+export type CreateWorkerShiftInputDTO = z.infer<typeof CreateWorkerShiftSchema>;
+export type WorkerShiftIdParamsDTO = z.infer<typeof WorkerShiftIdParamsSechema>;
