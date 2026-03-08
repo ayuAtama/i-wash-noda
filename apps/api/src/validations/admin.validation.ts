@@ -4,15 +4,17 @@ import "zod-openapi";
 export class AdminValidation {
   static RegisterInternalUserSchema = z
     .object({
-      email: z.string().email().meta({
+      email: z.email().meta({
         description: "User email address",
         example: "staff@example.com",
       }),
-      role: z.enum(["super_admin", "outlet_admin", "driver", "customer"]).meta({
-        description: "User role",
-        example: "driver",
-      }),
-      outlet_id: z.string().uuid().optional().meta({
+      role: z
+        .enum(["super_admin", "outlet_admin", "driver", "customer", "worker"])
+        .meta({
+          description: "User role",
+          example: "driver",
+        }),
+      outlet_id: z.uuid().optional().meta({
         description: "Outlet ID (required for driver, outlet_admin)",
         example: "123e4567-e89b-12d3-a456-426614174000",
       }),
@@ -29,14 +31,16 @@ export class AdminValidation {
 
   static ChangeRoleSchema = z
     .object({
-      userId: z.string().uuid().meta({
+      userId: z.uuid().meta({
         description: "UUID of the user to change role",
         example: "123e4567-e89b-12d3-a456-426614174000",
       }),
-      role: z.enum(["super_admin", "outlet_admin", "driver", "customer"]).meta({
-        description: "New role for the user",
-        example: "outlet_admin",
-      }),
+      role: z
+        .enum(["super_admin", "outlet_admin", "driver", "customer", "worker"])
+        .meta({
+          description: "User role",
+          example: "driver",
+        }),
     })
     .meta({
       id: "ChangeRole",
@@ -49,7 +53,7 @@ export class AdminValidation {
 
   static RemoveUserSchema = z
     .object({
-      userId: z.string().uuid().meta({
+      userId: z.uuid().meta({
         description: "UUID of the user to remove",
         example: "123e4567-e89b-12d3-a456-426614174000",
       }),

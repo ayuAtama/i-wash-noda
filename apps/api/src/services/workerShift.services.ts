@@ -1,12 +1,8 @@
 // apps/api/src/services/workerShift.services.ts
 import { prisma } from "@/config/prisma";
-import { Prisma, StationName, WorkerShiftDay } from "@/generated/prisma/client";
 import { HttpError } from "@/utils/httpError";
 import { validateNoOverlap } from "@/utils/validateNoOverlap";
-import {
-  CreateWorkerShiftInput,
-  CreateWorkerShiftSchema,
-} from "@/validations/workerShift.validation";
+import { CreateWorkerShiftInputDTO } from "@/validations/workerShift.validation";
 
 export class WorkerShiftService {
   async getShiftsByWorkerId(workerId: string) {
@@ -31,7 +27,7 @@ export class WorkerShiftService {
     }
   }
 
-  async replaceWeeklySchedule(data: CreateWorkerShiftInput) {
+  async replaceWeeklySchedule(data: CreateWorkerShiftInputDTO) {
     try {
       const { outletId, workerId, station, schedules } = data;
 

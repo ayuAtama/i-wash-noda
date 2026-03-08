@@ -36,10 +36,11 @@ export class Validator {
 
       if (body) {
         const result = body.safeParse(req.body);
+        // return the validation error
         if (!result.success) {
           return res.status(400).json({
             message: "Validation failed",
-            errors: result.error.issues,
+            errors: result.error.issues[0].message,
           });
         }
         req.validated.body = result.data;
@@ -50,7 +51,7 @@ export class Validator {
         if (!result.success) {
           return res.status(400).json({
             message: "Validation failed",
-            errors: result.error.issues,
+            errors: result.error.issues[0].message,
           });
         }
         req.validated.params = result.data;
@@ -61,7 +62,7 @@ export class Validator {
         if (!result.success) {
           return res.status(400).json({
             message: "Validation failed",
-            errors: result.error.issues,
+            errors: result.error.issues[0].message,
           });
         }
         req.validated.query = result.data;

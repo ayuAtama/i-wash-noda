@@ -3,6 +3,11 @@ import type { Request, Response, NextFunction } from "express";
 import { AdminService } from "@/services/admin.services";
 import { HttpError } from "@/utils/httpError";
 import { isUserRole } from "@/types/role";
+import {
+  ChangeRoleDto,
+  RegisterInternalUserDto,
+  RemoveUserDto,
+} from "@/validations/admin.validation";
 
 export class AdminController {
   private adminService: AdminService;
@@ -17,7 +22,11 @@ export class AdminController {
       const userRole = req.user?.role ?? req.access_token?.role;
 
       // destructre email, role, and outlet_id
-      const { email, role, outlet_id } = req.body;
+      if (!req.validated) {
+        throw new HttpError(400, "Missing email or role or outlet_id");
+      }
+      const { email, role, outlet_id } = req.validated
+        .body as RegisterInternalUserDto;
       //check if email or role is missing and validate the role
       if (!email || !role) {
         throw new HttpError(400, "Missing email or role");
@@ -33,7 +42,7 @@ export class AdminController {
       ) {
         throw new HttpError(
           403,
-          "Forbidden, only super_admin can create outlet_admin or super_admin"
+          "Forbidden, only super_admin can create outlet_admin or super_admin",
         );
       }
 
@@ -64,7 +73,7 @@ export class AdminController {
 
   changeRole = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { userId, role } = req.body;
+      const { userId, role } = req.validated!.body as ChangeRoleDto;
       if (!userId || !role) {
         throw new HttpError(400, "Missing userId or role");
       }
@@ -80,7 +89,7 @@ export class AdminController {
 
   removeUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { userId } = req.body;
+      const { userId } = req.validated!.params as RemoveUserDto;
       if (!userId) {
         throw new HttpError(400, "Missing userId");
       }

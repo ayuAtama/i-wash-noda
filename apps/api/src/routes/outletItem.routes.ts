@@ -1,8 +1,10 @@
-import { OutletItemController } from "@/controllers/outletItem.controller";
 import { Router } from "express";
-import { OutletItemService } from "@/services/outletItem.services";
+import { OutletItemController } from "@/controllers/outletItem.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
+import { Validator } from "@/middleware/validate";
+import { OutletValidation } from "@/validations/outlet.validation";
+import { OutletItemService } from "@/services/outletItem.services";
 
 export class OutletItemRoute {
   public router = Router();
@@ -32,6 +34,9 @@ export class OutletItemRoute {
       "/outlets",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
+      Validator.validate({
+        body: OutletValidation.CreateOutletSchema,
+      }),
       this.controller.createOutlet
     );
   }
@@ -41,6 +46,9 @@ export class OutletItemRoute {
       "/outlets/:id",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
+      Validator.validate({
+        body: OutletValidation.UpdateOutletSchema,
+      }),
       this.controller.updateOutlet
     );
   }
@@ -63,6 +71,9 @@ export class OutletItemRoute {
       "/items",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
+      Validator.validate({
+        body: OutletValidation.CreateItemSchema,
+      }),
       this.controller.createItem
     );
   }

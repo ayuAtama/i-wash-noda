@@ -1,8 +1,7 @@
 // src/services/adminOrder.services.ts
 import { prisma } from "@/config/prisma";
-import { Prisma } from "@/generated/prisma/client";
 import { HttpError } from "@/utils/httpError";
-import { AdminOrderInput } from "@/validations/adminOrder.validation";
+import { AdminOrderInputDTO } from "@/validations/adminOrder.validation";
 
 export class AdminOrderService {
   async getAllOrder(outletId: string) {
@@ -29,10 +28,14 @@ export class AdminOrderService {
     }
   }
 
-  async createOrder(data: AdminOrderInput, outletId: string, orderId: string) {
+  async createOrder(
+    payload: AdminOrderInputDTO,
+    outletId: string,
+    orderId: string,
+  ) {
     try {
       // destructure the data
-      const { total_kilos, items } = data;
+      const { total_kilos, items } = payload;
 
       // manage the items first
       // collect the item id into array
@@ -60,7 +63,7 @@ export class AdminOrderService {
       const existingItemIdsSet = new Set(existingItemIds);
       // filter into item id exist in db and quantity > 0
       const validItems = items.filter(
-        (item) => existingItemIdsSet.has(item.id) && item.quantity > 0
+        (item) => existingItemIdsSet.has(item.id) && item.quantity > 0,
       );
 
       // reject if all items are filtered out

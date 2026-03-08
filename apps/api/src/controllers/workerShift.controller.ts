@@ -3,8 +3,8 @@ import { WorkerShiftService } from "@/services/workerShift.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
 import {
-  CreateWorkerShiftInput,
-  CreateWorkerShiftSchema,
+  CreateWorkerShiftInputDTO,
+  WorkerShiftIdParamsDTO,
 } from "@/validations/workerShift.validation";
 
 export class WorkerShiftController {
@@ -26,7 +26,7 @@ export class WorkerShiftController {
       // }
 
       // 2. call service after used middleware (DTO validation)
-      const body = req.validated!.body as CreateWorkerShiftInput;
+      const body = req.validated!.body as CreateWorkerShiftInputDTO;
       await this.workerShiftService.replaceWeeklySchedule(body);
 
       // 3. response
@@ -40,7 +40,8 @@ export class WorkerShiftController {
 
   getScheduleById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = String(req.params.id);
+      //const id = String(req.params.id);
+      const { id } = req.validated!.params as WorkerShiftIdParamsDTO;
       const schedule = await this.workerShiftService.getShiftsByWorkerId(id);
       if (!schedule) {
         throw new HttpError(404, "Schedule not found");

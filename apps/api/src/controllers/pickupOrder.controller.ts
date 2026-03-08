@@ -2,6 +2,10 @@
 import { PickupOrderService } from "@/services/pickupOrder.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
+import {
+  PickupIdParamsDto,
+  UpdateStatusDto,
+} from "@/validations/pickupOrder.validation";
 
 export class PickupOrderController {
   private pickupOrderService: PickupOrderService;
@@ -14,7 +18,7 @@ export class PickupOrderController {
   getAllPickupRequests = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const outletId = req.context?.outlet_id;
@@ -34,10 +38,12 @@ export class PickupOrderController {
   acceptPickupRequest = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
-      const pickupRequestId = req.params.id;
+      //const pickupRequestId = req.params.id;
+      const { id: pickupRequestId } = req.validated!
+        .params as PickupIdParamsDto;
       const outletId = req.context?.outlet_id;
       const userId = req.access_token?.sub;
       if (!outletId) throw new HttpError(401, "Outlet id not found");
@@ -49,7 +55,7 @@ export class PickupOrderController {
         await this.pickupOrderService.acceptPickupRequest(
           outletId,
           pickupRequestId,
-          userId
+          userId,
         );
       res.status(200).json({
         success: success,
@@ -64,7 +70,7 @@ export class PickupOrderController {
   getAcceptedPickupRequests = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const userId = req.access_token?.sub;
@@ -75,7 +81,7 @@ export class PickupOrderController {
 
       const result = await this.pickupOrderService.getAcceptedPickupRequests(
         userId,
-        outletId
+        outletId,
       );
       res.status(200).json({
         status: "success",
@@ -89,9 +95,12 @@ export class PickupOrderController {
 
   updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const pickupRequestId = req.params.id;
+      //const pickupRequestId = req.params.id;
+      const { id: pickupRequestId } = req.validated!
+        .params as PickupIdParamsDto;
       const userId = req.access_token?.sub;
-      const status = req.body.status;
+      //const status = req.body.status;
+      const { status } = req.validated!.body as UpdateStatusDto;
       if (!userId) throw new HttpError(401, "User id not found");
       if (!pickupRequestId)
         throw new HttpError(400, "Pickup request id not found");
@@ -100,7 +109,7 @@ export class PickupOrderController {
       const result = await this.pickupOrderService.upateStatusDriver(
         userId,
         pickupRequestId,
-        status
+        status,
       );
       res.status(200).json({
         status: "success",

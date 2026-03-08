@@ -1,6 +1,10 @@
 // apps/api/src/controllers/addresses.controller.ts
 import { AddressService } from "@/services/addresses.services";
 import { HttpError } from "@/utils/httpError";
+import {
+  CreateAddressDto,
+  ParamsAddressDto,
+} from "@/validations/address.validation";
 import type { Request, Response, NextFunction } from "express";
 
 export class AddressController {
@@ -30,11 +34,18 @@ export class AddressController {
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // get the data
-      const payload = req.body;
+      //const payload = req.body;
+      const payload = req.validated?.body as CreateAddressDto;
+      if (!payload) {
+        throw new HttpError(400, "Invalid payload");
+      }
       const userId = req.access_token?.sub ?? req.user?.id;
       if (!userId) throw new HttpError(401, "Invalid user id");
-
-      const address = await this.addressService.create(userId, payload);
+      const payloadWithUserId = {
+        ...payload,
+        user_id: userId,
+      };
+      const address = await this.addressService.create(payloadWithUserId);
 
       res.status(201).json({
         success: true,
@@ -50,14 +61,16 @@ export class AddressController {
     try {
       // get the data
       const userId = req.access_token?.sub ?? req.user?.id;
-      const addressId = String(req.params.id);
-      const payload = req.body;
+      //const addressId = String(req.params.id);
+      //const payload = req.body;
+      const { id: addressId } = req.validated?.params as ParamsAddressDto;
+      const payload = req.validated?.body as CreateAddressDto;
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       const address = await this.addressService.update(
         userId,
         addressId,
-        payload
+        payload,
       );
 
       res.status(200).json({
@@ -73,11 +86,12 @@ export class AddressController {
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // get the data
-      const addressId = String(req.params.id);
+      //const addressId = String(req.params.id);
+      const { id: addressId } = req.validated?.params as ParamsAddressDto;
       const userId = req.access_token?.sub ?? req.user?.id;
       if (!userId) throw new HttpError(401, "Invalid user id");
 
-      const address = await this.addressService.delete(userId, addressId);
+      await this.addressService.delete(userId, addressId);
 
       res.status(200).json({
         success: true,
@@ -91,12 +105,13 @@ export class AddressController {
   setDefault = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.access_token?.sub ?? req.user?.id;
-      const addressId = String(req.params.id);
+      //const addressId = String(req.params.id);
+      const { id: addressId } = req.validated?.params as ParamsAddressDto;
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       const defaultAddress = await this.addressService.setDefault(
         userId,
-        addressId
+        addressId,
       );
 
       res.status(200).json({

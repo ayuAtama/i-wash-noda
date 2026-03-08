@@ -3,8 +3,6 @@ import type { Request, Response, NextFunction } from "express";
 import { AuthUserService } from "../services/authUser.services";
 import { HttpError } from "@/utils/httpError";
 import { addDays, addHours, addMinutes, addYears, format } from "date-fns";
-import { isUserRole } from "@/types/role";
-import { verifyToken } from "@/utils/jwt";
 import { RegisterDto } from "@/validations/auth.validation";
 
 export class AuthUserController {
@@ -59,8 +57,8 @@ export class AuthUserController {
       // destructure only role and email
 
       // validate request body from validation midleware zod
-      const payload = req.validated?.body as RegisterDto;
-      if (!payload.email) {
+      const payload = req.validated!.body as RegisterDto;
+      if (!payload) {
         throw new HttpError(400, "Email required");
       }
 

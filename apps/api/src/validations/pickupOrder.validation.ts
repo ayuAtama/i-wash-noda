@@ -4,29 +4,38 @@ import "zod-openapi";
 export class PickupOrderValidation {
   static UpdateStatusSchema = z
     .object({
-      status: z
-        .enum([
-          "PENDING",
-          "ACCEPTED",
-          "PICKED_UP",
-          "IN_PROGRESS",
-          "COMPLETED",
-          "CANCELLED",
-        ])
-        .meta({
-          description: "New status for the pickup request",
-          example: "PICKED_UP",
-        }),
+      status: z.enum(["in_transit", "on_delivery", "done"]).meta({
+        description: "New status for the pickup request",
+        example: "in_transit",
+      }),
     })
     .meta({
       id: "UpdateStatus",
       description: "Payload for updating pickup request status",
       example: {
-        status: "PICKED_UP",
+        status: "done",
+      },
+    });
+
+  static PickupIdParamsSchema = z
+    .object({
+      id: z.uuid().meta({
+        description: "Pickup Request ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "PickupIdParams",
+      description: "Payload for updating or accepting a pickup request",
+      example: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
       },
     });
 }
 
 export type UpdateStatusDto = z.infer<
   typeof PickupOrderValidation.UpdateStatusSchema
+>;
+export type PickupIdParamsDto = z.infer<
+  typeof PickupOrderValidation.PickupIdParamsSchema
 >;

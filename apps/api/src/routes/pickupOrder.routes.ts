@@ -1,10 +1,12 @@
 // apps/api/src/routes/pickupOrder.routes.ts
+import { Router } from "express";
 import { PickupOrderController } from "@/controllers/pickupOrder.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { resolveContext } from "@/middleware/resolveContext";
+import { Validator } from "@/middleware/validate";
+import { PickupOrderValidation } from "@/validations/pickupOrder.validation";
 import { PickupOrderService } from "@/services/pickupOrder.services";
-import { Router } from "express";
 
 export class PickupOrderRoute {
   public router = Router();
@@ -24,7 +26,7 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.getAllPickupRequests
+      this.controller.getAllPickupRequests,
     );
   }
 
@@ -34,7 +36,10 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.acceptPickupRequest
+      Validator.validate({
+        params: PickupOrderValidation.PickupIdParamsSchema,
+      }),
+      this.controller.acceptPickupRequest,
     );
   }
 
@@ -44,7 +49,7 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.getAcceptedPickupRequests
+      this.controller.getAcceptedPickupRequests,
     );
   }
 
@@ -54,7 +59,11 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.updateStatus
+      Validator.validate({
+        body: PickupOrderValidation.UpdateStatusSchema,
+        params: PickupOrderValidation.PickupIdParamsSchema,
+      }),
+      this.controller.updateStatus,
     );
   }
 }

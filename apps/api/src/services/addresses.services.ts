@@ -22,10 +22,10 @@ export class AddressService {
     }
   }
 
-  async create(userId: string, data: Prisma.UserAddressCreateInput) {
+  async create(data: Prisma.UserAddressUncheckedCreateInput) {
     try {
       // get the data
-      const { label, address, lat, lng, is_default } = data;
+      const { label, address, lat, lng, is_default, user_id: userId } = data;
 
       // create the address
       const { newAddress } = await prisma.$transaction(async (tx) => {
@@ -77,7 +77,7 @@ export class AddressService {
   async update(
     userId: string,
     addressId: string,
-    data: Prisma.UserAddressUpdateInput
+    data: Prisma.UserAddressUpdateInput,
   ) {
     try {
       // get the data
