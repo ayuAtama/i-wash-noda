@@ -257,7 +257,7 @@ async function main() {
       laundry_price: 24000,
       total_amount: 40000,
       total_kilo: 3.0,
-      status: "Laundry_Sedang_Dicuci",
+      status: "washing_in_progress",
       paid: false,
     },
   });

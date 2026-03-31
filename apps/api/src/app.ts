@@ -1,23 +1,21 @@
 // src/app.ts
-import express from "express";
-import type { Application } from "express";
-import swaggerUi from "swagger-ui-express";
-
-import userRoutes from "@/routes/user.routes";
-import { openApiDocument } from "@/docs/swagger";
-import { errorHandler } from "@/middleware/error-handler";
-import authRoutes from "@/routes/auth.routes";
-
-import listEndpoints from "express-list-endpoints";
-import cors from "cors";
+import express, { Application } from "express";
+//middleware
 import "dotenv/config";
-import authUserRoutes from "@/routes/authUser.routes";
-
+import swaggerUi from "swagger-ui-express";
+import { openApiDocument } from "@/docs/swagger";
+import cors from "cors";
+import listEndpoints from "express-list-endpoints";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import { errorHandler } from "@/middleware/error-handler";
+//route
+import authRoutes from "@/routes/auth.routes";
+import userRoutes from "@/routes/user.routes";
+import authUserRoutes from "@/routes/authUser.routes";
+import adminRoutes from "@/routes/admin.routes";
 import AddressRoute from "@/routes/address.routes";
 import OutletItemRoute from "@/routes/outletItem.routes";
-import adminRoutes from "@/routes/admin.routes";
 import workerShiftRoutes from "@/routes/workerShift.routes";
 import pickupRequstRoutes from "./routes/pickupRequst.routes";
 import pickupOrderRoutes from "./routes/pickupOrder.routes";
@@ -28,10 +26,11 @@ export class App {
   constructor() {
     this.app = express();
     this.initializeCors();
-    this.initializeAuth();
+    this.initializeBetterAuth();
     this.initializeMiddlewares();
     this.initializeAdminRoutes();
     this.initializeUserAndAuth();
+    this.initializeAdminManageUserRoutes();
     this.initializeAddressRoutes();
     this.initializePickupRoutes();
     this.initializeRoutes();
@@ -45,7 +44,7 @@ export class App {
         origin: process.env.NEXT_PUBLIC_APP_URL,
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      })
+      }),
     );
   }
 
@@ -55,12 +54,17 @@ export class App {
     this.app.use(cookieParser());
   }
 
-  private initializeAuth() {
+  private initializeBetterAuth() {
     this.app.use("/api/auth", authRoutes);
   }
 
   private initializeUserAndAuth() {
+    this.app.use("/users", userRoutes);
     this.app.use("/api", authUserRoutes);
+  }
+
+  private initializeAdminManageUserRoutes() {
+    this.app.use("/api/admin", adminRoutes);
   }
 
   private initializeAddressRoutes() {
@@ -68,7 +72,6 @@ export class App {
   }
 
   private initializeAdminRoutes() {
-    this.app.use("/api/admin", adminRoutes);
     this.app.use("/api/admin", workerShiftRoutes); // test
   }
 
@@ -79,9 +82,6 @@ export class App {
 
   private initializeRoutes() {
     this.app.use("/api", OutletItemRoute);
-    this.app.use("/users", userRoutes);
-    //better-auth endpoints
-    // this.app.use("/api/auth", authRoutes);
   }
 
   private initializeSwagger() {
@@ -97,6 +97,7 @@ export class App {
   public listen(port: number) {
     this.app.listen(port, () => {
       console.log(`🚀 Server running on http://localhost:${port}`);
+      console.log(`📚 API Docs at http://localhost:${port}/docs`);
 
       console.log("\n=== Registered Endpoints ===");
       console.log(listEndpoints(this.app));
