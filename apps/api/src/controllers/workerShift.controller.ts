@@ -31,7 +31,9 @@ export class WorkerShiftController {
 
       // 3. response
       return res.status(200).json({
+        success: true,
         message: "Worker weekly schedule saved",
+        data: null,
       });
     } catch (error) {
       next(error);
@@ -51,7 +53,11 @@ export class WorkerShiftController {
       //   start_time: format(item.start_time, "HH:mm"),
       //   end_time: format(item.end_time, "HH:mm"),
       // }));
-      return res.status(200).json(schedule);
+      return res.status(200).json({
+        success: true,
+        message: "Schedule fetched successfully",
+        data: schedule,
+      });
     } catch (error) {
       next(error);
     }

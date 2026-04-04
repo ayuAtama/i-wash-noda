@@ -50,9 +50,12 @@ export class AdminController {
       const payload = { email, role, outlet_id };
       const result = await this.adminService.registerInternalUser(payload);
       return res.status(201).json({
+        success: true,
         message: `${result.role} User registered. Verification email sent.`,
-        role: result.role,
-        "email verified": result.emailVerified,
+        data: {
+          role: result.role,
+          emailVerified: result.emailVerified,
+        },
       });
     } catch (error) {
       next(error);
@@ -63,7 +66,8 @@ export class AdminController {
     try {
       const result = await this.adminService.getAllUser();
       return res.status(200).json({
-        message: "User fetched successfully",
+        success: true,
+        message: "Users fetched successfully",
         data: result,
       });
     } catch (error) {
@@ -79,6 +83,7 @@ export class AdminController {
       }
       const result = await this.adminService.changeRole(userId, role);
       return res.status(200).json({
+        success: true,
         message: "Role changed successfully",
         data: result,
       });
@@ -95,6 +100,7 @@ export class AdminController {
       }
       const result = await this.adminService.deleteUser(userId);
       return res.status(200).json({
+        success: true,
         message: "User removed successfully",
         data: result,
       });

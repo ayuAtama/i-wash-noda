@@ -8,13 +8,14 @@ export function errorHandler(
   err: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   console.error("ERROR:", err);
 
   // 1. Handle custom HttpError
   if (err instanceof HttpError) {
     return res.status(err.status).json({
+      success: false,
       message: err.message,
     });
   }
@@ -23,20 +24,23 @@ export function errorHandler(
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     const mapped = mapPrismaError(err);
     return res.status(mapped.status).json({
+      success: false,
       message: mapped.message,
-      fields: mapped.fields ?? undefined,
+      errors: mapped.fields ?? undefined,
     });
   }
 
   // 3. Body parse errors
   if (err.type === "entity.parse.failed") {
     return res.status(400).json({
+      success: false,
       message: "Invalid JSON payload",
     });
   }
 
   // 4. Unexpected server errors
   return res.status(500).json({
+    success: false,
     message: "Internal Server Error",
     note: "Developers likes a femboy xD",
   });
