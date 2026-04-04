@@ -17,8 +17,9 @@ import adminRoutes from "@/routes/admin.routes";
 import AddressRoute from "@/routes/address.routes";
 import OutletItemRoute from "@/routes/outletItem.routes";
 import workerShiftRoutes from "@/routes/workerShift.routes";
-import pickupRequstRoutes from "./routes/pickupRequst.routes";
+import pickupRequestRoutes from "./routes/pickupRequest.routes";
 import pickupOrderRoutes from "./routes/pickupOrder.routes";
+import adminOrderRoutes from "./routes/adminOrder.routes";
 
 export class App {
   public app: Application;
@@ -43,7 +44,7 @@ export class App {
       cors({
         origin: process.env.NEXT_PUBLIC_APP_URL,
         credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       }),
     );
   }
@@ -76,12 +77,13 @@ export class App {
   }
 
   private initializePickupRoutes() {
-    this.app.use("/api/", pickupRequstRoutes);
+    this.app.use("/api/", pickupRequestRoutes);
     this.app.use("/api/", pickupOrderRoutes);
   }
 
   private initializeRoutes() {
     this.app.use("/api", OutletItemRoute);
+    this.app.use("/api", adminOrderRoutes);
   }
 
   private initializeSwagger() {

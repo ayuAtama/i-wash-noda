@@ -22,7 +22,7 @@ export class PickupOrderRoute {
 
   private getAllPickupOrders() {
     this.router.get(
-      "/pickup-request",
+      "/pickup-requests",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
@@ -32,7 +32,7 @@ export class PickupOrderRoute {
 
   private acceptPickupRequest() {
     this.router.post(
-      "/pickup-request/:id/accept",
+      "/pickup-requests/:id/accept",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
@@ -45,7 +45,7 @@ export class PickupOrderRoute {
 
   private listJobs() {
     this.router.get(
-      "/pickup-request/jobs",
+      "/pickup-requests/accepted",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
@@ -54,8 +54,8 @@ export class PickupOrderRoute {
   }
 
   private updateStatus() {
-    this.router.put(
-      "/pickup-request/:id/status",
+    this.router.patch(
+      "/pickup-requests/:id/status",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,

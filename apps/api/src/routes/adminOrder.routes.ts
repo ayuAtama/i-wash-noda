@@ -16,7 +16,7 @@ export class AdminOrderRoute {
 
   private createOrder() {
     this.router.put(
-      "/order/:id",
+      "/orders/:id",
       Validator.validate({
         body: AdminOrderValidation.AdminOrderSchema,
         params: AdminOrderValidation.AdminOrderParamsSchema,
