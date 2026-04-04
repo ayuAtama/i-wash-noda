@@ -18,19 +18,19 @@ export class OutletItemController {
       if (!lat || !lng)
         throw new HttpError(
           400,
-          "Missing lat or lng, please allow location permission"
+          "Missing lat or lng, please allow location permission",
         );
 
       // fetch it
       const outletCoverage = await this.outletItemService.outletCoverage(
         lat,
-        lng
+        lng,
       );
 
       if (outletCoverage.length === 0) {
         throw new HttpError(
           404,
-          "At this moment there is no outlets in your area"
+          "At this moment there is no outlets in your area",
         );
       }
 
@@ -66,7 +66,7 @@ export class OutletItemController {
       if (!userId) throw new HttpError(401, "Invalid user id");
       const outlet = await this.outletItemService.createOutlet(
         userId,
-        req.body
+        req.body,
       );
       res.status(201).json({
         success: true,
@@ -83,10 +83,10 @@ export class OutletItemController {
       throw new HttpError(400, "Missing id or body");
     const updateOutet = await this.outletItemService.updateOutet(
       req.params.id,
-      req.body
+      req.body,
     );
     res.status(200).json({
-      status: true,
+      success: true,
       message: "Outlet updated successfully",
       data: updateOutet,
     });
@@ -95,10 +95,10 @@ export class OutletItemController {
   deleteOutlet = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.params.id) throw new HttpError(400, "Missing id");
     const deletedOutlet = await this.outletItemService.deleteOutlet(
-      req.params.id
+      req.params.id,
     );
     res.status(200).json({
-      status: true,
+      success: true,
       message: "Outlet deleted successfully",
       data: deletedOutlet,
     });

@@ -26,9 +26,9 @@ export class PickupOrderController {
       const pickupRequests =
         await this.pickupOrderService.getAllPickupRequests(outletId);
       res.status(200).json({
-        status: "success",
+        success: true,
         message: "Pickup requests fetched successfully",
-        pickupRequests,
+        data: pickupRequests,
       });
     } catch (error) {
       next(error);
@@ -58,7 +58,7 @@ export class PickupOrderController {
           userId,
         );
       res.status(200).json({
-        success: success,
+        success: true,
         message: message,
         data,
       });
@@ -84,9 +84,9 @@ export class PickupOrderController {
         outletId,
       );
       res.status(200).json({
-        status: "success",
+        success: true,
         message: "Pickup requests fetched successfully",
-        result,
+        data: result,
       });
     } catch (error) {
       next(error);
@@ -112,9 +112,9 @@ export class PickupOrderController {
         status,
       );
       res.status(200).json({
-        status: "success",
+        success: true,
         message: "Job status updated successfully",
-        result,
+        data: result,
       });
     } catch (error) {
       next(error);

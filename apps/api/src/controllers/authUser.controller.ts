@@ -86,8 +86,11 @@ export class AuthUserController {
 
       // return response
       return res.status(201).json({
+        success: true,
         message: "User registered. Verification email sent.",
-        "email verified": user.emailVerified,
+        data: {
+          emailVerified: user.emailVerified,
+        },
       });
     } catch (err) {
       next(err);
@@ -135,8 +138,11 @@ export class AuthUserController {
 
       // return response
       return res.status(201).json({
-        success: result.success,
+        success: true,
         message: result.message,
+        data: {
+          emailVerified: result.success,
+        },
       });
     } catch (err) {
       next(err);
@@ -179,9 +185,10 @@ export class AuthUserController {
         });
 
         // return a response
-        return res.status(201).json({
-          success: success,
+        return res.status(200).json({
+          success: true,
           message: "Verification email resent successfully",
+          data: null,
         });
       }
 
@@ -205,9 +212,11 @@ export class AuthUserController {
         });
       }
 
-      return res
-        .status(201)
-        .json({ message: "Email Verified, You can continue registration" });
+      return res.status(201).json({
+        success: true,
+        message: "Email Verified, You can continue registration",
+        data: null,
+      });
     } catch (err) {
       next(err);
     }
@@ -272,11 +281,13 @@ export class AuthUserController {
 
       // format the response
       const response = {
-        success: success,
+        success: true,
         message: message,
-        "email verified": dataUser.emailVerified,
-        role: dataUser.role,
-        "created at": format(dataUser.createdAt, "PP HH:mm"),
+        data: {
+          emailVerified: dataUser.emailVerified,
+          role: dataUser.role,
+          createdAt: format(dataUser.createdAt, "PP HH:mm"),
+        },
       };
 
       // return response
@@ -343,11 +354,11 @@ export class AuthUserController {
       });
 
       // return the response
-      const response = {
-        success: success,
+      return res.status(200).json({
+        success: true,
         message: message,
-      };
-      return res.status(200).json(response);
+        data: null,
+      });
     } catch (error) {
       next(error);
     }
@@ -434,8 +445,9 @@ export class AuthUserController {
 
       // return the response
       return res.status(200).json({
-        success: result.success,
+        success: true,
         message: result.message,
+        data: null,
       });
     } catch (error) {
       next(error);
@@ -480,7 +492,11 @@ export class AuthUserController {
       res.clearCookie("next_step");
 
       // return the response
-      return res.status(200).json(result);
+      return res.status(200).json({
+        success: true,
+        message: "Password reset successfully",
+        data: result,
+      });
     } catch (error) {
       next(error);
     }
@@ -497,9 +513,9 @@ export class AuthUserController {
       if (!user) throw new HttpError(404, "User not found");
 
       return res.status(200).json({
-        success: success,
+        success: true,
         message: message,
-        user: user,
+        data: user,
       });
     } catch (error) {
       next(error);
@@ -522,7 +538,7 @@ export class AuthUserController {
       return res.status(200).json({
         success: true,
         message: "User updated",
-        user: updatedUser,
+        data: updatedUser,
       });
     } catch (error) {
       next(error);
@@ -569,8 +585,9 @@ export class AuthUserController {
       });
 
       return res.status(200).json({
-        success: success,
+        success: true,
         message: message,
+        data: null,
       });
     } catch (error) {
       next(error);
@@ -617,7 +634,7 @@ export class AuthUserController {
       return res.status(200).json({
         success: true,
         message: "Email updated successfully",
-        user: result,
+        data: result,
       });
     } catch (error) {
       next(error);

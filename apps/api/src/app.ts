@@ -59,7 +59,7 @@ export class App {
   }
 
   private initializeUserAndAuth() {
-    this.app.use("/users", userRoutes);
+    this.app.use("/api/users", userRoutes); //  deprecated and testing only
     this.app.use("/api", authUserRoutes);
   }
 

@@ -62,7 +62,11 @@ export class PickupRequestController {
         addressId,
         outletId,
       );
-      res.status(201).json(pickupRequest);
+      res.status(201).json({
+        success: true,
+        message: "Pickup request created successfully",
+        data: pickupRequest,
+      });
     } catch (error) {
       if (error instanceof HttpError) {
         next(error);

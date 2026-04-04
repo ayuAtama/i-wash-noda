@@ -20,7 +20,11 @@ export class UserController {
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const users = await this.userService.getAll();
-      res.json(users);
+      res.json({
+        success: true,
+        message: "Users fetched successfully",
+        data: users,
+      });
     } catch (err) {
       next(err);
     }
@@ -31,9 +35,16 @@ export class UserController {
       const id = String(req.params.id); //uuid string
       const user = await this.userService.getById(id);
 
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user)
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
 
-      res.json(user);
+      res.json({
+        success: true,
+        message: "User fetched successfully",
+        data: user,
+      });
     } catch (err) {
       next(err);
     }
@@ -42,7 +53,11 @@ export class UserController {
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const created = await this.userService.create(req.body);
-      res.status(201).json(created);
+      res.status(201).json({
+        success: true,
+        message: "User created successfully",
+        data: created,
+      });
     } catch (err) {
       next(err); // <-- REQUIRED so error handler can catch it
     }
@@ -53,7 +68,11 @@ export class UserController {
       const id = String(req.params.id);
       const payload = req.body;
       const updated = await this.userService.update(id, payload);
-      res.json(updated);
+      res.json({
+        success: true,
+        message: "User updated successfully",
+        data: updated,
+      });
     } catch (err) {
       next(err);
     }
@@ -63,7 +82,11 @@ export class UserController {
     try {
       const id = String(req.params.id);
       await this.userService.delete(id);
-      res.json({ message: "User deleted" });
+      res.json({
+        success: true,
+        message: "User deleted successfully",
+        data: null,
+      });
     } catch (err) {
       next(err);
     }
