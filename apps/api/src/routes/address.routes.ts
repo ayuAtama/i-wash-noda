@@ -61,7 +61,7 @@ export class AddressRoute {
   }
 
   private setDefaultAddress() {
-    this.router.post(
+    this.router.put(
       "/addresses/:id/set-default",
       authenticationMiddleware,
       Validator.validate({

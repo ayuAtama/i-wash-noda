@@ -20,22 +20,22 @@ export class PickupRequestRoute {
   // check if the user has address
   private checkAddressFirst() {
     this.router.get(
-      "/check/pickup-request",
+      "/pickup-requests/coverage-check",
       authenticationMiddleware,
       authorizationMiddleware("customer"),
-      this.controller.checkAddressFirst
+      this.controller.checkAddressFirst,
     );
   }
 
   private createPickupRequest() {
     this.router.post(
-      "/pickup-request",
+      "/pickup-requests",
       authenticationMiddleware,
       authorizationMiddleware("customer"),
       Validator.validate({
         body: PickupRequestValidation.CreatePickupRequestSchema,
       }),
-      this.controller.createPickupRequest
+      this.controller.createPickupRequest,
     );
   }
 }

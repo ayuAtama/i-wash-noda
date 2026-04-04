@@ -36,7 +36,7 @@ export class AdminRoute {
       this.controller.getAllUser,
     );
 
-    this.router.put(
+    this.router.patch(
       "/users",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
