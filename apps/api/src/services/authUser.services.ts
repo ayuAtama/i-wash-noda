@@ -247,6 +247,8 @@ export class AuthUserService {
         accessToken,
       };
     } catch (error) {
+      //debug the error
+      console.log("Here's the error: ", userId);
       // expected user error
       if (error instanceof HttpError) {
         throw error;

@@ -5,7 +5,8 @@ import { verifyToken } from "@/utils/jwt";
 export function requireStep(step: number) {
   return async function (req: Request, res: Response, next: NextFunction) {
     try {
-      // read if there're userid and token in query (bypass email verify for worker and driver)
+      // read if there're userid and token in query 
+      // (bypass email verify for worker and driver created by admin)
       if (req.query.userId && req.query.token) {
         console.log(req.query);
         return next();

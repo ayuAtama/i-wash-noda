@@ -17,18 +17,39 @@ export class AuthValidation {
       },
     });
 
-  static VerifySchema = z
+  static VerifySchemaTokenBody = z
     .object({
-      token: z.string().meta({
-        description: "OTP verification token",
-        example: "123456",
-      }),
+      token: z
+        .string()
+        .regex(/^\d{6}$/)
+        .optional()
+        .meta({
+          description: "OTP verification token",
+          example: "123456",
+        }),
     })
     .meta({
-      id: "Verify",
+      id: "VerifyTokenBody",
       description: "Payload for verifying email with OTP",
       example: {
         token: "123456",
+      },
+    });
+
+  static VerifySchemaTokenParams = z
+    .object({
+      token: z.string().optional().meta({
+        description: "OTP verification token using link",
+        example:
+          "17d620b2f137f4897b2882c530303a856cf27fe9ff9c8879065f8c135c9c55df",
+      }),
+    })
+    .meta({
+      id: "VerifyTokenParams",
+      description: "Payload for verifying email with OTP",
+      example: {
+        token:
+          "17d620b2f137f4897b2882c530303a856cf27fe9ff9c8879065f8c135c9c55df",
       },
     });
 
@@ -199,7 +220,12 @@ export class AuthValidation {
 }
 
 export type RegisterDto = z.infer<typeof AuthValidation.RegisterSchema>;
-export type VerifyDto = z.infer<typeof AuthValidation.VerifySchema>;
+export type VerifyDtoBody = z.infer<
+  typeof AuthValidation.VerifySchemaTokenBody
+>;
+export type VerifyDtoParams = z.infer<
+  typeof AuthValidation.VerifySchemaTokenParams
+>;
 export type CompleteRegisterDto = z.infer<
   typeof AuthValidation.CompleteRegisterSchema
 >;

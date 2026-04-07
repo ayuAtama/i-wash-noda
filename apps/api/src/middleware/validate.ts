@@ -35,7 +35,7 @@ export class Validator {
       req.validated = {};
 
       if (body) {
-        const result = body.safeParse(req.body);
+        const result = body.safeParse(req.body ?? {});
         // return the validation error
         if (!result.success) {
           return res.status(400).json({
