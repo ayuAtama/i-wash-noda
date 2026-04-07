@@ -41,7 +41,8 @@ export class AuthUserRoute {
       "/verify",
       verifyOTPEndpointRateLimiter,
       Validator.validate({
-        body: AuthValidation.VerifySchema,
+        body: AuthValidation.VerifySchemaTokenBody,
+        query: AuthValidation.VerifySchemaTokenParams,
       }),
       requireStep(1),
       this.controller.verify,

@@ -4,7 +4,7 @@ import { HttpError } from "@/utils/httpError";
 
 // Extract field name from Prisma message (fallback)
 function extractField(
-  err: Prisma.PrismaClientKnownRequestError
+  err: Prisma.PrismaClientKnownRequestError,
 ): string[] | undefined {
   // Step 1: Prisma gives the correct field
   if (err.meta?.target) return err.meta.target as string[];
@@ -29,7 +29,7 @@ function extractField(
 
 // Full Prisma error mapper
 export function mapPrismaError(
-  err: Prisma.PrismaClientKnownRequestError
+  err: Prisma.PrismaClientKnownRequestError,
 ): HttpError {
   switch (err.code) {
     // Unique constraint failed
@@ -37,7 +37,7 @@ export function mapPrismaError(
       return new HttpError(
         409,
         "Duplicate field",
-        extractField(err) ?? ["unknown"]
+        extractField(err) ?? ["unknown"],
       );
 
     // Record not found
@@ -49,7 +49,7 @@ export function mapPrismaError(
       return new HttpError(
         409,
         "Foreign key constraint failed",
-        extractField(err) ?? ["unknown"]
+        extractField(err) ?? ["unknown"],
       );
 
     // Query interpretation error
@@ -57,7 +57,7 @@ export function mapPrismaError(
       return new HttpError(
         400,
         "Invalid value for field",
-        extractField(err) ?? ["unknown"]
+        extractField(err) ?? ["unknown"],
       );
 
     // Required field is missing
@@ -65,7 +65,7 @@ export function mapPrismaError(
       return new HttpError(
         400,
         "Required field missing",
-        extractField(err) ?? ["unknown"]
+        extractField(err) ?? ["unknown"],
       );
 
     // Null constraint failed
@@ -73,7 +73,7 @@ export function mapPrismaError(
       return new HttpError(
         400,
         "Input violates null constraint",
-        extractField(err) ?? ["unknown"]
+        extractField(err) ?? ["unknown"],
       );
 
     // Value too long for column type
@@ -81,7 +81,7 @@ export function mapPrismaError(
       return new HttpError(
         400,
         "Value is too long for field",
-        extractField(err) ?? ["unknown"]
+        extractField(err) ?? ["unknown"],
       );
 
     // Invalid value type
@@ -89,7 +89,7 @@ export function mapPrismaError(
       return new HttpError(
         400,
         "Invalid value type",
-        extractField(err) ?? ["unknown"]
+        extractField(err) ?? ["unknown"],
       );
 
     // Record already exists (unique + upsert mismatch)
@@ -97,7 +97,7 @@ export function mapPrismaError(
       return new HttpError(
         409,
         "Record already exists",
-        extractField(err) ?? ["unknown"]
+        extractField(err) ?? ["unknown"],
       );
 
     // Broken relation
@@ -119,6 +119,10 @@ export function mapPrismaError(
     // Connection failure
     case "P2024":
       return new HttpError(503, "Database connection issue");
+
+    // connection unreachable
+    case "P1001":
+      return new HttpError(503, "Database unreachable");
 
     // case "P2028":
     //   return new HttpError(

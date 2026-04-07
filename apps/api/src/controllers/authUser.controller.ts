@@ -101,7 +101,11 @@ export class AuthUserController {
     try {
       // store the hashed token from query or the raw token from body
       const token = req.query.token || req.body.token;
-      const userId = String(req.query.userId) ?? req.access_token?.sub;
+      if (!token) {
+        throw new HttpError(400, "Token required");
+      }
+      // bypass the cookies next_step and temp_jwt for account created by admin (worker & driver)
+      const userId = (req.query.userId as string) || req.access_token?.sub;
 
       //check if token is valid
       if (!token) {

@@ -26,6 +26,7 @@ export class App {
 
   constructor() {
     this.app = express();
+    this.initializeHealthCheck();
     this.initializeCors();
     this.initializeBetterAuth();
     this.initializeMiddlewares();
@@ -37,6 +38,18 @@ export class App {
     this.initializeRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
+  }
+
+  private initializeHealthCheck() {
+    this.app.get("/", (_req, res) => {
+      res.status(200).json({
+        success: true,
+        message: "API is healthy",
+        data: {
+          timestamp: new Date().toISOString(),
+        },
+      });
+    });
   }
 
   private initializeCors() {
