@@ -3,7 +3,19 @@ import type { Request, Response, NextFunction } from "express";
 import { AuthUserService } from "../services/authUser.services";
 import { HttpError } from "@/utils/httpError";
 import { addDays, addHours, addMinutes, addYears, format } from "date-fns";
-import { RegisterDto } from "@/validations/auth.validation";
+import {
+  CompleteRegisterDto,
+  EmailChangeConfirmDto,
+  EmailChangeRequestDto,
+  LoginDto,
+  RegisterDto,
+  ResendDto,
+  ResetConfirmDto,
+  ResetRequestDto,
+  UpdateMeDto,
+  VerifyDtoBody,
+  VerifyDtoParams,
+} from "@/validations/auth.validation";
 
 export class AuthUserController {
   private authUserService: AuthUserService;
@@ -99,11 +111,14 @@ export class AuthUserController {
 
   verify = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const payload =
+        (req.validated!.body as VerifyDtoBody) ||
+        (req.validated!.query as VerifyDtoParams);
+
       // store the hashed token from query or the raw token from body
-      const token = req.query.token || req.body.token;
-      if (!token) {
-        throw new HttpError(400, "Token required");
-      }
+      //const token = req.query.token || req.body.token;
+      const token = payload.token;
+
       // bypass the cookies next_step and temp_jwt for account created by admin (worker & driver)
       const userId = (req.query.userId as string) || req.access_token?.sub;
 
@@ -159,7 +174,8 @@ export class AuthUserController {
     next: NextFunction,
   ) => {
     try {
-      const email = req.body.email;
+      const payload = req.validated!.body as ResendDto;
+      const email = payload.email;
       if (!email || (!email.includes("@") && !email.includes("."))) {
         throw new HttpError(400, "Email required");
       }
@@ -190,7 +206,7 @@ export class AuthUserController {
 
         // return a response
         return res.status(200).json({
-          success: true,
+          success: success,
           message: "Verification email resent successfully",
           data: null,
         });
@@ -217,7 +233,7 @@ export class AuthUserController {
       }
 
       return res.status(201).json({
-        success: true,
+        success: success,
         message: "Email Verified, You can continue registration",
         data: null,
       });
@@ -234,11 +250,11 @@ export class AuthUserController {
     try {
       // get the decoded jwt from middleware
       const tempJwt = req.temp_jwt;
-
       if (!tempJwt) throw new HttpError(400, "Missing token");
 
       // get the email
-      const email = req.body.email;
+      const payload = req.validated!.body as CompleteRegisterDto;
+      const email = payload.email;
       if (!email) throw new HttpError(400, "Email required");
 
       // check if the email matches the temp jwt
@@ -246,8 +262,12 @@ export class AuthUserController {
         throw new HttpError(400, "Email does not match jwt");
       }
 
-      // get the data
-      const payload = req.body;
+      // data
+      const data = {
+        email: payload.email,
+        name: payload.name,
+        password: payload.password,
+      };
       // get the user Agent
       const userAgent = req.get("user-agent") || null; // if the user agent is not set, return null
 
@@ -256,7 +276,7 @@ export class AuthUserController {
         await this.authUserService.completeUserDataRegistration(
           tempJwt,
           email,
-          payload,
+          data,
           userAgent,
         );
 
@@ -326,9 +346,11 @@ export class AuthUserController {
 
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const payload = req.validated!.body as LoginDto;
+
       // get the email and password and also the user agent
-      if (!req.body) throw new HttpError(400, "Email and password required");
-      const { email, password } = req.body;
+      if (!payload) throw new HttpError(400, "Email and password required");
+      const { email, password } = payload;
       const userAgent = req.get("user-agent") || null;
       const ipAddress = req.ip || "";
       if (!email || !password)
@@ -359,7 +381,7 @@ export class AuthUserController {
 
       // return the response
       return res.status(200).json({
-        success: true,
+        success: success,
         message: message,
         data: null,
       });
@@ -422,8 +444,9 @@ export class AuthUserController {
     next: NextFunction,
   ) => {
     try {
+      const payload = req.validated!.body as ResetRequestDto;
       // grab and check the email
-      const { email } = req.body;
+      const { email } = payload;
       if (!email) throw new HttpError(400, "Email required");
 
       // reset password request
@@ -449,7 +472,7 @@ export class AuthUserController {
 
       // return the response
       return res.status(200).json({
-        success: true,
+        success: result.success,
         message: result.message,
         data: null,
       });
@@ -475,7 +498,8 @@ export class AuthUserController {
       }
 
       // get the email and password
-      const { email, password, token } = req.body;
+      const payload = req.validated!.body as ResetConfirmDto;
+      const { email, password, token } = payload;
 
       // check if the email valid and match with jwt email
       const jwt_email = temp_jwt.email!;
@@ -517,7 +541,7 @@ export class AuthUserController {
       if (!user) throw new HttpError(404, "User not found");
 
       return res.status(200).json({
-        success: true,
+        success: success,
         message: message,
         data: user,
       });
@@ -533,7 +557,8 @@ export class AuthUserController {
       if (!id) throw new HttpError(401, "Unauthorized, login first");
 
       // get the data from body
-      const data = req.body;
+      const payload = req.validated!.body as UpdateMeDto;
+      const data = payload;
 
       // update the user
       const updatedUser = await this.authUserService.updateMe(id, data);
@@ -560,8 +585,9 @@ export class AuthUserController {
       if (!id) throw new HttpError(401, "Unauthorized, login first");
 
       // get the new email from body
-      if (!req.body) throw new HttpError(400, "Email required");
-      const { email } = req.body;
+      const payload = req.validated!.body as EmailChangeRequestDto;
+      if (!payload) throw new HttpError(400, "Email required");
+      const { email } = payload;
       if (!email) throw new HttpError(400, "Email required");
 
       // request the new email chacnge
@@ -589,7 +615,7 @@ export class AuthUserController {
       });
 
       return res.status(200).json({
-        success: true,
+        success: success,
         message: message,
         data: null,
       });
@@ -610,6 +636,7 @@ export class AuthUserController {
       if (!access_token) throw new HttpError(401, "Unauthorized, login first");
 
       // get the email and password
+      const payload = req.validated!.body as EmailChangeConfirmDto;
       const { email, token } = req.body;
       const jwt_email = temp_jwt.email!;
       const newEmail = email;

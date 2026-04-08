@@ -4,22 +4,23 @@
 
 ### Registration
 
+- [x] Send OTP to Regristration Email
 - [x] Email verification by link
 - [x] Email verification by code
-
-- [ ] Create user account
+- [x] Complete registration form (name and password)
+- [x] Resend OTP
 
 ### Login
 
-- [] JWT authentication
-- [ ] Better Auth integration (Google, etc.)
+- [x] JWT authentication (email and password)
+- [x] Refresh token
+- [x] Better Auth integration (Google, etc.)
+- [x] Logout
 
-## User Management
+### Miscellaneous
 
-- [ ] User registration
-- [ ] User login
-- [ ] User profile management
-- [ ] User session management
+- [x] Password reset
+- [x] Email change
 
 ## Address Management
 
