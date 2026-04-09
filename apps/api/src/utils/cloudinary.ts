@@ -19,8 +19,6 @@ export type UploadType = "image" | "video" | "audio" | "document";
 export interface CloudinaryUploadOptions {
   type?: UploadType;
   maxSize?: number;
-  minWidth?: number;
-  minHeight?: number;
   maxWidth?: number;
   maxHeight?: number;
   allowedFormats?: string[];

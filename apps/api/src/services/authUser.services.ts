@@ -1,6 +1,7 @@
 // apps/api/src/services/authUser.services.ts
 import { prisma } from "@/config/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { z } from "zod";
 import {
   generate6DigitCode,
   hashToken,
@@ -1037,13 +1038,36 @@ export class AuthUserService {
 
   async updateAvatar(userId: string, imageUrl: string) {
     try {
+      if (!z.string().uuid().safeParse(userId).success) {
+        throw new HttpError(
+          400,
+          "Invalid user ID format",
+          undefined,
+          "AVATAR_INVALID_USER_ID",
+        );
+      }
+
+      if (!imageUrl.includes("cloudinary.com")) {
+        throw new HttpError(
+          400,
+          "Invalid image URL",
+          undefined,
+          "AVATAR_INVALID_URL",
+        );
+      }
+
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { image: true },
       });
 
       if (!user) {
-        throw new HttpError(404, "User not found");
+        throw new HttpError(
+          404,
+          "User not found",
+          undefined,
+          "AVATAR_USER_NOT_FOUND",
+        );
       }
 
       if (user.image) {
@@ -1067,13 +1091,27 @@ export class AuthUserService {
 
   async deleteAvatar(userId: string) {
     try {
+      if (!z.string().uuid().safeParse(userId).success) {
+        throw new HttpError(
+          400,
+          "Invalid user ID format",
+          undefined,
+          "AVATAR_INVALID_USER_ID",
+        );
+      }
+
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { image: true },
       });
 
       if (!user) {
-        throw new HttpError(404, "User not found");
+        throw new HttpError(
+          404,
+          "User not found",
+          undefined,
+          "AVATAR_USER_NOT_FOUND",
+        );
       }
 
       if (user.image) {

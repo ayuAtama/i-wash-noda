@@ -16,6 +16,11 @@ const typeMimeTypes: Record<UploadType, string[]> = {
   document: imageMimeTypes.document,
 };
 
+const ERROR_CODES = {
+  INVALID_MIME: "UPLOAD_INVALID_MIME",
+  INVALID_FORMAT: "UPLOAD_INVALID_FORMAT",
+} as const;
+
 export function cloudinaryUploadMiddleware(
   fieldName: string,
   options: CloudinaryUploadOptions = {},
@@ -41,7 +46,14 @@ export function cloudinaryUploadMiddleware(
 
       if (!mimeAllowed) {
         const typeName = type.charAt(0).toUpperCase() + type.slice(1);
-        cb(new HttpError(400, `Only ${typeName} files are allowed`));
+        cb(
+          new HttpError(
+            400,
+            `Only ${typeName} files are allowed`,
+            undefined,
+            ERROR_CODES.INVALID_MIME,
+          ),
+        );
         return;
       }
 
@@ -54,39 +66,14 @@ export function cloudinaryUploadMiddleware(
 
       if (!formatAllowed) {
         const extList = allowedFormats.map((f) => f.toUpperCase()).join(", ");
-        cb(new HttpError(400, `Only ${extList} files are allowed`));
-        return;
-      }
-
-      if (type === "image" && (options.minWidth || options.minHeight)) {
-        const sharp = require("sharp");
-        const sizeError = (message: string) => {
-          cb(new HttpError(400, message));
-        };
-
-        sharp(file.buffer)
-          .metadata()
-          .then((metadata: { width?: number; height?: number }) => {
-            const { width = 0, height = 0 } = metadata;
-
-            if (options.minWidth && width < options.minWidth) {
-              sizeError(
-                `Image must be at least ${options.minWidth}x${options.minHeight || options.minWidth} pixels`,
-              );
-              return;
-            }
-            if (options.minHeight && height < options.minHeight) {
-              sizeError(
-                `Image must be at least ${options.minWidth || options.minHeight}x${options.minHeight} pixels`,
-              );
-              return;
-            }
-
-            cb(null, true);
-          })
-          .catch(() => {
-            cb(new HttpError(400, "Failed to read image dimensions"));
-          });
+        cb(
+          new HttpError(
+            400,
+            `Only ${extList} files are allowed`,
+            undefined,
+            ERROR_CODES.INVALID_FORMAT,
+          ),
+        );
         return;
       }
 

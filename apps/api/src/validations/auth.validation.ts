@@ -217,6 +217,45 @@ export class AuthValidation {
         token: "123456",
       },
     });
+
+  static AvatarUploadResponseSchema = z
+    .object({
+      success: z.boolean(),
+      message: z.string(),
+      data: z.object({
+        image: z.string().url().nullable(),
+      }),
+    })
+    .meta({
+      id: "AvatarUploadResponse",
+      description: "Response for avatar upload",
+      example: {
+        success: true,
+        message: "Avatar uploaded successfully",
+        data: {
+          image:
+            "https://res.cloudinary.com/xxx/image/upload/v123/avatars/abc.jpg",
+        },
+      },
+    });
+
+  static AvatarDeleteResponseSchema = z
+    .object({
+      success: z.boolean(),
+      message: z.string(),
+      data: z.object({
+        image: z.null(),
+      }),
+    })
+    .meta({
+      id: "AvatarDeleteResponse",
+      description: "Response for avatar deletion",
+      example: {
+        success: true,
+        message: "Avatar deleted successfully",
+        data: { image: null },
+      },
+    });
 }
 
 export type RegisterDto = z.infer<typeof AuthValidation.RegisterSchema>;
@@ -239,4 +278,10 @@ export type EmailChangeRequestDto = z.infer<
 >;
 export type EmailChangeConfirmDto = z.infer<
   typeof AuthValidation.EmailChangeConfirmSchema
+>;
+export type AvatarUploadResponseDto = z.infer<
+  typeof AuthValidation.AvatarUploadResponseSchema
+>;
+export type AvatarDeleteResponseDto = z.infer<
+  typeof AuthValidation.AvatarDeleteResponseSchema
 >;

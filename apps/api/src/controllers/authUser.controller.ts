@@ -1,5 +1,6 @@
 // src/controllers/authUser.controller.ts
 import type { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { AuthUserService } from "../services/authUser.services";
 import { HttpError } from "@/utils/httpError";
 import { addDays, addHours, addMinutes, addYears, format } from "date-fns";
@@ -676,14 +677,38 @@ export class AuthUserController {
   uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.access_token?.sub || req.user?.id;
-      if (!userId) throw new HttpError(401, "Unauthorized, login first");
 
-      if (!req.file) {
-        throw new HttpError(400, "No file uploaded");
+      if (!userId) {
+        throw new HttpError(
+          401,
+          "Unauthorized, login first",
+          undefined,
+          "UNAUTHORIZED",
+        );
       }
 
-      const imageUrl = req.file.path;
-      const result = await this.authUserService.updateAvatar(userId, imageUrl);
+      if (!z.string().uuid().safeParse(userId).success) {
+        throw new HttpError(
+          400,
+          "Invalid user ID format",
+          undefined,
+          "AVATAR_INVALID_USER_ID",
+        );
+      }
+
+      if (!req.file) {
+        throw new HttpError(
+          400,
+          "No file uploaded",
+          undefined,
+          "AVATAR_MISSING_FILE",
+        );
+      }
+
+      const result = await this.authUserService.updateAvatar(
+        userId,
+        req.file.path,
+      );
 
       return res.status(200).json({
         success: true,
@@ -698,7 +723,24 @@ export class AuthUserController {
   deleteAvatar = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.access_token?.sub || req.user?.id;
-      if (!userId) throw new HttpError(401, "Unauthorized, login first");
+
+      if (!userId) {
+        throw new HttpError(
+          401,
+          "Unauthorized, login first",
+          undefined,
+          "UNAUTHORIZED",
+        );
+      }
+
+      if (!z.string().uuid().safeParse(userId).success) {
+        throw new HttpError(
+          400,
+          "Invalid user ID format",
+          undefined,
+          "AVATAR_INVALID_USER_ID",
+        );
+      }
 
       const result = await this.authUserService.deleteAvatar(userId);
 

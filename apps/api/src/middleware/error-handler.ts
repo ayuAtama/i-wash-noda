@@ -14,19 +14,40 @@ export function errorHandler(
 
   // 1. Multer errors
   if (err.name === "MulterError") {
-    const multerMessages: Record<string, string> = {
-      MISSING_FIELD_NAME: "Field name 'avatar' is required in form-data",
-      LIMIT_FILE_SIZE: "File too large. Maximum size is 2MB",
-      LIMIT_FILE_COUNT: "Too many files uploaded",
-      LIMIT_FIELD_COUNT: "Too many fields in the form",
-      LIMIT_UNEXPECTED_FILE:
-        "Unexpected field name. Use 'avatar' as the field name",
-      LIMIT_PART_COUNT: "Too many parts in the multipart form",
+    const multerMessages: Record<string, { message: string; code: string }> = {
+      MISSING_FIELD_NAME: {
+        message: "No file uploaded",
+        code: "AVATAR_MISSING_FILE",
+      },
+      LIMIT_FILE_SIZE: {
+        message: "File too large. Maximum size is 2MB",
+        code: "AVATAR_FILE_TOO_LARGE",
+      },
+      LIMIT_FILE_COUNT: {
+        message: "Too many files uploaded",
+        code: "AVATAR_TOO_MANY_FILES",
+      },
+      LIMIT_FIELD_COUNT: {
+        message: "Too many fields in the form",
+        code: "AVATAR_TOO_MANY_FIELDS",
+      },
+      LIMIT_UNEXPECTED_FILE: {
+        message: "Unexpected field name",
+        code: "AVATAR_UNEXPECTED_FIELD",
+      },
+      LIMIT_PART_COUNT: {
+        message: "Too many parts in the multipart form",
+        code: "AVATAR_TOO_MANY_PARTS",
+      },
+    };
+    const error = multerMessages[err.code] || {
+      message: "File upload error",
+      code: "AVATAR_UPLOAD_ERROR",
     };
     return res.status(400).json({
       success: false,
-      message: multerMessages[err.code] || "File upload error",
-      code: err.code,
+      message: error.message,
+      code: error.code,
     });
   }
 
