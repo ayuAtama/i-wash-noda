@@ -672,4 +672,43 @@ export class AuthUserController {
       next(error);
     }
   };
+
+  uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub || req.user?.id;
+      if (!userId) throw new HttpError(401, "Unauthorized, login first");
+
+      if (!req.file) {
+        throw new HttpError(400, "No file uploaded");
+      }
+
+      const imageUrl = req.file.path;
+      const result = await this.authUserService.updateAvatar(userId, imageUrl);
+
+      return res.status(200).json({
+        success: true,
+        message: "Avatar uploaded successfully",
+        data: { image: result.image },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteAvatar = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub || req.user?.id;
+      if (!userId) throw new HttpError(401, "Unauthorized, login first");
+
+      const result = await this.authUserService.deleteAvatar(userId);
+
+      return res.status(200).json({
+        success: true,
+        message: "Avatar deleted successfully",
+        data: { image: result.image },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

@@ -27,6 +27,7 @@ import {
 import { validateMXRecord } from "@/utils/mxRecordValidatior";
 import { Role } from "@/generated/prisma/client";
 import { UpdateMeDto } from "@/validations/auth.validation";
+import { deleteImage } from "@/utils/cloudinary";
 
 export class AuthUserService {
   async register(data: Prisma.UserCreateInput) {
@@ -1030,6 +1031,66 @@ export class AuthUserService {
       // return to controller
       return result;
     } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateAvatar(userId: string, imageUrl: string) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { image: true },
+      });
+
+      if (!user) {
+        throw new HttpError(404, "User not found");
+      }
+
+      if (user.image) {
+        await deleteImage(user.image);
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { image: imageUrl },
+        select: { image: true },
+      });
+
+      return updatedUser;
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
+  async deleteAvatar(userId: string) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { image: true },
+      });
+
+      if (!user) {
+        throw new HttpError(404, "User not found");
+      }
+
+      if (user.image) {
+        await deleteImage(user.image);
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { image: null },
+        select: { image: true },
+      });
+
+      return updatedUser;
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
       throw error;
     }
   }

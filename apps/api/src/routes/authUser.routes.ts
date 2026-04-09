@@ -13,6 +13,7 @@ import { authenticationMiddleware } from "@/middleware/authentication";
 import { refreshTokenMiddleware } from "@/middleware/refreshToken";
 import { Validator } from "@/middleware/validate";
 import { AuthValidation } from "@/validations/auth.validation";
+import { cloudinaryUploadMiddleware } from "@/middleware/cloudinary.middleware";
 
 export class AuthUserRoute {
   public router = Router();
@@ -119,6 +120,17 @@ export class AuthUserRoute {
         body: AuthValidation.UpdateMeSchema,
       }),
       this.controller.updateMe,
+    );
+    this.router.post(
+      "/me/avatar",
+      authenticationMiddleware,
+      cloudinaryUploadMiddleware("avatarq"),
+      this.controller.uploadAvatar,
+    );
+    this.router.delete(
+      "/me/avatar",
+      authenticationMiddleware,
+      this.controller.deleteAvatar,
     );
     this.router.post(
       "/change-email-request",
