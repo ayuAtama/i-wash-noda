@@ -169,9 +169,9 @@ export class AuthValidation {
         description: "User full name",
         example: "John Updated",
       }),
-      phone: z.string().optional().meta({
-        description: "User phone number",
-        example: "+1987654321",
+      password: z.string().min(6).optional().meta({
+        description: "User password (min 6 characters)",
+        example: "securePassword123",
       }),
     })
     .meta({

@@ -57,7 +57,7 @@ export class AuthUserRoute {
       this.controller.completeRegistration,
     );
     this.router.post(
-      "/resend",
+      "/resend-otp",
       resendOTPEndpointRateLimiter,
       Validator.validate({
         body: AuthValidation.ResendSchema,
@@ -94,14 +94,14 @@ export class AuthUserRoute {
 
   private resetPassword() {
     this.router.post(
-      "/reset-request",
+      "/reset-password-request",
       Validator.validate({
         body: AuthValidation.ResetRequestSchema,
       }),
       this.controller.resetPasswordRequest,
     );
     this.router.post(
-      "/reset-confirm",
+      "/reset-password-confirm",
       Validator.validate({
         body: AuthValidation.ResetConfirmSchema,
       }),
@@ -129,7 +129,7 @@ export class AuthUserRoute {
       this.controller.emailChangeRequest,
     );
     this.router.put(
-      "/change-email",
+      "/change-email-confirm",
       requireStep(67),
       authenticationMiddleware,
       Validator.validate({

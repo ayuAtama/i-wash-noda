@@ -112,7 +112,7 @@ export class AuthUserController {
   verify = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const payload =
-        (req.validated!.body as VerifyDtoBody) ||
+        (req.validated!.body as VerifyDtoBody) ??
         (req.validated!.query as VerifyDtoParams);
 
       // store the hashed token from query or the raw token from body
@@ -120,7 +120,7 @@ export class AuthUserController {
       const token = payload.token;
 
       // bypass the cookies next_step and temp_jwt for account created by admin (worker & driver)
-      const userId = (req.query.userId as string) || req.access_token?.sub;
+      const userId = (req.query.userId as string) ?? req.access_token?.sub;
 
       //check if token is valid
       if (!token) {
@@ -551,9 +551,10 @@ export class AuthUserController {
   };
 
   updateMe = async (req: Request, res: Response, next: NextFunction) => {
+    // update the user name and password
     try {
       // get the decoded userid from middleware
-      const id = req.access_token?.sub || req.user?.id;
+      const id = req.access_token?.sub ?? req.user?.id;
       if (!id) throw new HttpError(401, "Unauthorized, login first");
 
       // get the data from body

@@ -26,6 +26,7 @@ import {
 } from "date-fns";
 import { validateMXRecord } from "@/utils/mxRecordValidatior";
 import { Role } from "@/generated/prisma/client";
+import { UpdateMeDto } from "@/validations/auth.validation";
 
 export class AuthUserService {
   async register(data: Prisma.UserCreateInput) {
@@ -846,24 +847,39 @@ export class AuthUserService {
     }
   }
 
-  async updateMe(sub: string, data: Prisma.UserUpdateInput) {
+  async updateMe(sub: string, data: UpdateMeDto) {
     try {
-      // get the data
+      // format the data
+      const userId = sub;
+      const { name, password } = data;
+
+      // hash the password
+      let hashedPassword = null as string | null;
+      if (password) {
+        hashedPassword = hashPassword(password);
+      }
+
+      // payload the data
+      const payload = {
+        name,
+        ...(hashedPassword ? { password: hashedPassword } : {}),
+        //or
+        // ...(hashedPassword && { password: hashedPassword }),
+      };
+
+      // update the user's data accordingly
       const updateData = await prisma.user.update({
         where: {
-          id: sub,
+          id: userId,
         },
-        data: data,
+        data: payload,
       });
 
       // format the data
       const user = {
         name: updateData.name,
         email: updateData.email,
-        "pending email": updateData.pending_email,
-        "email verified": updateData.emailVerified,
-        role: updateData.role,
-        image: updateData.image,
+        password: "New password created: ******",
         "created at": formatDate(updateData.createdAt, "PP HH:mm"),
         "updated at": formatDate(updateData.updatedAt, "PP HH:mm"),
       };
