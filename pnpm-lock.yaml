@@ -32,6 +32,9 @@ importers:
       better-auth:
         specifier: ^1.4.0
         version: 1.4.1(next@16.1.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      cloudinary:
+        specifier: ^2.9.0
+        version: 2.9.0
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -1741,6 +1744,10 @@ packages:
 
   client-only@0.0.1:
     resolution: {integrity: sha512-IV3Ou0jSMzZrd3pZ48nLkT9DA7Ag1pnPzaiQhpW7c3RbcqqzvzzVu+L8gfqMp/8IM2MQtSiqaCxrrcfu8I8rMA==}
+
+  cloudinary@2.9.0:
+    resolution: {integrity: sha512-F3iKMOy4y0zy0bi5JBp94SC7HY7i/ImfTPSUV07iJmRzH1Iz8WavFfOlJTR1zvYM/xKGoiGZ3my/zy64In0IQQ==}
+    engines: {node: '>=9'}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -5082,6 +5089,10 @@ snapshots:
       consola: 3.4.2
 
   client-only@0.0.1: {}
+
+  cloudinary@2.9.0:
+    dependencies:
+      lodash: 4.17.21
 
   color-convert@2.0.1:
     dependencies:
