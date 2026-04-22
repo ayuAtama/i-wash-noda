@@ -20,6 +20,7 @@ import workerShiftRoutes from "@/routes/workerShift.routes";
 import pickupRequestRoutes from "./routes/pickupRequest.routes";
 import pickupOrderRoutes from "./routes/pickupOrder.routes";
 import adminOrderRoutes from "./routes/adminOrder.routes";
+import cloudinaryRoutes from "./routes/cloudinary.routes";
 
 export class App {
   public app: Application;
@@ -35,6 +36,7 @@ export class App {
     this.initializeAdminManageUserRoutes();
     this.initializeAddressRoutes();
     this.initializePickupRoutes();
+    this.initializePreSignedURLRoutes();
     this.initializeRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
@@ -101,6 +103,10 @@ export class App {
 
   private initializeSwagger() {
     this.app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
+  }
+
+  private initializePreSignedURLRoutes() {
+    this.app.use("/api", cloudinaryRoutes);
   }
 
   private initializeErrorHandler() {
