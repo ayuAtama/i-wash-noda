@@ -1,34 +1,24 @@
 import rateLimit from "express-rate-limit";
-import ms from "ms";
+import ms, { StringValue } from "ms";
 
-export const registerEndpointRateLimiter = rateLimit({
-  windowMs: ms("1m"), // 1 minutes
-  max: 10, // limit each IP to 100 requests per windowMs
-  standardHeaders: true, // send RateLimit-* headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  message: { error: "Too many requests, please try again later." },
-});
+/**
+ * Membuat middleware rate limiter untuk membatasi jumlah request dari satu IP.
+ * Fungsi ini membantu mencegah spam atau serangan brute-force pada endpoint tertentu.
+ * * @param maxRequests - Batas maksimal request yang diizinkan dalam rentang waktu tertentu.
+ * @param windowMs - Durasi waktu (contoh: "1m" untuk 1 menit, "1h" untuk 1 jam). Default adalah "1m".
+ * @returns Konfigurasi middleware express-rate-limit.
+ * * @example
+ * // Membatasi maksimal 5 request per 2 menit
+ * export const loginLimiter = rateLimiter(5, "2m");
+ */
+const rateLimiter = (maxRequests: number, windowMs: StringValue = "1m") => {
+  return rateLimit({
+    windowMs: ms(windowMs), // default 1 minute for rate limit
+    max: maxRequests, // Limit how much IP can request per windowMs
+    standardHeaders: true, // send RateLimit-* headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { error: "Too many requests, please try again later." },
+  });
+};
 
-export const verifyOTPEndpointRateLimiter = rateLimit({
-  windowMs: ms("1m"),
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many requests, please try again later." },
-});
-
-export const resendOTPEndpointRateLimiter = rateLimit({
-  windowMs: ms("1m"),
-  max: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many requests, please try again later." },
-});
-
-export const commpleteRegisterEndpointRateLimiter = rateLimit({
-  windowMs: ms("1m"),
-  max: 3  ,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many requests, please try again later." },
-});
+export default rateLimiter;
