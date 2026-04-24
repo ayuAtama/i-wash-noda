@@ -6,20 +6,17 @@ import {
 import { getUnixTime } from "date-fns/getUnixTime";
 
 export class CloudinaryService {
-  async getSignature(params: string) {
+  async getSignature(userId: string, folder: string) {
     try {
       // getUnixTime automatically gets the current time in seconds,
       // eliminating the need for division or rounding!
       const timestamp = getUnixTime(new Date());
 
       // the parameters that need to be signed
-      //get the public_id from cookies
-      //const uuid = params.uuid
       const paramsToSign = {
         timestamp: timestamp,
-        //public_id: `avatar_${uuid}`,
-        public_id: `avatar_test`,
-        folder: "/profile", // /profile
+        public_id: `avatar_${userId}`,
+        folder: folder, // /profile
         overwrite: true, // for prevent user make a same upload flood the cloudinary.
         allowed_formats: ["jpg", "png", "jpeg"],
       };
