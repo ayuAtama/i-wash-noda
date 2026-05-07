@@ -35,7 +35,7 @@ export class AddressController {
     try {
       // get the data
       //const payload = req.body;
-      const payload = req.validated?.body as CreateAddressDto;
+      const payload = req.validated!.body as CreateAddressDto;
       if (!payload) {
         throw new HttpError(400, "Invalid payload");
       }
@@ -63,8 +63,8 @@ export class AddressController {
       const userId = req.access_token?.sub ?? req.user?.id;
       //const addressId = String(req.params.id);
       //const payload = req.body;
-      const { id: addressId } = req.validated?.params as ParamsAddressDto;
-      const payload = req.validated?.body as CreateAddressDto;
+      const { id: addressId } = req.validated!.params as ParamsAddressDto;
+      const payload = req.validated!.body as CreateAddressDto;
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       const address = await this.addressService.update(
@@ -122,5 +122,9 @@ export class AddressController {
     } catch (error) {
       next(error);
     }
+  };
+
+  idNotFound = (_req: Request, _res: Response, next: NextFunction) => {
+    next(new HttpError(404, "Please, input a valid address id"));
   };
 }
