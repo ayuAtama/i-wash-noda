@@ -55,6 +55,10 @@ export class AddressValidation {
         description: "Longitude coordinate",
         example: 107.6098,
       }),
+      isDefault: z.boolean().optional().default(false).meta({
+        description: "Indicates if the address is the default address",
+        example: false,
+      }),
     })
     .meta({
       id: "UpdateAddress",

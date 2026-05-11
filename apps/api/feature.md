@@ -30,11 +30,6 @@
 - [x] Address deletion\*
 - [x] Address set default\*
 
-bug:
-
-- address not override the old default address (isdefaut is true, if created address and update address)
-- address deletion is permanently deleted instead of soft delete
-
 ## Outlet Coverage
 
 - [ ] Outlet creation

@@ -4,6 +4,7 @@ import { HttpError } from "@/utils/httpError";
 import {
   CreateAddressDto,
   ParamsAddressDto,
+  UpdateAddressDto,
 } from "@/validations/address.validation";
 import type { Request, Response, NextFunction } from "express";
 
@@ -41,11 +42,7 @@ export class AddressController {
       }
       const userId = req.access_token?.sub ?? req.user?.id;
       if (!userId) throw new HttpError(401, "Invalid user id");
-      const payloadWithUserId = {
-        ...payload,
-        user_id: userId,
-      };
-      const address = await this.addressService.create(payloadWithUserId);
+      const address = await this.addressService.create(userId, payload);
 
       res.status(201).json({
         success: true,
@@ -64,7 +61,7 @@ export class AddressController {
       //const addressId = String(req.params.id);
       //const payload = req.body;
       const { id: addressId } = req.validated!.params as ParamsAddressDto;
-      const payload = req.validated!.body as CreateAddressDto;
+      const payload = req.validated!.body as UpdateAddressDto;
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       const address = await this.addressService.update(
