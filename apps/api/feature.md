@@ -30,11 +30,13 @@
 - [x] Address deletion\*
 - [x] Address set default\*
 
-## Outlet Coverage
+## Outlet Coverage Management
 
-- [ ] Outlet creation
-- [ ] Outlet deletion
-- [ ] Outlet updating
+- [x] Outlet coverage search by lat and lng
+- [x] Outlet list all
+- [x] Outlet creation\*\*
+- [x] Outlet updating\*\*
+- [x] Outlet deletion\*\*
 
 ## Pickup Requests
 
@@ -59,3 +61,4 @@
 - [x] Presigned URL creation
 
 \*: Login required
+\*\*: Specified role required

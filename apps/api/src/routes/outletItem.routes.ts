@@ -37,28 +37,48 @@ export class OutletItemRoute {
       Validator.validate({
         body: OutletValidation.CreateOutletSchema,
       }),
-      this.controller.createOutlet
+      this.controller.createOutlet,
     );
   }
 
   private updateOutlet() {
+    // handle if the user input no outlet id
+    this.router.put(
+      "/outlets",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin"),
+      this.controller.idNotFound,
+    );
+
     this.router.put(
       "/outlets/:id",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
       Validator.validate({
+        params: OutletValidation.OutletIdParamSchema,
         body: OutletValidation.UpdateOutletSchema,
       }),
-      this.controller.updateOutlet
+      this.controller.updateOutlet,
     );
   }
 
   private deleteOutlet() {
+    // handle if the user input no outlet id
+    this.router.delete(
+      "/outlets",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin"),
+      this.controller.idNotFound,
+    );
+
     this.router.delete(
       "/outlets/:id",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
-      this.controller.deleteOutlet
+      Validator.validate({
+        params: OutletValidation.OutletIdParamSchema,
+      }),
+      this.controller.deleteOutlet,
     );
   }
 
@@ -74,7 +94,7 @@ export class OutletItemRoute {
       Validator.validate({
         body: OutletValidation.CreateItemSchema,
       }),
-      this.controller.createItem
+      this.controller.createItem,
     );
   }
 }

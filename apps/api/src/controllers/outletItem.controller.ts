@@ -2,6 +2,10 @@
 import { OutletItemService } from "@/services/outletItem.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
+import {
+  CreateOutletDto,
+  OutletIdParamDto,
+} from "@/validations/outlet.validation";
 
 export class OutletItemController {
   private outletItemService: OutletItemService;
@@ -63,11 +67,9 @@ export class OutletItemController {
       const role = req.access_token?.role ?? req.user?.role;
       // more safety
       if (role !== "super_admin") throw new HttpError(403, "Forbidden");
+      const payload = req.validated!.body as CreateOutletDto;
       if (!userId) throw new HttpError(401, "Invalid user id");
-      const outlet = await this.outletItemService.createOutlet(
-        userId,
-        req.body,
-      );
+      const outlet = await this.outletItemService.createOutlet(userId, payload);
       res.status(201).json({
         success: true,
         message: "Outlet created successfully",
@@ -79,11 +81,18 @@ export class OutletItemController {
   };
 
   updateOutlet = async (req: Request, res: Response, next: NextFunction) => {
+    const { id: outletId } = req.validated!.params as OutletIdParamDto;
+    const body = req.validated!.body as CreateOutletDto;
+    // const id = (req.validated!.params as OutletIdParamDto).id;
+    // console.log(outletId, id);
+
+    // more safety
     if (!req.params.id || !req.body)
       throw new HttpError(400, "Missing id or body");
+
     const updateOutet = await this.outletItemService.updateOutet(
-      req.params.id,
-      req.body,
+      outletId,
+      body,
     );
     res.status(200).json({
       success: true,
@@ -93,10 +102,9 @@ export class OutletItemController {
   };
 
   deleteOutlet = async (req: Request, res: Response, next: NextFunction) => {
+    const { id: outletId } = req.validated!.params as OutletIdParamDto;
     if (!req.params.id) throw new HttpError(400, "Missing id");
-    const deletedOutlet = await this.outletItemService.deleteOutlet(
-      req.params.id,
-    );
+    const deletedOutlet = await this.outletItemService.deleteOutlet(outletId);
     res.status(200).json({
       success: true,
       message: "Outlet deleted successfully",
@@ -130,5 +138,9 @@ export class OutletItemController {
     } catch (error) {
       next(error);
     }
+  };
+
+  idNotFound = (_req: Request, _res: Response, next: NextFunction) => {
+    next(new HttpError(404, "Please, input a valid outlet id"));
   };
 }
