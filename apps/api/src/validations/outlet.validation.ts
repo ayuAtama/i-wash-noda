@@ -2,6 +2,20 @@ import { z } from "zod";
 import "zod-openapi";
 
 export class OutletValidation {
+  static OutletIdParamSchema = z
+    .object({
+      id: z.uuid({ error: "Outlet ID must be a valid UUID" }).meta({
+        description: "Outlet ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "OutletIdParam",
+      description: "Payload for getting an outlet by ID",
+      example: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
   static CreateOutletSchema = z
     .object({
       name: z.string().meta({
@@ -12,14 +26,6 @@ export class OutletValidation {
         description: "Outlet address",
         example: "Jl. Basin No.789",
       }),
-      city: z.string().meta({
-        description: "City name",
-        example: "Surabaya",
-      }),
-      province: z.string().meta({
-        description: "Province name",
-        example: "Jawa Timur",
-      }),
       lat: z.number().meta({
         description: "Latitude coordinate",
         example: -7.2575,
@@ -28,22 +34,30 @@ export class OutletValidation {
         description: "Longitude coordinate",
         example: 112.7521,
       }),
-      coverageRadius: z.number().optional().meta({
+      max_distance_km: z.number().meta({
         description: "Coverage radius in km",
         example: 5,
+      }),
+      price_per_km: z.number().meta({
+        description: "Delivery pickup and delivery price per kilometer",
+        example: 5000,
+      }),
+      price_per_kg: z.number().meta({
+        description: "Laundry price per kilogram",
+        example: 5000,
       }),
     })
     .meta({
       id: "CreateOutlet",
       description: "Payload for creating a new outlet",
       example: {
-        name: "I-Wash Noda Surabaya",
-        address: "Jl. Basin No.789",
-        city: "Surabaya",
-        province: "Jawa Timur",
-        lat: -7.2575,
-        lng: 112.7521,
-        coverageRadius: 5,
+        name: "Di desa ga pakai dollar",
+        address: "Jln. yang telah ditentukan",
+        lat: -2.9845123,
+        lng: 104.7423812,
+        max_distance_km: 2,
+        price_per_km: 3000,
+        price_per_kg: 3982,
       },
     });
 
@@ -57,14 +71,6 @@ export class OutletValidation {
         description: "Outlet address",
         example: "Jl. New Address No.100",
       }),
-      city: z.string().optional().meta({
-        description: "City name",
-        example: "Surabaya",
-      }),
-      province: z.string().optional().meta({
-        description: "Province name",
-        example: "Jawa Timur",
-      }),
       lat: z.number().optional().meta({
         description: "Latitude coordinate",
         example: -7.2575,
@@ -73,9 +79,17 @@ export class OutletValidation {
         description: "Longitude coordinate",
         example: 112.7521,
       }),
-      coverageRadius: z.number().optional().meta({
+      max_distance_km: z.number().optional().meta({
         description: "Coverage radius in km",
         example: 10,
+      }),
+      price_per_km: z.number().optional().meta({
+        description: "Delivery pickup and delivery price per kilometer",
+        example: 5000,
+      }),
+      price_per_kg: z.number().optional().meta({
+        description: "Laundry price per kilogram",
+        example: 5000,
       }),
     })
     .meta({
@@ -84,7 +98,7 @@ export class OutletValidation {
       example: {
         name: "I-Wash Noda Surabaya - Updated",
         address: "Jl. New Address No.100",
-        coverageRadius: 10,
+        max_distance_km: 10,
       },
     });
 
@@ -111,3 +125,6 @@ export type UpdateOutletDto = z.infer<
   typeof OutletValidation.UpdateOutletSchema
 >;
 export type CreateItemDto = z.infer<typeof OutletValidation.CreateItemSchema>;
+export type OutletIdParamDto = z.infer<
+  typeof OutletValidation.OutletIdParamSchema
+>;
