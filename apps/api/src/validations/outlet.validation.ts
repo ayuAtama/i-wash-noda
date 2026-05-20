@@ -101,21 +101,6 @@ export class OutletValidation {
         max_distance_km: 10,
       },
     });
-
-  static CreateItemSchema = z
-    .object({
-      name: z.string().meta({
-        description: "Item/service name",
-        example: "Cuci Karpet",
-      }),
-    })
-    .meta({
-      id: "CreateItem",
-      description: "Payload for creating a new item",
-      example: {
-        name: "Cuci Karpet",
-      },
-    });
 }
 
 export type CreateOutletDto = z.infer<
@@ -124,7 +109,7 @@ export type CreateOutletDto = z.infer<
 export type UpdateOutletDto = z.infer<
   typeof OutletValidation.UpdateOutletSchema
 >;
-export type CreateItemDto = z.infer<typeof OutletValidation.CreateItemSchema>;
+
 export type OutletIdParamDto = z.infer<
   typeof OutletValidation.OutletIdParamSchema
 >;

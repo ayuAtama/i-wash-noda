@@ -38,6 +38,13 @@
 - [x] Outlet updating\*\*
 - [x] Outlet deletion\*\*
 
+## Laundry Item Management
+
+- [] Item list all
+- [] Item creation\*\*
+- [] Item updating\*\*
+- [] Item deletion\*\*
+
 ## Pickup Requests
 
 - [ ] Pickup request creation
