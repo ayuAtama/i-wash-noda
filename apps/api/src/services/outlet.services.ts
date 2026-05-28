@@ -2,10 +2,17 @@
 import { prisma } from "../config/prisma";
 import { HttpError } from "../utils/httpError";
 import calculateDistance from "../utils/haversineDistance";
-import { Prisma } from "@/generated/prisma/client";
+import {
+  CreateOutletDto,
+  OutletCoverageQueryDto,
+  OutletIdParamDto,
+} from "@/validations/outlet.validation";
 
 export class OutletService {
-  async outletCoverage(lat: number, lng: number) {
+  async outletCoverage(
+    lat: OutletCoverageQueryDto["lat"],
+    lng: OutletCoverageQueryDto["lng"],
+  ) {
     try {
       // fetch all the outlets first
       const outlets = await prisma.outlet.findMany({
@@ -51,13 +58,13 @@ export class OutletService {
     });
   }
 
-  async createOutlet(userId: string, data: Prisma.OutletCreateInput) {
+  async createOutlet(userId: string, data: CreateOutletDto) {
     if (!userId) throw new HttpError(401, "Unauthorized");
     if (!data) throw new HttpError(400, "Bad request");
     return prisma.outlet.create({ data });
   }
 
-  async updateOutet(outletId: string, data: Prisma.OutletUpdateInput) {
+  async updateOutet(outletId: OutletIdParamDto["id"], data: CreateOutletDto) {
     // get the outlet by id
     const outlet = await prisma.outlet.findUnique({ where: { id: outletId } });
     if (!outlet) throw new HttpError(404, "Outlet not found");
@@ -74,7 +81,7 @@ export class OutletService {
     return updatedOutlet;
   }
 
-  async deleteOutlet(outletId: string) {
+  async deleteOutlet(outletId: OutletIdParamDto["id"]) {
     const outlet = await prisma.outlet.findUnique({
       where: { id: outletId, is_deleted: false },
     });
@@ -89,21 +96,5 @@ export class OutletService {
         is_deleted: true,
       },
     });
-  }
-
-  async getAllItems() {
-    try {
-      return await prisma.item.findMany();
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async createItem(data: Prisma.ItemCreateInput) {
-    try {
-      return await prisma.item.create({ data });
-    } catch (error) {
-      throw error;
-    }
   }
 }

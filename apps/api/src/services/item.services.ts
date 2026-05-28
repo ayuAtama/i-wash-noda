@@ -12,6 +12,16 @@ export default class ItemService {
     }
   }
 
+  async getItemById(itemId: string) {
+    try {
+      return await prisma.item.findUnique({
+        where: { id: itemId },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async createItem(data: Prisma.ItemCreateInput) {
     try {
       return await prisma.item.create({ data });

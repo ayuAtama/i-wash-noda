@@ -4,6 +4,7 @@ import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
 import {
   CreateOutletDto,
+  OutletCoverageQueryDto,
   OutletIdParamDto,
 } from "@/validations/outlet.validation";
 
@@ -17,8 +18,10 @@ export class OutletController {
   outletCoverage = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // get the data
-      const lat = Number(req.query.lat);
-      const lng = Number(req.query.lng);
+      const query = req.validated!.query as OutletCoverageQueryDto;
+      const { lat, lng } = query;
+      //      const lat = Number(req.query.lat);
+      //      const lng = Number(req.query.lng);
       if (!lat || !lng)
         throw new HttpError(
           400,
@@ -104,34 +107,6 @@ export class OutletController {
       message: "Outlet deleted successfully",
       data: deletedOutlet,
     });
-  };
-
-  getAllItems = async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const items = await this.outletService.getAllItems();
-      res.json({
-        success: true,
-        message: "Items fetched successfully",
-        data: items,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  createItem = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const item = await this.outletService.createItem({
-        name: req.body.name,
-      });
-      res.status(201).json({
-        success: true,
-        message: "Item created successfully",
-        data: item,
-      });
-    } catch (error) {
-      next(error);
-    }
   };
 
   idNotFound = (_req: Request, _res: Response, next: NextFunction) => {

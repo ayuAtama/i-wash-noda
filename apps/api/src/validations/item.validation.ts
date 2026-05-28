@@ -50,3 +50,4 @@ export class ItemValidation {
 
 export type CreateItemDto = z.infer<typeof ItemValidation.CreateItemSchema>;
 export type UpdateItemDto = z.infer<typeof ItemValidation.UpdateItemSchema>;
+export type ParamsItemDto = z.infer<typeof ItemValidation.ParamsItemSchema>;

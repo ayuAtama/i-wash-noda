@@ -20,7 +20,13 @@ export class OutletRoute {
   }
 
   private getCoveragedOutlet() {
-    this.router.get("/coverage", this.controller.outletCoverage);
+    this.router.get(
+      "/coverage",
+      Validator.validate({
+        query: OutletValidation.OutletCoverageQuerySchema,
+      }),
+      this.controller.outletCoverage,
+    );
   }
 
   private getAllOutlets() {

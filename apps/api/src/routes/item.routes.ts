@@ -13,6 +13,7 @@ class ItemRoute {
   constructor() {
     this.controller = new ItemController(new ItemService());
     this.getAllItems();
+    this.getItemById();
     this.createItem();
     this.updateItem();
     this.deleteItem();
@@ -20,6 +21,18 @@ class ItemRoute {
 
   private getAllItems() {
     this.router.get("/items", this.controller.getAllItems);
+  }
+
+  private getItemById() {
+    // handle if the user not input item id
+    this.router.get("/items");
+    this.router.get(
+      "/items/:id",
+      Validator.validate({
+        params: ItemValidation.ParamsItemSchema,
+      }),
+      this.controller.getItemById,
+    );
   }
 
   private createItem() {

@@ -6,6 +6,7 @@ import {
   CreateOutletDto,
   OutletIdParamDto,
 } from "@/validations/outlet.validation";
+import { ParamsItemDto } from "@/validations/item.validation";
 
 export class ItemController {
   private ItemService: ItemService;
@@ -21,6 +22,20 @@ export class ItemController {
         success: true,
         message: "Items fetched successfully",
         data: items,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getItemById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.validated!.params as ParamsItemDto;
+      const item = await this.ItemService.getItemById(id);
+      res.status(200).json({
+        success: true,
+        message: "Item fetched successfully",
+        data: item,
       });
     } catch (error) {
       next(error);
