@@ -2,6 +2,26 @@ import { z } from "zod";
 import "zod-openapi";
 
 export class OutletValidation {
+  static OutletCoverageQuerySchema = z
+    .object({
+      lat: z.number().meta({
+        description: "Latitude coordinate",
+        example: -6.2088,
+      }),
+      lng: z.number().meta({
+        description: "Longitude coordinate",
+        example: 106.8456,
+      }),
+    })
+    .meta({
+      id: "OutletCoverageQuery",
+      description: "Payload for getting outlet coverage",
+      example: {
+        lat: -6.2088,
+        lng: 106.8456,
+      },
+    });
+
   static OutletIdParamSchema = z
     .object({
       id: z.uuid({ error: "Outlet ID must be a valid UUID" }).meta({
@@ -16,6 +36,7 @@ export class OutletValidation {
         id: "123e4567-e89b-12d3-a456-426614174000",
       },
     });
+
   static CreateOutletSchema = z
     .object({
       name: z.string().meta({
@@ -106,10 +127,15 @@ export class OutletValidation {
 export type CreateOutletDto = z.infer<
   typeof OutletValidation.CreateOutletSchema
 >;
+
 export type UpdateOutletDto = z.infer<
   typeof OutletValidation.UpdateOutletSchema
 >;
 
 export type OutletIdParamDto = z.infer<
   typeof OutletValidation.OutletIdParamSchema
+>;
+
+export type OutletCoverageQueryDto = z.infer<
+  typeof OutletValidation.OutletCoverageQuerySchema
 >;

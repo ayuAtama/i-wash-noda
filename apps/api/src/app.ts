@@ -15,7 +15,6 @@ import userRoutes from "@/routes/user.routes";
 import authUserRoutes from "@/routes/authUser.routes";
 import adminRoutes from "@/routes/admin.routes";
 import AddressRoute from "@/routes/address.routes";
-import OutletItemRoute from "@/routes/outletItem.routes";
 import workerShiftRoutes from "@/routes/workerShift.routes";
 import pickupRequestRoutes from "./routes/pickupRequest.routes";
 import pickupOrderRoutes from "./routes/pickupOrder.routes";
