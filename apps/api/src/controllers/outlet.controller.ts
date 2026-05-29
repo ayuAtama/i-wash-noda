@@ -90,7 +90,7 @@ export class OutletController {
     if (!req.params.id || !req.body)
       throw new HttpError(400, "Missing id or body");
 
-    const updateOutet = await this.outletService.updateOutet(outletId, body);
+    const updateOutet = await this.outletService.updateOutlet(outletId, body);
     res.status(200).json({
       success: true,
       message: "Outlet updated successfully",
