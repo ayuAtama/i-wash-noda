@@ -24,8 +24,13 @@ class ItemRoute {
   }
 
   private getItemById() {
-    // handle if the user not input item id
-    this.router.get("/items");
+    // handle if the user input no item id
+    this.router.get(
+      "/items",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin"),
+      this.controller.idNotFound,
+    );
     this.router.get(
       "/items/:id",
       Validator.validate({

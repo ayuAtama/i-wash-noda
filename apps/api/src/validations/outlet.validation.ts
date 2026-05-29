@@ -4,11 +4,11 @@ import "zod-openapi";
 export class OutletValidation {
   static OutletCoverageQuerySchema = z
     .object({
-      lat: z.number().meta({
+      lat: z.coerce.number().meta({
         description: "Latitude coordinate",
         example: -6.2088,
       }),
-      lng: z.number().meta({
+      lng: z.coerce.number().meta({
         description: "Longitude coordinate",
         example: 106.8456,
       }),
