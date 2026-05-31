@@ -2,11 +2,7 @@
 import ItemService from "@/services/item.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
-import {
-  CreateOutletDto,
-  OutletIdParamDto,
-} from "@/validations/outlet.validation";
-import { ParamsItemDto } from "@/validations/item.validation";
+import { CreateItemDto, ParamsItemDto } from "@/validations/item.validation";
 
 export class ItemController {
   private ItemService: ItemService;
@@ -30,7 +26,7 @@ export class ItemController {
 
   getItemById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.validated!.params as ParamsItemDto;
+      const id = req.validated!.params as ParamsItemDto;
       const item = await this.ItemService.getItemById(id);
       res.status(200).json({
         success: true,
@@ -44,9 +40,8 @@ export class ItemController {
 
   createItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const item = await this.ItemService.createItem({
-        name: req.body.name,
-      });
+      const newItem = req.validated!.body as CreateItemDto;
+      const item = await this.ItemService.createItem(newItem);
       res.status(201).json({
         success: true,
         message: "Item created successfully",
@@ -60,11 +55,15 @@ export class ItemController {
   updateItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // get the item id and name from controller
-      const id = req.params.id;
-      const name = req.body;
+      // const id = req.params.id;
+      // const name = req.body;
+
+      // get it from middleware validator
+      const data = req.validated!.body as CreateItemDto;
+      const id = req.validated!.params as ParamsItemDto;
 
       //call the service
-      const editedItem = await this.ItemService.editItem(id, name);
+      const editedItem = await this.ItemService.editItem(id, data);
 
       //response
       res.status(200).json({
@@ -79,7 +78,8 @@ export class ItemController {
 
   deleteItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = req.params.id;
+      //const id = req.params.id;
+      const id = req.validated!.params as ParamsItemDto;
       const deletedItem = await this.ItemService.deleteItem(id);
       res.status(200).json({
         success: true,

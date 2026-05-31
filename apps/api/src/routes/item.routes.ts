@@ -20,19 +20,19 @@ class ItemRoute {
   }
 
   private getAllItems() {
-    this.router.get("/items", this.controller.getAllItems);
+    this.router.get("/", this.controller.getAllItems);
   }
 
   private getItemById() {
     // handle if the user input no item id
     this.router.get(
-      "/items",
+      "/",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
       this.controller.idNotFound,
     );
     this.router.get(
-      "/items/:id",
+      "/:id",
       Validator.validate({
         params: ItemValidation.ParamsItemSchema,
       }),
@@ -42,7 +42,7 @@ class ItemRoute {
 
   private createItem() {
     this.router.post(
-      "/items",
+      "/",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
       Validator.validate({
@@ -55,13 +55,13 @@ class ItemRoute {
   private updateItem() {
     // handle if the user input no item id
     this.router.put(
-      "/items",
+      "/",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
       this.controller.idNotFound,
     );
     this.router.put(
-      "/items/:id",
+      "/:id",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
       Validator.validate({
@@ -75,14 +75,14 @@ class ItemRoute {
   private deleteItem() {
     // handle if the user input no item id
     this.router.delete(
-      "/items",
+      "/",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
       this.controller.idNotFound,
     );
     // handle if the user input no item id
     this.router.delete(
-      "/items/:id",
+      "/:id",
       authenticationMiddleware,
       authorizationMiddleware("super_admin"),
       Validator.validate({
