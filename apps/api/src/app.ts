@@ -109,7 +109,7 @@ export class App {
   }
 
   private initializeItemRoutes() {
-    this.app.use("/api", ItemRoute);
+    this.app.use("/api/items", ItemRoute);
   }
 
   private initializeSwagger() {
