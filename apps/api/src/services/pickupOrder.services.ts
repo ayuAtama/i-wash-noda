@@ -2,6 +2,7 @@
 import { prisma } from "@/config/prisma";
 import { DriverJobStatusEnum } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
+import { format } from "date-fns";
 
 export class PickupOrderService {
   // get all the pickup requests based on outlet id
@@ -30,6 +31,8 @@ export class PickupOrderService {
                 select: {
                   id: true,
                   address: true,
+                  lat: true,
+                  lng: true,
                 },
               },
               customer: {
@@ -44,7 +47,24 @@ export class PickupOrderService {
         },
       });
 
-      return pickupRequests;
+      // restructure the data into human readable
+      const result = pickupRequests.map((pickupRequest) => {
+        const readableDate = format(
+          pickupRequest.created_at,
+          "MMMM do, yyyy 'at' h:mm a",
+        );
+        return {
+          id: pickupRequest.id,
+          order_id: pickupRequest.order_id,
+          customer_name: pickupRequest.order.customer.name,
+          customer_address: pickupRequest.order.pickupAddress!.address,
+          customer_coordinates: `${pickupRequest.order.pickupAddress!.lat}, ${pickupRequest.order.pickupAddress!.lng}`,
+          created_at: readableDate,
+        };
+      });
+
+      //return pickupRequests;
+      return result;
     } catch (error) {
       throw error;
     }
@@ -53,7 +73,7 @@ export class PickupOrderService {
   async acceptPickupRequest(
     outletId: string,
     pickupOrderId: string,
-    userId: string
+    userId: string,
   ) {
     try {
       //accept the pickup request
@@ -75,7 +95,7 @@ export class PickupOrderService {
           if (pickupRequest.order.outlet_id !== outletId) {
             throw new HttpError(
               400,
-              "Pickup request does not match with the outlet's driver"
+              "Pickup request does not match with the outlet's driver",
             );
           }
           if (pickupRequest.accepted) {
@@ -123,7 +143,7 @@ export class PickupOrderService {
               driverJobStatus: driverStatus,
             },
           };
-        }
+        },
       );
 
       return { success, message, data };
@@ -135,7 +155,7 @@ export class PickupOrderService {
   async upateStatusDriver(
     userId: string,
     pickupOrderId: string,
-    status: DriverJobStatusEnum
+    status: DriverJobStatusEnum,
   ) {
     try {
       // run all db operations in a single transaction

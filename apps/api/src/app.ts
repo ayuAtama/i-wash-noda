@@ -79,7 +79,7 @@ export class App {
 
   private initializeUserAndAuth() {
     this.app.use("/api/users", userRoutes); //  deprecated and testing only
-    this.app.use("/api", authUserRoutes);
+    this.app.use("/api", authUserRoutes); // user for jwt
   }
 
   private initializeAdminManageUserRoutes() {
@@ -110,6 +110,10 @@ export class App {
 
   private initializeItemRoutes() {
     this.app.use("/api/items", ItemRoute);
+  }
+
+  private initializeOrderRoutes() {
+    //this.app.use("/api/orders", OrderRoute);
   }
 
   private initializeSwagger() {
