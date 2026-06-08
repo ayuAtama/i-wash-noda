@@ -19,52 +19,105 @@ export class PickupRequestService {
         throw new HttpError(404, "User has no address");
       }
 
-      // fetch the all the outlets firsts
-      const getAllOutlets = await prisma.outlet.findMany({
-        where: {
-          is_deleted: false,
-        },
-        select: {
-          id: true,
-          name: true,
-          lat: true,
-          lng: true,
-          price_per_kg: true,
-          price_per_km: true,
-          max_distance_km: true,
-        },
-      });
+      // also check if the pickup order has been created (only can create one)
+      const checkExistingPickupRequestOrder =
+        await prisma.pickupRequest.findFirst({
+          where: {
+            accepted: false,
+            driver_id: null,
+            order: {
+              customer_id: userId,
+              status: "waiting_for_driver_pickup",
+            },
+          },
+        });
 
-      // mutate and filter the outlet within the address
-      const withinCoverage = getAllOutlets
-        .map((outlet) => {
-          //destructuring the needed data
-          const { id, name, price_per_kg, price_per_km } = outlet;
+      // return error because the pickup order has been created once
+      if (checkExistingPickupRequestOrder) {
+        return {
+          success: false,
+          message: "Pickup order has been created once",
+          data: checkExistingPickupRequestOrder,
+        };
+      }
 
-          // calculate the distance
-          const distance = calculateDistance(
-            Number(address.lat),
-            Number(address.lng),
-            Number(outlet.lat),
-            Number(outlet.lng)
-          );
+      // // fetch the all the outlets firsts
+      // const getAllOutlets = await prisma.outlet.findMany({
+      //   where: {
+      //     is_deleted: false,
+      //   },
+      //   select: {
+      //     id: true,
+      //     name: true,
+      //     lat: true,
+      //     lng: true,
+      //     price_per_kg: true,
+      //     price_per_km: true,
+      //     max_distance_km: true,
+      //   },
+      // });
 
-          // return the distance and mutate it into the outlet
-          return {
-            id,
-            name,
-            price_per_kg,
-            price_per_km,
-            distance_km: Number(distance.toFixed(2)),
-            within_coverage: distance <= Number(outlet.max_distance_km),
-          };
-        })
-        // eliminate the outlets that are not within coverage
-        .filter((outlet) => outlet.within_coverage);
+      // // mutate and filter the outlet within the address
+      // const withinCoverage = getAllOutlets
+      //   .map((outlet) => {
+      //     //destructuring the needed data
+      //     const { id, name, price_per_kg, price_per_km } = outlet;
+
+      //     // calculate the distance
+      //     const distance = calculateDistance(
+      //       Number(address.lat),
+      //       Number(address.lng),
+      //       Number(outlet.lat),
+      //       Number(outlet.lng),
+      //     );
+
+      //     // return the distance and mutate it into the outlet
+      //     return {
+      //       id,
+      //       name,
+      //       price_per_kg,
+      //       price_per_km,
+      //       distance_km: Number(distance.toFixed(2)),
+      //       within_coverage: distance <= Number(outlet.max_distance_km),
+      //     };
+      //   })
+      //   // eliminate the outlets that are not within coverage
+      //   .filter((outlet) => outlet.within_coverage);
+
+      // raw query method
+      const userLat = Number(address.lat);
+      const userLng = Number(address.lng);
+      const availableOutlets = await prisma.$queryRaw`
+          SELECT
+          id, name, lat, lng, price_per_kg, price_per_km, max_distance_km,
+          (
+          6371 * 2 * ASIN(
+            SQRT(
+              POWER(SIN(RADIANS(lat - ${userLat}) / 2), 2) +
+              COS(RADIANS(${userLat})) * COS(RADIANS(lat)) *
+              POWER(SIN(RADIANS(lng - ${userLng}) / 2), 2)
+            )
+          )
+        ) AS distance_km
+      FROM outlets /* <--- EXACT MATCH TO YOUR @@map("outlets") */
+      WHERE is_deleted = false
+      AND (
+        6371 * 2 * ASIN(
+          SQRT(
+            POWER(SIN(RADIANS(lat - ${userLat}) / 2), 2) +
+            COS(RADIANS(${userLat})) * COS(RADIANS(lat)) *
+            POWER(SIN(RADIANS(lng - ${userLng}) / 2), 2)
+          )
+        )
+      ) <= max_distance_km
+      ORDER BY distance_km ASC;
+        `;
+
       return {
         success: true,
         message: "Available outlets found",
-        withinCoverage,
+        //withinCoverage,
+        availableOutlets,
         address,
       };
     } catch (error) {
@@ -75,31 +128,39 @@ export class PickupRequestService {
   async createPickupRequest(
     userId: string,
     addressId: string,
-    outletId: string
+    outletId: string,
   ) {
     try {
       // check if the user is valid
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) throw new HttpError(404, "User not found");
 
-      // check if the address is valid
+      // check if the address is valid and belongs to the user
       const address = await prisma.userAddress.findUnique({
-        where: { id: addressId },
+        where: { id: addressId, user_id: userId },
       });
-      if (!address) throw new HttpError(404, "Address not found");
+      if (!address)
+        throw new HttpError(
+          404,
+          "Address not found or perhaps you're the little hacker?",
+        );
 
       // check if the outlet is valid
       const outlet = await prisma.outlet.findUnique({
         where: { id: outletId },
       });
-      if (!outlet) throw new HttpError(404, "Outlet not found");
+      if (!outlet)
+        throw new HttpError(
+          404,
+          "Outlet not found or perhaps you're the little hacker?",
+        );
 
       // calculate the distance between the user and the outlet
       const distance = calculateDistance(
         Number(address.lat),
         Number(address.lng),
         Number(outlet.lat),
-        Number(outlet.lng)
+        Number(outlet.lng),
       );
 
       // calculate the pickup and deliver price
@@ -108,6 +169,24 @@ export class PickupRequestService {
 
       // make the order and pickup request order
       const order = await prisma.$transaction(async (tx) => {
+        // check if the user has already create the pickup request
+        const checkExisting = await tx.pickupRequest.findFirst({
+          where: {
+            accepted: false,
+            driver_id: null,
+            order: {
+              customer_id: user.id,
+              status: "waiting_for_driver_pickup",
+            },
+          },
+        });
+        if (checkExisting) {
+          throw new HttpError(
+            409,
+            "Pickup order has been created, please be patient for the driver to get to your location",
+          );
+        }
+
         // create the order
         const order = await tx.order.create({
           data: {
@@ -141,6 +220,66 @@ export class PickupRequestService {
       });
 
       return order;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async cancelPickupRequest(userId: string, pickupRequestOrderId: string) {
+    try {
+      // check if the user is valid
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new HttpError(404, "User not found");
+
+      // check the pickup request by outlet and the userId(prevent abuse)
+      const existingPickupRequest = await prisma.pickupRequest.findFirst({
+        where: {
+          id: pickupRequestOrderId,
+          accepted: false,
+          driver_id: null,
+          order: {
+            customer_id: user.id,
+            status: "waiting_for_driver_pickup",
+          },
+        },
+      });
+
+      if (!existingPickupRequest)
+        throw new HttpError(404, "Pickup request id not found");
+
+      // cancel the pickup request and the order
+      const cancel = await prisma.$transaction(async (tx) => {
+        // cancel the pickup request
+        const cancelPickupRequest = await tx.pickupRequest.delete({
+          where: {
+            id: pickupRequestOrderId,
+            accepted: false,
+            driver_id: null,
+          },
+        });
+
+        // cancel the order
+        await tx.order.delete({
+          where: {
+            id: cancelPickupRequest.order_id,
+            customer_id: user.id,
+            status: "waiting_for_driver_pickup",
+          },
+        });
+
+        return {
+          order_id: cancelPickupRequest.order_id,
+          pickup_request_id: cancelPickupRequest.id,
+          status: "cancelled",
+        };
+      });
+
+      // return the response
+      return {
+        success: true,
+        message: "Pickup request cancelled successfully",
+        data: cancel,
+      };
     } catch (error) {
       throw error;
     }

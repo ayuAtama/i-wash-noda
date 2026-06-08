@@ -24,15 +24,23 @@ export class PickupRequestController {
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       // call the service
-      const { success, message, withinCoverage } =
+      const { success, message, availableOutlets, data } =
         await this.pickupRequestService.checkAddressFirst(userId);
 
       //response
-      res.status(200).json({
-        success: success,
-        message: message,
-        data: withinCoverage,
-      });
+      if (success) {
+        res.status(200).json({
+          success: success,
+          message: message,
+          data: availableOutlets,
+        });
+      } else {
+        res.status(409).json({
+          success,
+          message,
+          data,
+        });
+      }
     } catch (error) {
       next(error);
     }
@@ -73,6 +81,35 @@ export class PickupRequestController {
       } else {
         next(error);
       }
+    }
+  };
+
+  cancelPickupRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      // get the id from middlewere
+      const userId = req.user?.id ?? req.access_token?.sub;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+
+      // from the frontend error from check address
+      const pickupRequestOrderId = req.params.id;
+      if (!pickupRequestOrderId)
+        throw new HttpError(400, "Missing pickupRequestOrderId");
+
+      // call the service
+      const { success, message, data } =
+        await this.pickupRequestService.cancelPickupRequest(
+          userId,
+          pickupRequestOrderId,
+        );
+
+      // response
+      res.status(200).json({ success, message, data });
+    } catch (error) {
+      next(error);
     }
   };
 }

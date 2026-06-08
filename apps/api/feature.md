@@ -40,16 +40,23 @@
 
 ## Laundry Item Management
 
-- [] Item list all
-- [] Item creation\*\*
-- [] Item updating\*\*
-- [] Item deletion\*\*
+- [x] Item list all
+- [x] Item creation\*\*
+- [x] Item updating\*\*
+- [x] Item deletion\*\*
 
-## Pickup Requests
+## Pickup Requests to do a laundry user
 
-- [ ] Pickup request creation
-- [ ] Pickup request deletion
-- [ ] Pickup request updating
+- [x] Check if the user has address and filter out the outlets that out of coverage. And existing pickup requests (only one order allowed)\*\* (using raw query because it is faster than fitering it in server side)
+- [x] Pickup request creation\*\*
+- [x] Pickup request canceling before accepted by the driver\*\*
+
+## Pickup Requests to do a laundry (driver)
+- [x] Pickup request fetching added coords for the driver\*\*
+- [x] Pickup request fetching list for the driver\*\*
+- [x] Accepting Pickup request by the driver\*\*
+- [x] Update the status of the pickup request by the driver (same outlet)\*\*
+- [?] Fetching all accepted pickup requests for the driver (not picked up yet)\*\*
 
 ## Pickup Orders
 

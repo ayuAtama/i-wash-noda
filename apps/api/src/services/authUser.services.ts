@@ -595,6 +595,9 @@ export class AuthUserService {
         message: `Login with email ${updateData.email} was successfull`,
         accessToken,
         refreshToken,
+        name: updateData.name,
+        email: updateData.email,
+        role: updateData.role,
       };
     } catch (error) {
       throw error;
