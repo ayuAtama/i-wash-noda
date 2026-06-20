@@ -27,14 +27,18 @@ enum WorkerStation {
 
 enum OrderStatus {
   waiting_for_driver_pickup
+  out_for_pickup
   in_transit_to_outlet
   arrived_at_outlet
   washing_in_progress
   ironing_in_progress
   packing_in_progrees
   waiting_for_payment
+  waiting_for_driver_deliver
   out_for_delivery
   delivered
+  cancelled
+  finished
 }
 
 enum StationName {
@@ -71,6 +75,11 @@ enum WorkerShiftDay {
   fri
   sat
   sun
+}
+
+enum OrderSource {
+  customer_app
+  walk_in
 }
 
 // -----------------------
@@ -119,6 +128,24 @@ model User {
   accounts      Account[]
 
   @@map("users")
+}
+
+// -----------------------
+// WALKIN COSTUMER (NO ACCOUNT)
+// -----------------------
+
+model WalkInCustomer {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  phone      String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // relation
+  order Order[] @relation("WalkInCustumerOrder")
+
+  @@unique([phone])
+  @@map("walk_in_customers")
 }
 
 // -----------------------
@@ -247,8 +274,10 @@ model Item {
 
 model Order {
   id                   String      @id @default(uuid()) @db.Uuid
-  customer_id          String      @db.Uuid
+  customer_id          String?     @db.Uuid
+  walkin_customer_id   String?     @db.Uuid
   pickup_address_id    String?     @db.Uuid
+  source               OrderSource @default(customer_app)
   outlet_id            String      @db.Uuid
   driver_pickup_id     String?     @db.Uuid
   driver_delivery_id   String?     @db.Uuid
@@ -270,7 +299,8 @@ model Order {
   updated_at           DateTime    @updatedAt
 
   //relation
-  customer         User                 @relation("CustomerOrders", fields: [customer_id], references: [id])
+  customer         User?                @relation("CustomerOrders", fields: [customer_id], references: [id])
+  walkInCustomer   WalkInCustomer?      @relation("WalkInCustumerOrder", fields: [walkin_customer_id], references: [id])
   pickupDriver     User?                @relation("PickupDriver", fields: [driver_pickup_id], references: [id])
   deliveryDriver   User?                @relation("DeliveryDriver", fields: [driver_delivery_id], references: [id])
   washingWorker    User?                @relation("WashingWorker", fields: [washing_worker_id], references: [id])

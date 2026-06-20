@@ -136,7 +136,7 @@ export class PickupOrderController {
         userId,
         outletId,
       );
-      
+
       res.status(200).json({
         success: true,
         message: "Pickup requests fetched successfully",
