@@ -12,6 +12,7 @@ class ItemRoute {
 
   constructor() {
     this.controller = new ItemController(new ItemService());
+    this.searchItem();
     this.getAllItems();
     this.getItemById();
     this.createItem();
@@ -21,6 +22,15 @@ class ItemRoute {
 
   private getAllItems() {
     this.router.get("/", this.controller.getAllItems);
+  }
+
+  private searchItem() {
+    this.router.get(
+      "/search",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      this.controller.searchItem,
+    );
   }
 
   private getItemById() {
