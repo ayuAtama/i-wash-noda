@@ -46,8 +46,24 @@ export class ItemValidation {
         id: "123e4567-e89b-12d3-a456-426614174000",
       },
     });
+
+  static QueryItemSchema = z
+    .object({
+      name: z.string().meta({
+        description: "Item name that'll be laundried",
+        example: "Baju Pramuka",
+      }),
+    })
+    .meta({
+      id: "QueryItem",
+      description: "Payload for getting an item by name",
+      example: {
+        name: "Baju Pramuka",
+      },
+    });
 }
 
 export type CreateItemDto = z.infer<typeof ItemValidation.CreateItemSchema>;
 export type UpdateItemDto = z.infer<typeof ItemValidation.UpdateItemSchema>;
 export type ParamsItemDto = z.infer<typeof ItemValidation.ParamsItemSchema>;
+export type QueryItemDto = z.infer<typeof ItemValidation.QueryItemSchema>;
