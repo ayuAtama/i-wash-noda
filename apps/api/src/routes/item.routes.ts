@@ -29,6 +29,9 @@ class ItemRoute {
       "/search",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
+      Validator.validate({
+        query: ItemValidation.QueryItemSchema,
+      }),
       this.controller.searchItem,
     );
   }

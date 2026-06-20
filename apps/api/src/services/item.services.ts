@@ -2,6 +2,7 @@
 import {
   CreateItemDto,
   ParamsItemDto,
+  QueryItemDto,
   UpdateItemDto,
 } from "@/validations/item.validation";
 import { prisma } from "../config/prisma";
@@ -60,13 +61,13 @@ export default class ItemService {
     }
   };
 
-  searchItem = async (searchItem: string) => {
+  searchItem = async (searchItem: QueryItemDto["name"]) => {
     try {
       return await prisma.item.findMany({
         where: {
           name: {
             contains: searchItem,
-            mode: "insensitive",
+            mode: "insensitive", // case insensitive
           },
         },
       });

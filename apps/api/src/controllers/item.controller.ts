@@ -2,7 +2,11 @@
 import ItemService from "@/services/item.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
-import { CreateItemDto, ParamsItemDto } from "@/validations/item.validation";
+import {
+  CreateItemDto,
+  ParamsItemDto,
+  QueryItemDto,
+} from "@/validations/item.validation";
 
 export class ItemController {
   private ItemService: ItemService;
@@ -93,11 +97,20 @@ export class ItemController {
 
   searchItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const name = req.query.name as string;
+      //const name = req.query.name as string;
+      //const { name: searchItems } = req.query;
+      const { name } = req.validated!.query as QueryItemDto;
+      console.log(name, typeof name);
       if (!name) {
         throw new HttpError(400, "Please, input a valid item name");
       }
       const searchItem = await this.ItemService.searchItem(name);
+      if (searchItem.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: `${name} not found in the database`,
+        });
+      }
       res.status(200).json({
         success: true,
         message: "Item searched successfully",
