@@ -6,7 +6,9 @@ import calculateDistance from "@/utils/haversineDistance";
 export class PickupRequestService {
   async checkAddressFirst(userId: string) {
     try {
-      // check if the user has any address
+      // check if the user has any default address
+      // (if want to change address redirect to another page on the front end)
+      // e.g. Not this address? (in italic)
       const address = await prisma.userAddress.findFirst({
         where: {
           user_id: userId,
@@ -15,11 +17,15 @@ export class PickupRequestService {
       });
 
       // return error if no address in the result
+      // and redirect to the create address page in front end
       if (!address) {
         throw new HttpError(404, "User has no address");
       }
 
       // also check if the pickup order has been created (only can create one)
+      // if so, return to status page of the pickup order (you can see the cancel button)
+      // after accepted it'll show the pay button instead
+      // the button to access this page become disabled
       const checkExistingPickupRequestOrder =
         await prisma.pickupRequest.findFirst({
           where: {
@@ -163,6 +169,10 @@ export class PickupRequestService {
         Number(outlet.lng),
       );
 
+      // validate the outlet id coverage the address id
+      if (distance > Number(outlet.max_distance_km))
+        throw new HttpError(400, "Outlet is not within coverage");
+
       // calculate the pickup and deliver price
       const pickupPrice = Math.ceil(distance * (outlet.price_per_km || 0));
       const deliverPrice = Math.ceil(distance * (outlet.price_per_km || 0));
@@ -225,7 +235,7 @@ export class PickupRequestService {
     }
   }
 
-  async cancelPickupRequest(userId: string, pickupRequestOrderId: string) {
+  async cancelPickupRequest(userId: string, OrderId: string) {
     try {
       // check if the user is valid
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -234,7 +244,7 @@ export class PickupRequestService {
       // check the pickup request by outlet and the userId(prevent abuse)
       const existingPickupRequest = await prisma.pickupRequest.findFirst({
         where: {
-          id: pickupRequestOrderId,
+          order_id: OrderId,
           accepted: false,
           driver_id: null,
           order: {
@@ -252,7 +262,8 @@ export class PickupRequestService {
         // cancel the pickup request
         const cancelPickupRequest = await tx.pickupRequest.delete({
           where: {
-            id: pickupRequestOrderId,
+            id: existingPickupRequest.id,
+            order_id: OrderId,
             accepted: false,
             driver_id: null,
           },
@@ -282,6 +293,48 @@ export class PickupRequestService {
       };
     } catch (error) {
       throw error;
+    }
+  }
+
+  // check status of the order (not only pickup request for customer)
+  async checkOrderStatus(userId: string) {
+    try {
+      // check if the user is valid
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new HttpError(404, "User not found");
+
+      // check the status of the order
+      const order = await prisma.order.findFirst({
+        where: {
+          customer_id: userId,
+          status: {
+            not: "delivered",
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+          paid: true,
+          pickup_fee: true,
+          delivery_fee: true,
+          total_kilo: true,
+          laundry_price: true,
+          total_amount: true,
+          created_at: true,
+        },
+      });
+
+      if (!order)
+        throw new HttpError(404, "Currently there is no active order");
+
+      // return the response
+      return {
+        success: true,
+        message: "Order status fetched successfully",
+        data: order,
+      };
+    } catch (err) {
+      throw err;
     }
   }
 }
