@@ -91,6 +91,23 @@ export class ItemController {
     }
   };
 
+  searchItem = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const name = req.query.name as string;
+      if (!name) {
+        throw new HttpError(400, "Please, input a valid item name");
+      }
+      const searchItem = await this.ItemService.searchItem(name);
+      res.status(200).json({
+        success: true,
+        message: "Item searched successfully",
+        data: searchItem,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   idNotFound = (_req: Request, _res: Response, next: NextFunction) => {
     next(new HttpError(404, "Please, input a valid item id"));
   };

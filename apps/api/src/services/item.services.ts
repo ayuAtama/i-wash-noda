@@ -59,4 +59,19 @@ export default class ItemService {
       throw error;
     }
   };
+
+  searchItem = async (searchItem: string) => {
+    try {
+      return await prisma.item.findMany({
+        where: {
+          name: {
+            contains: searchItem,
+            mode: "insensitive",
+          },
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+  };
 }
