@@ -16,6 +16,7 @@ export class PickupRequestRoute {
     this.checkAddressFirst();
     this.createPickupRequest();
     this.cancelPickupRequest();
+    this.checkOrderStatus();
   }
 
   // check if the user has address
@@ -46,6 +47,15 @@ export class PickupRequestRoute {
       authenticationMiddleware,
       authorizationMiddleware("customer"),
       this.controller.cancelPickupRequest,
+    );
+  }
+
+  private checkOrderStatus() {
+    this.router.get(
+      "/pickup-requests/status",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      this.controller.checkOrderStatus,
     );
   }
 }

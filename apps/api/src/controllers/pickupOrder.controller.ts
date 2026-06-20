@@ -120,4 +120,30 @@ export class PickupOrderController {
       next(error);
     }
   };
+
+  getAllAlreadyPickedUpJob = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const userId = req.access_token?.sub;
+      const outletId = req.context?.outlet_id;
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
+      if (!userId) throw new HttpError(401, "User id not found");
+
+      const result = await this.pickupOrderService.getAllAlreadyPickedUpJob(
+        userId,
+        outletId,
+      );
+      
+      res.status(200).json({
+        success: true,
+        message: "Pickup requests fetched successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

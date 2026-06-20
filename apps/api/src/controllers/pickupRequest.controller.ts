@@ -112,4 +112,25 @@ export class PickupRequestController {
       next(error);
     }
   };
+
+  checkOrderStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      // get the id from middlewere
+      const userId = req.user?.id ?? req.access_token?.sub;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+
+      // call the service
+      const { success, message, data } =
+        await this.pickupRequestService.checkOrderStatus(userId);
+
+      // response
+      res.status(200).json({ success, message, data });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

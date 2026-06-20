@@ -59,6 +59,7 @@ export class PickupOrderService {
           customer_name: pickupRequest.order.customer.name,
           customer_address: pickupRequest.order.pickupAddress!.address,
           customer_coordinates: `${pickupRequest.order.pickupAddress!.lat}, ${pickupRequest.order.pickupAddress!.lng}`,
+          gmap_link: `https://www.google.com/maps/dir/?api=1&destination=${pickupRequest.order.pickupAddress!.lat},${pickupRequest.order.pickupAddress!.lng}`,
           created_at: readableDate,
         };
       });
@@ -168,6 +169,7 @@ export class PickupOrderService {
           },
           data: {
             status,
+            updated_at: new Date(),
           },
         });
 
@@ -206,7 +208,6 @@ export class PickupOrderService {
   async getAcceptedPickupRequests(userId: string, outletId: string) {
     try {
       // get list all the accepted job
-      console.log("alamak error");
       const listPickedUpJob = await prisma.driverJobStatus.findMany({
         where: {
           driver_id: userId,
@@ -233,6 +234,79 @@ export class PickupOrderService {
       });
 
       return listPickedUpJob;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getAllAlreadyPickedUpJob(userId: string, outletId: string) {
+    try {
+      // get list all the accepted job
+      // const listPickedUpJob = await prisma.driverJobStatus.findMany({
+      //   where: {
+      //     driver_id: userId,
+      //     pickup_request_id: { not: null },
+      //     status: "done",
+      //   },
+      // });
+
+      // return listPickedUpJob;
+
+      const jobs = await prisma.driverJobStatus.findMany({
+        where: {
+          driver_id: userId,
+          pickup_request_id: {
+            not: null,
+          },
+          status: "done",
+        },
+        select: {
+          id: true,
+          status: true,
+          updated_at: true,
+
+          pickupRequest: {
+            select: {
+              id: true,
+              created_at: true,
+
+              order: {
+                select: {
+                  id: true,
+                  total_amount: true,
+                  total_kilo: true,
+                  pickup_fee: true,
+                  status: true,
+                  created_at: true,
+
+                  customer: {
+                    select: {
+                      name: true,
+                    },
+                  },
+
+                  pickupAddress: {
+                    select: {
+                      address: true,
+                      lat: true,
+                      lng: true,
+                    },
+                  },
+
+                  outlet: {
+                    select: {
+                      name: true,
+                      address: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return jobs;
     } catch (error) {
       throw error;
     }

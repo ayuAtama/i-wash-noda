@@ -50,25 +50,35 @@
 - [x] Check if the user has address and filter out the outlets that out of coverage. And existing pickup requests (only one order allowed)\*\* (using raw query because it is faster than fitering it in server side)
 - [x] Pickup request creation\*\*
 - [x] Pickup request canceling before accepted by the driver\*\*
+- [x] To check status order by the user
 
 ## Pickup Requests to do a laundry (driver)
+
 - [x] Pickup request fetching added coords for the driver\*\*
 - [x] Pickup request fetching list for the driver\*\*
 - [x] Accepting Pickup request by the driver\*\*
+- [x] Fetching all accepted pickup requests for the driver (WIP)\*\*
 - [x] Update the status of the pickup request by the driver (same outlet)\*\*
-- [?] Fetching all accepted pickup requests for the driver (not picked up yet)\*\*
+- [x] Get all finished order (pickup request) by the driver\*\*
 
-## Pickup Orders
+## TO DO
 
-- [ ] Pickup order creation
-- [ ] Pickup order deletion
-- [ ] Pickup order updating
+- [ ] Check more carfully about the validation to pickup request and api responses
+- [ ] searchable item list by keyword used in frontend to filter the item or create new one if not exist
 
-## Admin Orders
+## Admin Outlets Orders
 
-- [ ] Admin order creation
-- [ ] Admin order deletion
-- [ ] Admin order updating
+- [ ] Update the item quantity after the packed picked up by the driver
+- [ ] Option to manual create order if the customer directly come to the outlet (not through the app)
+- [ ] Get all orders for the admin based on the outlet admin
+- [ ] Update or delete the order by the admin (same outlet admin)
+
+## Worker
+
+- [ ] Worker get all the list of the available order in each station
+- [ ] Worker had to re-input quantity of the item before accepting the order (either conflict and need acc from outlet admin or auto accept if there is no missmatch)[worker can accept multiple orders at the same time]
+- [ ] Worker get the button to mark the order as done and passed it to another worker station (Status Page)
+- [ ] Worker get the past history of the order already done.
 
 ## Presigned URLs
 
