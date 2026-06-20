@@ -39,6 +39,7 @@ export class App {
     this.initializeItemRoutes();
     this.initializeAddressRoutes();
     this.initializePickupRoutes();
+    this.initializeOrderRoutes();
     this.initializePreSignedURLRoutes();
     this.initializeRoutes();
     this.initializeSwagger();
@@ -104,16 +105,16 @@ export class App {
     this.app.use("/api", adminOrderRoutes);
   }
 
+  private initializeOrderRoutes() {
+    this.app.use("/api/admin/orders", adminOrderRoutes);
+  }
+
   private initializeOutletRoutes() {
     this.app.use("/api/outlets", OutletRoute);
   }
 
   private initializeItemRoutes() {
     this.app.use("/api/items", ItemRoute);
-  }
-
-  private initializeOrderRoutes() {
-    //this.app.use("/api/orders", OrderRoute);
   }
 
   private initializeSwagger() {

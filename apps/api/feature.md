@@ -44,6 +44,7 @@
 - [x] Item creation\*\*
 - [x] Item updating\*\*
 - [x] Item deletion\*\*
+- [x] searchable item list by keyword | used in frontend to filter the item or create new one if not exist (using order endpoint by the outlet admin automatically)\*\*
 
 ## Pickup Requests to do a laundry user
 
@@ -64,10 +65,13 @@
 ## TO DO
 
 - [ ] Check more carfully about the validation to pickup request and api responses
-- [ ] searchable item list by keyword used in frontend to filter the item or create new one if not exist
 
 ## Admin Outlets Orders
 
+- [x] create the data for user walk-in first
+- [x] endpoint to search the user walk-in used for debouncing berfore creating the order
+
+- [ ] create the order by the admin manually for the walk in customer
 - [ ] Update the item quantity after the packed picked up by the driver
 - [ ] Option to manual create order if the customer directly come to the outlet (not through the app)
 - [ ] Get all orders for the admin based on the outlet admin

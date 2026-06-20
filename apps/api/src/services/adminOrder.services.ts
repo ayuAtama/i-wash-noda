@@ -2,8 +2,68 @@
 import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import { AdminOrderInputDTO } from "@/validations/adminOrder.validation";
+import {
+  KeywordWalkInCustomerSchmaDTO,
+  WalkInCustomerValidationDTO,
+} from "@/validations/adminOrder.validation";
 
 export class AdminOrderService {
+  async createNewWalkInCustomer(data: WalkInCustomerValidationDTO) {
+    try {
+      const customer = await prisma.walkInCustomer.create({
+        data,
+      });
+      return {
+        success: true,
+        message: "New Walk-In customer created",
+        data: customer,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async checkWalkInCustomer(keyword: KeywordWalkInCustomerSchmaDTO["keyword"]) {
+    try {
+      // check if the keyword valid
+      if (!keyword.trim()) throw new HttpError(400, "Invalid keyword");
+
+      // check if the keyword valid
+      const customer = await prisma.walkInCustomer.findMany({
+        where: {
+          OR: [
+            {
+              name: {
+                contains: keyword,
+                mode: "insensitive",
+              },
+            },
+            {
+              phone: {
+                contains: keyword,
+              },
+            },
+          ],
+        },
+      });
+
+      if (customer.length === 0) {
+        return {
+          success: false,
+          message: "Customer not found",
+          data: customer,
+        };
+      }
+      return {
+        success: true,
+        message: "Customer found",
+        data: customer,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async getAllOrder(outletId: string) {
     try {
       const ordersList = await prisma.order.findMany({

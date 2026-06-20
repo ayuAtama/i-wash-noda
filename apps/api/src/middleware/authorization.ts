@@ -5,7 +5,7 @@ import { isUserRole } from "@/types/role";
 /**
  * Authorization middleware
  * @param allowedRoles - roles that are allowed to access the route
- * super_admin, outlet_admin, worker, driver
+ * super_admin, outlet_admin, worker, driver, and customer
  */
 export function authorizationMiddleware(...allowedRoles: string[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
@@ -26,7 +26,7 @@ export function authorizationMiddleware(...allowedRoles: string[]) {
       if (!allowedRoles.includes(role)) {
         throw new HttpError(
           403,
-          "Forbidden, only " + allowedRoles.join(", ") + "'re allowed"
+          "Forbidden, only " + allowedRoles.join(", ") + "'re allowed",
         );
       }
 

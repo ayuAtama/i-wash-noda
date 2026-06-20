@@ -2,6 +2,38 @@
 import { z } from "zod";
 import "zod-openapi";
 
+export const CreateWalkInCustomerSchema = z.object({
+  name: z.string().min(1, "Name is required").meta({
+    description: "Name of the customer",
+    example: "John Doe",
+  }),
+  phone: z
+    .string()
+    .regex(/^(?:\+62|62|0)8[1-9][0-9]{6,11}$/, "Invalid phone number")
+    .meta({
+      description: "Phone number of the customer",
+      example: "+6281234567890 or 081234567890",
+    }),
+});
+
+export const keywordWalkInCustomerSchema = z.object({
+  keyword: z.string().min(1, "Keyword is required").meta({
+    description: "Keyword to search for walk-in customers",
+    example: "John or 081222222222",
+  }),
+});
+
+export class WalkInCustomerValidation {
+  static CreateWalkInCustomerSchema = CreateWalkInCustomerSchema;
+  static keywordWalkInCustomerSchema = keywordWalkInCustomerSchema;
+}
+export type WalkInCustomerValidationDTO = z.infer<
+  typeof WalkInCustomerValidation.CreateWalkInCustomerSchema
+>;
+export type KeywordWalkInCustomerSchmaDTO = z.infer<
+  typeof WalkInCustomerValidation.keywordWalkInCustomerSchema
+>;
+
 export const ItemOrderSchema = z.object({
   id: z.uuid().meta({
     description: "Item ID (UUID)",
