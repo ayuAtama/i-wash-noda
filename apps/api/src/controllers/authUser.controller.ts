@@ -365,6 +365,7 @@ export class AuthUserController {
         name,
         role,
         email: emailUser,
+        worker_station,
       } = await this.authUserService.login(
         email,
         password,
@@ -399,6 +400,7 @@ export class AuthUserController {
           name,
           email: emailUser,
           role,
+          worker_station: worker_station ? worker_station : undefined,
         },
       });
     } catch (error) {

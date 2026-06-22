@@ -26,7 +26,7 @@ declare module "express" {
       query?: unknown;
     };
     context?: {
-      outlet_id?: string;
+      outlet_id: string;
       worker_station?: string;
     };
   }

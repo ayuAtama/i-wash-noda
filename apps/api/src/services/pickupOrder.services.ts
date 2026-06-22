@@ -56,7 +56,7 @@ export class PickupOrderService {
         return {
           id: pickupRequest.id,
           order_id: pickupRequest.order_id,
-          customer_name: pickupRequest.order.customer.name,
+          customer_name: pickupRequest.order.customer!.name,
           customer_address: pickupRequest.order.pickupAddress!.address,
           customer_coordinates: `${pickupRequest.order.pickupAddress!.lat}, ${pickupRequest.order.pickupAddress!.lng}`,
           gmap_link: `https://www.google.com/maps/dir/?api=1&destination=${pickupRequest.order.pickupAddress!.lat},${pickupRequest.order.pickupAddress!.lng}`,

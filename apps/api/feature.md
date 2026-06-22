@@ -71,7 +71,7 @@
 - [x] create the data for user walk-in first
 - [x] endpoint to search the user walk-in used for debouncing berfore creating the order
 
-- [ ] create the order by the admin manually for the walk in customer
+- [ ] create the order by the admin manually for the walk in customer or the order update from the driver.
 - [ ] Update the item quantity after the packed picked up by the driver
 - [ ] Option to manual create order if the customer directly come to the outlet (not through the app)
 - [ ] Get all orders for the admin based on the outlet admin
