@@ -35,9 +35,15 @@ export type KeywordWalkInCustomerSchmaDTO = z.infer<
 >;
 
 export const ItemOrderSchema = z.object({
-  id: z.uuid().meta({
-    description: "Item ID (UUID)",
+  id: z.uuid().optional().meta({
+    description:
+      "Item ID (UUID), it's opional because it will be auto generated if not exist",
     example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+  name: z.string().optional().meta({
+    description:
+      "Item name, it's opional because it will be auto generated if not exist",
+    example: "Jaket Hoodie",
   }),
   quantity: z.number().min(1, "Quantity must be at least 1").meta({
     description: "Item quantity",
@@ -45,6 +51,9 @@ export const ItemOrderSchema = z.object({
   }),
 });
 
+/////////////////////////////////////////////////////
+//                AdminOrderSchema                 //
+////////////////////////////////////////////////////
 export const AdminOrderSchema = z
   .object({
     total_kilos: z.number().min(1, "Total kilos must be at least 1").meta({
@@ -95,3 +104,115 @@ export class AdminOrderValidation {
 }
 export type AdminOrderInputDTO = z.infer<typeof AdminOrderSchema>;
 export type AdminOrderParamsSchemaDTO = z.infer<typeof AdminOrderParamsSchema>;
+
+///////////////////////////////////////////////
+// Manual order by admin (walk-in customer) //
+//////////////////////////////////////////////
+
+import { OrderSource, OrderStatus } from "@/generated/prisma/enums";
+
+export class ManualOrderValidation {
+  static CreateManualOrderSchema = z
+    .object({
+      walkin_customer_id: z.uuid().meta({
+        description: "Walk-in customer ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      pickup_fee: z
+        .literal(0, { error: "Are you a hacker or some sort?" })
+        .meta({
+          description:
+            "Pickup fee for the order 0 because the customer is a walk-in customer",
+        }),
+      delivery_fee: z.literal(0, "Are you a hacker or some sort?").meta({
+        description:
+          "Delivery fee for the order 0 because the customer is a walk-in customer",
+      }),
+      laundry_price: z.literal(0, "Are you a hacker or some sort?").meta({
+        description:
+          "Laundry price for the order 0 because we don't do calculate in client side",
+      }),
+      total_amount: z.literal(0, "Are you a hacker or some sort?").meta({
+        description:
+          "Total amount for the order 0 because we don't do calculate in client side",
+      }),
+      total_kilo: z.number().min(1, "Total kilos must be at least 1 Kg").meta({
+        description: "Total kilos of laundry",
+        example: 5,
+      }),
+      status: z
+        .literal(
+          OrderStatus.arrived_at_outlet,
+          "Are you a hacker or some sort?",
+        )
+        .meta({
+          description: "Order status",
+          example: "arrived_at_outlet",
+        }),
+      paid: z.boolean().meta({
+        description:
+          "Indicates if the order is paid or not, because the customer is a walk-in customer",
+        example: true,
+      }),
+      source: z.literal(OrderSource.walk_in).meta({
+        description: "Order source",
+        example: "walkin donut",
+      }),
+      items: z
+        .array(ItemOrderSchema)
+        .min(1, "At least one item must be inputted")
+        .meta({
+          description: "Array of items with quantities",
+          example: [
+            { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
+            { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },
+            { name: "Jaket Hoodie", quantity: 1 },
+          ],
+        }),
+    })
+    .meta({
+      id: "CreateManualOrder",
+      description: "Payload for creating a manual order",
+      example: {
+        outlet_id: "123e4567-e89b-12d3-a456-426614174000",
+        walkin_customer_id: "123e4567-e89b-12d3-a456-426614174000",
+        total_kilo: 5,
+        status: "arrived_at_outlet",
+        paid: true,
+        source: "walk_in",
+        items: [
+          { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
+          { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },
+          { name: "Jaket Hoodie", quantity: 1 },
+        ],
+        pickup_fee: 0,
+        total_amount: 0,
+        delivery_fee: 0,
+        laundry_price: 0,
+      },
+    });
+
+  static OutletIdParamsSchema = z
+    .object({
+      outlet_id: z.uuid().meta({
+        description: "Outlet ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "OutletIdParams",
+      description: "Payload for updating an outlet",
+      example: {
+        outlet_id: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
+}
+
+export type ManualOrderInputDTO = z.infer<
+  typeof ManualOrderValidation.CreateManualOrderSchema
+>;
+export type OutletIdParamsSchemaDTO = z.infer<
+  typeof ManualOrderValidation.OutletIdParamsSchema
+>;
+export type ManualOrderPayloadValidationDTO = ManualOrderInputDTO &
+  OutletIdParamsSchemaDTO;

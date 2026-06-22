@@ -7,7 +7,7 @@ import { HttpError } from "@/utils/httpError";
 export async function resolveContext(
   req: Request,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
     // get the user id and role from the request
@@ -23,7 +23,7 @@ export async function resolveContext(
       },
       select: { outlet_id: true, worker_station: true },
     });
-    if (!outlet_id) throw new Error("Outlet not found");
+    if (!outlet_id) throw new HttpError(400, "Outlet not found");
 
     // store the outlet id into req.context (express)
     // req.context = {

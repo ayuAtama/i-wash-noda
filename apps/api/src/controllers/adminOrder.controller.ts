@@ -7,6 +7,7 @@ import {
   AdminOrderParamsSchemaDTO,
   WalkInCustomerValidationDTO,
   KeywordWalkInCustomerSchmaDTO,
+  ManualOrderInputDTO,
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderController {
@@ -76,24 +77,53 @@ export class AdminOrderController {
     }
   };
 
-  createOrder = async (req: Request, res: Response, next: NextFunction) => {
+  // createOrder = async (req: Request, res: Response, next: NextFunction) => {
+  //   try {
+  //     // 1. validate request body
+  //     const payload = req.validated!.body as AdminOrderInputDTO;
+  //     const { id } = req.validated!.params as AdminOrderParamsSchemaDTO;
+  //     if (!id) throw new HttpError(400, "Missing order id");
+
+  //     const outletId = req.context?.outlet_id;
+  //     if (!outletId) throw new HttpError(401, "Outlet id not found");
+
+  //     // 2. call service after used middleware (DTO validation)
+  //     const result = await this.adminOrderService.createOrder(
+  //       payload,
+  //       id,
+  //       outletId,
+  //     );
+
+  //     // 3. response
+  //     return res.status(200).json({
+  //       message: "Order created",
+  //       order: result,
+  //     });
+  //   } catch (error) {
+  //     next(error);
+  //   }
+  // };
+
+  manualCreateOrderWalkIn = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
-      // 1. validate request body
-      const payload = req.validated!.body as AdminOrderInputDTO;
-      const { id } = req.validated!.params as AdminOrderParamsSchemaDTO;
-      if (!id) throw new HttpError(400, "Missing order id");
+      if (req.validated === undefined) {
+        throw new HttpError(400, "Missing order data");
+      }
+      const body = req.validated.body as ManualOrderInputDTO;
+      const context = req.context;
+      if (!context) {
+        throw new HttpError(401, "Outlet id not found");
+      }
+      const outletId = context.outlet_id;
 
-      const outletId = req.context?.outlet_id;
-      if (!outletId) throw new HttpError(401, "Outlet id not found");
+      const data = { ...body, outlet_id: outletId };
+      //console.log(outletId, worker_station);
 
-      // 2. call service after used middleware (DTO validation)
-      const result = await this.adminOrderService.createOrder(
-        payload,
-        id,
-        outletId,
-      );
-
-      // 3. response
+      const result = await this.adminOrderService.manualCreateOrderWalkIn(data);
       return res.status(200).json({
         message: "Order created",
         order: result,
