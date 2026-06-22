@@ -22,6 +22,7 @@ export class AdminOrderRoute {
     this.createWalkinCustomerOrder();
     this.checkWalkinCustomer();
     this.manualCreateOrderWalkIn();
+    this.getAllOrderOnTheOutlet();
   }
 
   // private createOrder() {
@@ -69,6 +70,16 @@ export class AdminOrderRoute {
         body: ManualOrderValidation.CreateManualOrderSchema,
       }),
       this.controller.manualCreateOrderWalkIn,
+    );
+  }
+
+  private getAllOrderOnTheOutlet() {
+    this.router.get(
+      "/",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      this.controller.getAllOrderOnOutlet,
     );
   }
 }
