@@ -174,27 +174,27 @@ export class PickupOrderService {
         });
 
         // update the order status if the status is done
-        // if (status === "done") {
-        //   // fetch the order id
-        //   const order = await tx.pickupRequest.findUnique({
-        //     where: {
-        //       id: pickupOrderId,
-        //       driver_id: userId,
-        //     },
-        //   });
+        if (status === "done") {
+          // fetch the order id
+          const order = await tx.pickupRequest.findUnique({
+            where: {
+              id: pickupOrderId,
+              driver_id: userId,
+            },
+          });
 
-        //   // update the order status into arrived at outlet
-        //   if (order?.order_id) {
-        //     await tx.order.update({
-        //       where: {
-        //         id: order.order_id,
-        //       },
-        //       data: {
-        //         status: "arrived_at_outlet",
-        //       },
-        //     });
-        //   }
-        // }
+          // update the order status into arrived at outlet
+          if (order?.order_id) {
+            await tx.order.update({
+              where: {
+                id: order.order_id,
+              },
+              data: {
+                status: "arrived_at_outlet",
+              },
+            });
+          }
+        }
 
         return updateStatus;
       });

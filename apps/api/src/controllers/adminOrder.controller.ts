@@ -132,4 +132,29 @@ export class AdminOrderController {
       next(error);
     }
   };
+
+  getAllOrderOnOutlet = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (req.context === undefined) {
+        throw new HttpError(
+          500,
+          "There's something wrong but I can't proof it yet",
+        );
+      }
+      const outletId = req.context.outlet_id;
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
+      const orders = await this.adminOrderService.getAllOrderOnOutlet(outletId);
+      return res.status(200).json({
+        success: true,
+        message: "Orders fetched successfully",
+        data: orders,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

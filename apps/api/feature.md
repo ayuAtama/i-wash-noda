@@ -64,18 +64,15 @@
 
 ## TO DO
 
-- [ ] Check more carfully about the validation to pickup request and api responses
+- [ ] Check more carfully about the validation to pickup request and api responses (so mess up)
 
 ## Admin Outlets Orders
 
 - [x] create the data for user walk-in first
 - [x] endpoint to search the user walk-in used for debouncing berfore creating the order
-
-- [ ] create the order by the admin manually for the walk in customer or the order update from the driver.
-- [ ] Update the item quantity after the packed picked up by the driver
-- [ ] Option to manual create order if the customer directly come to the outlet (not through the app)
-- [ ] Get all orders for the admin based on the outlet admin
-- [ ] Update or delete the order by the admin (same outlet admin)
+- [x] create the order by the admin manually for the walk in customer
+- [x] fetch all the orders that already on the outlet by the admin_outlet
+- [ ] Update the order's item quantity and status by the admin outlet from the driver.
 
 ## Worker
 

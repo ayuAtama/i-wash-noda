@@ -319,4 +319,49 @@ export class AdminOrderService {
       throw error;
     }
   }
+
+  async getAllOrderOnOutlet(outlet_id: string) {
+    try {
+      const orders = await prisma.order.findMany({
+        where: {
+          outlet_id: outlet_id,
+          status: "arrived_at_outlet",
+        },
+        select: {
+          id: true,
+          customer_id: true,
+          walkin_customer_id: true,
+          pickupAddress: {
+            select: {
+              address: true,
+            },
+          },
+          pickupDriver: {
+            select: {
+              name: true,
+            },
+          },
+          deliveryDriver: {
+            select: {
+              name: true,
+            },
+          },
+          pickup_fee: true,
+          delivery_fee: true,
+          total_kilo: true,
+          laundry_price: true,
+          total_amount: true,
+          paid: true,
+          created_at: true,
+        },
+        orderBy: { created_at: "desc" },
+      });
+      if (orders.length === 0 || !orders) {
+        throw new HttpError(404, "There is no order from this outlet yet");
+      }
+      return orders;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
