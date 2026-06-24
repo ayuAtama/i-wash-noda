@@ -65,14 +65,15 @@
 ## TO DO
 
 - [ ] Check more carfully about the validation to pickup request and api responses (so mess up)
+- [ ] complete crud for the walk-in customer (update and delete)
 
 ## Admin Outlets Orders
 
-- [x] create the data for user walk-in first
+- [x] create the data for the first user walk-in
 - [x] endpoint to search the user walk-in used for debouncing berfore creating the order
 - [x] create the order by the admin manually for the walk in customer
 - [x] fetch all the orders that already on the outlet by the admin_outlet
-- [ ] Update the order's item quantity and status by the admin outlet from the driver.
+- [x] Update the order's item quantity and status by the admin outlet from the driver.
 
 ## Worker
 

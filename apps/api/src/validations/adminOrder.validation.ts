@@ -34,22 +34,26 @@ export type KeywordWalkInCustomerSchmaDTO = z.infer<
   typeof WalkInCustomerValidation.keywordWalkInCustomerSchema
 >;
 
-export const ItemOrderSchema = z.object({
-  id: z.uuid().optional().meta({
-    description:
-      "Item ID (UUID), it's opional because it will be auto generated if not exist",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  name: z.string().optional().meta({
-    description:
-      "Item name, it's opional because it will be auto generated if not exist",
-    example: "Jaket Hoodie",
-  }),
-  quantity: z.number().min(1, "Quantity must be at least 1").meta({
-    description: "Item quantity",
-    example: 2,
-  }),
-});
+export const ItemOrderSchema = z
+  .object({
+    id: z.uuid().optional().meta({
+      description:
+        "Item ID (UUID), it's opional because it will be auto generated if not exist",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    name: z.string().optional().meta({
+      description:
+        "Item name, it's opional because it will be auto generated if not exist",
+      example: "Jaket Hoodie",
+    }),
+    quantity: z.number().min(1, "Quantity must be at least 1").meta({
+      description: "Item quantity",
+      example: 2,
+    }),
+  })
+  .refine(({ id, name }) => (id ? 1 : 0) + (name ? 1 : 0) === 1, {
+    error: "Please only provide exactly one of id or name for the items",
+  });
 
 /////////////////////////////////////////////////////
 //                AdminOrderSchema                 //
@@ -201,7 +205,7 @@ export class ManualOrderValidation {
     })
     .meta({
       id: "OutletIdParams",
-      description: "Payload for updating an outlet",
+      description: "Payload for verifying an outlet",
       example: {
         outlet_id: "123e4567-e89b-12d3-a456-426614174000",
       },
@@ -216,3 +220,61 @@ export type OutletIdParamsSchemaDTO = z.infer<
 >;
 export type ManualOrderPayloadValidationDTO = ManualOrderInputDTO &
   OutletIdParamsSchemaDTO;
+
+////////////////////////////////////////////////////
+// Update Order Item for Order Arrived at Outlet //
+//////////////////////////////////////////////////
+
+export class UpdateOrderItemValidation {
+  static UpdateOrderItemSchema = z
+    .object({
+      items: z
+        .array(ItemOrderSchema)
+        .min(1, "At least one item must be inputted")
+        .meta({
+          description: "Array of items with quantities",
+          example: [
+            { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
+            { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },
+            { name: "Jaket Hoodie", quantity: 1 },
+          ],
+        }),
+    })
+    .meta({
+      id: "UpdateOrderItem",
+      description: "Payload for updating an order item",
+      example: {
+        items: [
+          { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
+          { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },
+          { name: "Jaket Hoodie", quantity: 1 },
+        ],
+      },
+    });
+
+  static OrderIdParamsSchema = z
+    .object({
+      orderId: z.uuid().meta({
+        description: "Order ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "OrderIdParams",
+      description: "Payload for verifying an outlet",
+      example: {
+        orderId: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
+}
+
+export type UpdateOrderItemInputDTO = z.infer<
+  typeof UpdateOrderItemValidation.UpdateOrderItemSchema
+>;
+export type UpdateOrderItemPayloadValidationDTO = UpdateOrderItemInputDTO &
+  OrderIdParamsSchemaDTO &
+  OutletIdParamsSchemaDTO;
+
+export type OrderIdParamsSchemaDTO = z.infer<
+  typeof UpdateOrderItemValidation.OrderIdParamsSchema
+>;
