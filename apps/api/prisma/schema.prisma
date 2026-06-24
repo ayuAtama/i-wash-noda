@@ -333,6 +333,7 @@ model OrderItem {
   order Order @relation(fields: [order_id], references: [id])
   item  Item  @relation(fields: [item_id], references: [id])
 
+  @@unique([order_id, item_id])
   @@map("order_items")
 }
 

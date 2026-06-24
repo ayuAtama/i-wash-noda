@@ -6,6 +6,7 @@ import { AdminOrderService } from "@/services/adminOrder.services";
 import {
   AdminOrderValidation,
   ManualOrderValidation,
+  UpdateOrderItemValidation,
   WalkInCustomerValidation,
 } from "@/validations/adminOrder.validation";
 import { authorizationMiddleware } from "@/middleware/authorization";
@@ -23,6 +24,7 @@ export class AdminOrderRoute {
     this.checkWalkinCustomer();
     this.manualCreateOrderWalkIn();
     this.getAllOrderOnTheOutlet();
+    this.updateItemOfOrder();
   }
 
   // private createOrder() {
@@ -62,7 +64,7 @@ export class AdminOrderRoute {
 
   private manualCreateOrderWalkIn() {
     this.router.post(
-      "/walk-in-customer/order",
+      "/walk-in-customer/orders",
       authenticationMiddleware,
       authorizationMiddleware("outlet_admin"),
       resolveContext,
@@ -80,6 +82,20 @@ export class AdminOrderRoute {
       authorizationMiddleware("outlet_admin"),
       resolveContext,
       this.controller.getAllOrderOnOutlet,
+    );
+  }
+
+  private updateItemOfOrder() {
+    this.router.patch(
+      "/:orderId",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        body: UpdateOrderItemValidation.UpdateOrderItemSchema,
+        params: UpdateOrderItemValidation.OrderIdParamsSchema,
+      }),
+      this.controller.updateItemOfOrder,
     );
   }
 }

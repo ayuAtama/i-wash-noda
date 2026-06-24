@@ -8,6 +8,8 @@ import {
   WalkInCustomerValidationDTO,
   KeywordWalkInCustomerSchmaDTO,
   ManualOrderInputDTO,
+  UpdateOrderItemInputDTO,
+  OrderIdParamsSchemaDTO,
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderController {
@@ -152,6 +154,39 @@ export class AdminOrderController {
         success: true,
         message: "Orders fetched successfully",
         data: orders,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateItemOfOrder = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (!req.validated) {
+        throw new HttpError(400, "Missing order's item data");
+      }
+
+      // get the payload
+      const body = req.validated.body as UpdateOrderItemInputDTO;
+      const { orderId} = req.validated
+        .params as OrderIdParamsSchemaDTO;
+      // get the outlet_id
+      if (!req.context) throw new HttpError(401, "Outlet id not found");
+      const outletId = req.context.outlet_id;
+
+      // combine the payload and call the service
+      const payload = { ...body, orderId, outlet_id: outletId };
+      const result = await this.adminOrderService.updateItemOfOrder(payload);
+
+      // response
+      return res.status(200).json({
+        success: result.success,
+        message: result.message,
+        data: result.data,
       });
     } catch (error) {
       next(error);
