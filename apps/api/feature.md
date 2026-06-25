@@ -46,7 +46,7 @@
 - [x] Item deletion\*\*
 - [x] searchable item list by keyword | used in frontend to filter the item or create new one if not exist (using order endpoint by the outlet admin automatically)\*\*
 
-## Pickup Requests to do a laundry user
+## Pickup Requests to do a laundry user (customer)
 
 - [x] Check if the user has address and filter out the outlets that out of coverage. And existing pickup requests (only one order allowed)\*\* (using raw query because it is faster than fitering it in server side)
 - [x] Pickup request creation\*\*

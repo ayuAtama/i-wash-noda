@@ -5,11 +5,18 @@ import { UserValidation } from "../validations/user.validation";
 import { AuthValidation } from "../validations/auth.validation";
 import { AddressValidation } from "../validations/address.validation";
 import { AdminValidation } from "../validations/admin.validation";
+import { ItemValidation } from "../validations/item.validation";
 import { OutletValidation } from "../validations/outlet.validation";
 import { WorkerShiftValidation } from "../validations/workerShift.validation";
 import { PickupRequestValidation } from "../validations/pickupRequest.validation";
 import { PickupOrderValidation } from "../validations/pickupOrder.validation";
 import { AdminOrderValidation } from "../validations/adminOrder.validation";
+import { CloudinaryValidation } from "../validations/cloudinary.validation";
+import {
+  WalkInCustomerValidation,
+  ManualOrderValidation,
+  UpdateOrderItemValidation,
+} from "../validations/adminOrder.validation";
 
 const UserIdParam = z.object({
   id: z.string().uuid().meta({
@@ -46,12 +53,33 @@ const PickupRequestIdParam = z.object({
   }),
 });
 
+const ItemIdParam = z.object({
+  id: z.string().uuid().meta({
+    description: "Item ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+});
+
+const OrderIdParam = z.object({
+  orderId: z.string().uuid().meta({
+    description: "Order ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+});
+
+const UserIdPathParam = z.object({
+  userId: z.string().uuid().meta({
+    description: "User ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+});
+
 const OutletCoverageQuery = z.object({
-  lat: z.number().meta({
+  lat: z.coerce.number().meta({
     description: "Latitude coordinate",
     example: -6.2088,
   }),
-  lng: z.number().meta({
+  lng: z.coerce.number().meta({
     description: "Longitude coordinate",
     example: 106.8456,
   }),
@@ -67,12 +95,16 @@ export const openApiDocument = createDocument({
   },
   servers: [
     {
-      url: "http://localhost:3000/api",
+      url: "http://localhost:3000",
       description: "Development server",
     },
   ],
   tags: [
-    { name: "User Management", description: "User CRUD operations" },
+    { name: "Health", description: "Health check endpoint" },
+    {
+      name: "User Management",
+      description: "User CRUD operations (deprecated - testing only)",
+    },
     { name: "Authentication", description: "User authentication endpoints" },
     { name: "Addresses", description: "User address management" },
     { name: "Outlets", description: "Outlet management" },
@@ -85,11 +117,32 @@ export const openApiDocument = createDocument({
     },
     { name: "Pickup Orders", description: "Driver pickup order management" },
     { name: "Orders", description: "Order management" },
+    { name: "Cloudinary", description: "Cloudinary upload signature" },
   ],
   paths: {
-    "/users": {
+    "/": {
       get: {
-        summary: "List all users",
+        summary: "Health check",
+        tags: ["Health"],
+        responses: {
+          "200": {
+            description: "OK - API is healthy",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "API is healthy",
+                  data: { timestamp: "2025-01-01T10:00:00Z" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/users": {
+      get: {
+        summary: "List all users (deprecated)",
         tags: ["User Management"],
         responses: {
           "200": {
@@ -106,7 +159,7 @@ export const openApiDocument = createDocument({
         },
       },
       post: {
-        summary: "Create user",
+        summary: "Create user (deprecated)",
         tags: ["User Management"],
         requestBody: {
           required: true,
@@ -133,9 +186,9 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/users/{id}": {
+    "/api/users/{id}": {
       get: {
-        summary: "Get user by ID",
+        summary: "Get user by ID (deprecated)",
         tags: ["User Management"],
         requestParams: { path: UserIdParam },
         responses: {
@@ -155,7 +208,7 @@ export const openApiDocument = createDocument({
         },
       },
       put: {
-        summary: "Update user",
+        summary: "Update user (deprecated)",
         tags: ["User Management"],
         requestParams: { path: UserIdParam },
         requestBody: {
@@ -183,7 +236,7 @@ export const openApiDocument = createDocument({
         },
       },
       delete: {
-        summary: "Delete user",
+        summary: "Delete user (deprecated)",
         tags: ["User Management"],
         requestParams: { path: UserIdParam },
         responses: {
@@ -192,7 +245,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/register": {
+    "/api/register": {
       post: {
         summary: "Register new user (Step 1)",
         tags: ["Authentication"],
@@ -220,7 +273,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/verify": {
+    "/api/verify": {
       post: {
         summary: "Verify email with OTP (Step 2)",
         tags: ["Authentication"],
@@ -228,9 +281,12 @@ export const openApiDocument = createDocument({
           required: true,
           content: {
             "application/json": {
-              schema: AuthValidation.VerifySchema,
+              schema: AuthValidation.VerifySchemaTokenBody,
             },
           },
+        },
+        requestParams: {
+          query: AuthValidation.VerifySchemaTokenParams,
         },
         responses: {
           "201": {
@@ -249,7 +305,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/complete-register": {
+    "/api/complete-register": {
       post: {
         summary: "Complete registration (Step 3)",
         tags: ["Authentication"],
@@ -280,7 +336,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/resend": {
+    "/api/resend-otp": {
       post: {
         summary: "Resend verification OTP",
         tags: ["Authentication"],
@@ -308,7 +364,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/login": {
+    "/api/login": {
       post: {
         summary: "Login with email and password",
         tags: ["Authentication"],
@@ -334,7 +390,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/logout": {
+    "/api/logout": {
       get: {
         summary: "Logout current user",
         tags: ["Authentication"],
@@ -352,11 +408,10 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/refresh": {
+    "/api/refresh": {
       get: {
         summary: "Refresh access token",
         tags: ["Authentication"],
-        security: [{ CookieAuth: [] }],
         responses: {
           "200": {
             description: "OK - Token refreshed",
@@ -373,7 +428,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/reset-request": {
+    "/api/reset-password-request": {
       post: {
         summary: "Request password reset",
         tags: ["Authentication"],
@@ -401,7 +456,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/reset-confirm": {
+    "/api/reset-password-confirm": {
       post: {
         summary: "Confirm password reset",
         tags: ["Authentication"],
@@ -430,9 +485,9 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/me": {
+    "/api/me": {
       get: {
-        summary: "Get current user",
+        summary: "Get current user profile",
         tags: ["Authentication"],
         security: [{ CookieAuth: [] }],
         responses: {
@@ -461,7 +516,7 @@ export const openApiDocument = createDocument({
         },
       },
       put: {
-        summary: "Update current user",
+        summary: "Update current user profile",
         tags: ["Authentication"],
         security: [{ CookieAuth: [] }],
         requestBody: {
@@ -496,7 +551,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/change-email-request": {
+    "/api/change-email-request": {
       post: {
         summary: "Request email change",
         tags: ["Authentication"],
@@ -526,7 +581,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/change-email": {
+    "/api/change-email-confirm": {
       put: {
         summary: "Confirm email change",
         tags: ["Authentication"],
@@ -561,7 +616,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/addresses": {
+    "/api/addresses": {
       get: {
         summary: "Get all user addresses",
         tags: ["Addresses"],
@@ -629,7 +684,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/addresses/{id}": {
+    "/api/addresses/{id}": {
       put: {
         summary: "Update address",
         tags: ["Addresses"],
@@ -682,9 +737,9 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/addresses/{id}/set-default": {
-      post: {
-        summary: "Set default address",
+    "/api/addresses/{id}/set-default": {
+      put: {
+        summary: "Set address as default",
         tags: ["Addresses"],
         security: [{ CookieAuth: [] }],
         requestParams: { path: AddressIdParam },
@@ -706,11 +761,11 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/outlets-coverage": {
+    "/api/outlets/coverage": {
       get: {
-        summary: "Get outlets by location",
+        summary: "Get outlets by location coverage",
         tags: ["Outlets"],
-        requestParams: { query: OutletCoverageQuery },
+        requestParams: { query: OutletValidation.OutletCoverageQuerySchema },
         responses: {
           "200": {
             description: "OK - Returns outlets in coverage area",
@@ -740,7 +795,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/outlets": {
+    "/api/outlets": {
       get: {
         summary: "List all outlets",
         tags: ["Outlets"],
@@ -797,13 +852,10 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Bad Request - Invalid input" },
           "401": { description: "Unauthorized - Not authenticated" },
-          "403": {
-            description: "Forbidden - Only super_admin can create outlet",
-          },
         },
       },
     },
-    "/outlets/{id}": {
+    "/api/outlets/{id}": {
       put: {
         summary: "Update outlet",
         tags: ["Outlets"],
@@ -831,9 +883,6 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Bad Request - Invalid input" },
           "401": { description: "Unauthorized - Not authenticated" },
-          "403": {
-            description: "Forbidden - Only super_admin can update outlet",
-          },
         },
       },
       delete: {
@@ -855,13 +904,10 @@ export const openApiDocument = createDocument({
             },
           },
           "401": { description: "Unauthorized - Not authenticated" },
-          "403": {
-            description: "Forbidden - Only super_admin can delete outlet",
-          },
         },
       },
     },
-    "/items": {
+    "/api/items": {
       get: {
         summary: "List all items",
         tags: ["Items"],
@@ -891,7 +937,7 @@ export const openApiDocument = createDocument({
           required: true,
           content: {
             "application/json": {
-              schema: OutletValidation.CreateItemSchema,
+              schema: ItemValidation.CreateItemSchema,
             },
           },
         },
@@ -910,13 +956,108 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Bad Request - Invalid input" },
           "401": { description: "Unauthorized - Not authenticated" },
-          "403": {
-            description: "Forbidden - Only super_admin can create item",
-          },
         },
       },
     },
-    "/admin/register": {
+    "/api/items/search": {
+      get: {
+        summary: "Search items by name",
+        tags: ["Items"],
+        security: [{ CookieAuth: [] }],
+        requestParams: { query: ItemValidation.QueryItemSchema },
+        responses: {
+          "200": {
+            description: "OK - Returns matching items",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Items fetched successfully",
+                  data: [
+                    { id: "uuid", name: "Baju Pramuka", pricePerKg: 8000 },
+                  ],
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+    },
+    "/api/items/{id}": {
+      get: {
+        summary: "Get item by ID",
+        tags: ["Items"],
+        requestParams: { path: ItemIdParam },
+        responses: {
+          "200": {
+            description: "OK - Returns item",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Item fetched successfully",
+                  data: { id: "uuid", name: "Cuci Kering", pricePerKg: 8000 },
+                },
+              },
+            },
+          },
+          "404": { description: "Not Found - Item not found" },
+        },
+      },
+      put: {
+        summary: "Update item",
+        tags: ["Items"],
+        security: [{ CookieAuth: [] }],
+        requestParams: { path: ItemIdParam },
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: ItemValidation.UpdateItemSchema,
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OK - Item updated",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Item updated successfully",
+                  data: { id: "uuid", name: "Seragam Sekolah" },
+                },
+              },
+            },
+          },
+          "400": { description: "Bad Request - Invalid input" },
+          "401": { description: "Unauthorized - Not authenticated" },
+          "404": { description: "Not Found - Item not found" },
+        },
+      },
+      delete: {
+        summary: "Delete item",
+        tags: ["Items"],
+        security: [{ CookieAuth: [] }],
+        requestParams: { path: ItemIdParam },
+        responses: {
+          "200": {
+            description: "OK - Item deleted",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Item deleted successfully",
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+          "404": { description: "Not Found - Item not found" },
+        },
+      },
+    },
+    "/api/admin/register": {
       post: {
         summary: "Register internal user",
         tags: ["Admin"],
@@ -944,13 +1085,10 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Bad Request - Missing email or role" },
           "401": { description: "Unauthorized - Not authenticated" },
-          "403": {
-            description: "Forbidden - Only super_admin can create admin",
-          },
         },
       },
     },
-    "/admin/users": {
+    "/api/admin/users": {
       get: {
         summary: "List all users (admin view)",
         tags: ["Admin"],
@@ -981,10 +1119,9 @@ export const openApiDocument = createDocument({
             },
           },
           "401": { description: "Unauthorized - Not authenticated" },
-          "403": { description: "Forbidden - Insufficient permissions" },
         },
       },
-      put: {
+      patch: {
         summary: "Change user role",
         tags: ["Admin"],
         security: [{ CookieAuth: [] }],
@@ -1010,21 +1147,15 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Bad Request - Missing userId or role" },
           "401": { description: "Unauthorized - Not authenticated" },
-          "403": { description: "Forbidden - Insufficient permissions" },
         },
       },
+    },
+    "/api/admin/users/{userId}": {
       delete: {
         summary: "Remove user",
         tags: ["Admin"],
         security: [{ CookieAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: AdminValidation.RemoveUserSchema,
-            },
-          },
-        },
+        requestParams: { path: UserIdPathParam },
         responses: {
           "200": {
             description: "OK - User removed",
@@ -1039,15 +1170,13 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Bad Request - Missing userId" },
           "401": { description: "Unauthorized - Not authenticated" },
-          "403": { description: "Forbidden - Insufficient permissions" },
         },
       },
     },
-    "/admin/schedule": {
+    "/api/admin/schedule": {
       post: {
         summary: "Create/update worker schedule",
         tags: ["Worker Shifts"],
-        security: [{ CookieAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -1066,11 +1195,10 @@ export const openApiDocument = createDocument({
             },
           },
           "400": { description: "Bad Request - Invalid input" },
-          "401": { description: "Unauthorized - Not authenticated" },
         },
       },
     },
-    "/admin/schedule/{id}": {
+    "/api/admin/schedule/{id}": {
       get: {
         summary: "Get schedule by worker ID",
         tags: ["Worker Shifts"],
@@ -1098,9 +1226,9 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/check/pickup-request": {
+    "/api/pickup-requests/coverage-check": {
       get: {
-        summary: "Check address coverage",
+        summary: "Check address coverage for pickup",
         tags: ["Pickup Requests"],
         security: [{ CookieAuth: [] }],
         responses: {
@@ -1126,36 +1254,7 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/pickup-request": {
-      get: {
-        summary: "Get all pickup requests (driver)",
-        tags: ["Pickup Orders"],
-        security: [{ CookieAuth: [] }],
-        responses: {
-          "200": {
-            description: "OK - Returns pickup requests",
-            content: {
-              "application/json": {
-                example: {
-                  status: "success",
-                  message: "Pickup requests fetched successfully",
-                  pickupRequests: [
-                    {
-                      id: "uuid",
-                      userId: "uuid",
-                      addressId: "uuid",
-                      outletId: "uuid",
-                      status: "PENDING",
-                      createdAt: "2025-01-01T10:00:00Z",
-                    },
-                  ],
-                },
-              },
-            },
-          },
-          "401": { description: "Unauthorized - Not authenticated" },
-        },
-      },
+    "/api/pickup-requests": {
       post: {
         summary: "Create pickup request",
         tags: ["Pickup Requests"],
@@ -1192,10 +1291,108 @@ export const openApiDocument = createDocument({
           "401": { description: "Unauthorized - Not authenticated" },
         },
       },
-    },
-    "/pickup-request/jobs": {
       get: {
-        summary: "Get accepted jobs",
+        summary: "Get all pending pickup requests (driver view)",
+        tags: ["Pickup Orders"],
+        security: [{ CookieAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK - Returns pending pickup requests",
+            content: {
+              "application/json": {
+                example: {
+                  status: "success",
+                  message: "Pickup requests fetched successfully",
+                  pickupRequests: [
+                    {
+                      id: "uuid",
+                      userId: "uuid",
+                      addressId: "uuid",
+                      outletId: "uuid",
+                      status: "PENDING",
+                      createdAt: "2025-01-01T10:00:00Z",
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+    },
+    "/api/pickup-requests/{id}": {
+      delete: {
+        summary: "Cancel pickup request",
+        tags: ["Pickup Requests"],
+        security: [{ CookieAuth: [] }],
+        requestParams: { path: PickupRequestIdParam },
+        responses: {
+          "200": {
+            description: "OK - Pickup request cancelled",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Pickup request cancelled successfully",
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+          "404": { description: "Not Found - Pickup request not found" },
+        },
+      },
+    },
+    "/api/pickup-requests/status": {
+      get: {
+        summary: "Check user pickup request/order status",
+        tags: ["Pickup Requests"],
+        security: [{ CookieAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK - Returns order status",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Order status fetched successfully",
+                  data: { status: "PROCESSING" },
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+    },
+    "/api/pickup-requests/{id}/accept": {
+      post: {
+        summary: "Accept pickup request (driver)",
+        tags: ["Pickup Orders"],
+        security: [{ CookieAuth: [] }],
+        requestParams: { path: PickupRequestIdParam },
+        responses: {
+          "200": {
+            description: "OK - Request accepted",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Pickup request accepted successfully",
+                  data: { id: "uuid", status: "ACCEPTED", driverId: "uuid" },
+                },
+              },
+            },
+          },
+          "400": { description: "Bad Request - Missing request ID" },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+    },
+    "/api/pickup-requests/accepted": {
+      get: {
+        summary: "Get accepted jobs (driver)",
         tags: ["Pickup Orders"],
         security: [{ CookieAuth: [] }],
         responses: {
@@ -1223,33 +1420,9 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/pickup-request/{id}/accept": {
-      post: {
-        summary: "Accept pickup request",
-        tags: ["Pickup Orders"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: PickupRequestIdParam },
-        responses: {
-          "200": {
-            description: "OK - Request accepted",
-            content: {
-              "application/json": {
-                example: {
-                  success: true,
-                  message: "Pickup request accepted successfully",
-                  data: { id: "uuid", status: "ACCEPTED", driverId: "uuid" },
-                },
-              },
-            },
-          },
-          "400": { description: "Bad Request - Missing request ID" },
-          "401": { description: "Unauthorized - Not authenticated" },
-        },
-      },
-    },
-    "/pickup-request/{id}/status": {
-      put: {
-        summary: "Update job status",
+    "/api/pickup-requests/{id}/status": {
+      patch: {
+        summary: "Update job status (driver)",
         tags: ["Pickup Orders"],
         security: [{ CookieAuth: [] }],
         requestParams: { path: PickupRequestIdParam },
@@ -1279,34 +1452,124 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/order/{id}": {
-      put: {
-        summary: "Create order from pickup request",
+    "/api/pickup-requests/already-picked-up": {
+      get: {
+        summary: "Get already picked up jobs (driver)",
+        tags: ["Pickup Orders"],
+        security: [{ CookieAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK - Returns picked up jobs",
+            content: {
+              "application/json": {
+                example: {
+                  status: "success",
+                  message: "Already picked up jobs fetched successfully",
+                  result: [
+                    {
+                      id: "uuid",
+                      userId: "uuid",
+                      addressId: "uuid",
+                      status: "PICKED_UP",
+                      driverId: "uuid",
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+    },
+    "/api/admin/orders/walk-in-customer": {
+      post: {
+        summary: "Create walk-in customer",
         tags: ["Orders"],
         security: [{ CookieAuth: [] }],
-        requestParams: { path: PickupRequestIdParam },
         requestBody: {
           required: true,
           content: {
             "application/json": {
-              schema: AdminOrderValidation.AdminOrderSchema,
+              schema: WalkInCustomerValidation.CreateWalkInCustomerSchema,
             },
           },
         },
         responses: {
+          "201": {
+            description: "Created - Walk-in customer created",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Walk-in customer created successfully",
+                  data: {
+                    id: "uuid",
+                    name: "John Doe",
+                    phone: "+6281234567890",
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Bad Request - Invalid input" },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+      get: {
+        summary: "Search walk-in customers",
+        tags: ["Orders"],
+        security: [{ CookieAuth: [] }],
+        requestParams: {
+          query: WalkInCustomerValidation.keywordWalkInCustomerSchema,
+        },
+        responses: {
           "200": {
-            description: "OK - Order created",
+            description: "OK - Returns matching customers",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Customers fetched successfully",
+                  data: [
+                    { id: "uuid", name: "John Doe", phone: "+6281234567890" },
+                  ],
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+    },
+    "/api/admin/orders/walk-in-customer/orders": {
+      post: {
+        summary: "Create manual walk-in order",
+        tags: ["Orders"],
+        security: [{ CookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: ManualOrderValidation.CreateManualOrderSchema,
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Created - Order created",
             content: {
               "application/json": {
                 example: {
                   message: "Order created",
                   order: {
                     id: "uuid",
-                    pickupRequestId: "uuid",
                     outletId: "uuid",
-                    totalKilos: 5,
+                    totalKilo: 5,
                     totalPrice: 85000,
-                    status: "PROCESSING",
+                    status: "arrived_at_outlet",
+                    source: "walk_in",
+                    paid: true,
                     createdAt: "2025-01-01T10:00:00Z",
                   },
                 },
@@ -1314,6 +1577,92 @@ export const openApiDocument = createDocument({
             },
           },
           "400": { description: "Bad Request - Invalid input" },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+    },
+    "/api/admin/orders": {
+      get: {
+        summary: "Get all orders for outlet",
+        tags: ["Orders"],
+        security: [{ CookieAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK - Returns orders",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Orders fetched successfully",
+                  data: [
+                    {
+                      id: "uuid",
+                      outletId: "uuid",
+                      status: "PROCESSING",
+                      totalKilo: 5,
+                      createdAt: "2025-01-01T10:00:00Z",
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+        },
+      },
+    },
+    "/api/admin/orders/{orderId}": {
+      patch: {
+        summary: "Update order items",
+        tags: ["Orders"],
+        security: [{ CookieAuth: [] }],
+        requestParams: { path: OrderIdParam },
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: UpdateOrderItemValidation.UpdateOrderItemSchema,
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OK - Order updated",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Order updated successfully",
+                  data: { id: "uuid", items: [] },
+                },
+              },
+            },
+          },
+          "400": { description: "Bad Request - Invalid input" },
+          "401": { description: "Unauthorized - Not authenticated" },
+          "404": { description: "Not Found - Order not found" },
+        },
+      },
+    },
+    "/api/get-upload-signature": {
+      get: {
+        summary: "Get Cloudinary upload signature",
+        tags: ["Cloudinary"],
+        security: [{ CookieAuth: [] }],
+        requestParams: { query: CloudinaryValidation.RequestSignatureSchema },
+        responses: {
+          "200": {
+            description: "OK - Returns upload signature",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  signature: "abc123signature",
+                  timestamp: 1234567890,
+                },
+              },
+            },
+          },
           "401": { description: "Unauthorized - Not authenticated" },
         },
       },

@@ -2,9 +2,13 @@
 import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import calculateDistance from "@/utils/haversineDistance";
+import {
+  CreatePickupRequestDto,
+  PickupRequestIdParamsDto,
+} from "@/validations/pickupRequest.validation";
 
 export class PickupRequestService {
-  async checkAddressFirst(userId: string) {
+  async checkAddressFirst(userId: PickupRequestIdParamsDto["id"]) {
     try {
       // check if the user has any default address
       // (if want to change address redirect to another page on the front end)
@@ -13,6 +17,13 @@ export class PickupRequestService {
         where: {
           user_id: userId,
           is_default: true,
+        },
+        select: {
+          id: true,
+          label: true,
+          address: true,
+          lat: true,
+          lng: true,
         },
       });
 
@@ -24,7 +35,7 @@ export class PickupRequestService {
 
       // also check if the pickup order has been created (only can create one)
       // if so, return to status page of the pickup order (you can see the cancel button)
-      // after accepted it'll show the pay button instead
+      // after accepted it'll show the pay button instead if the laundry price (outlet_admin) is not null (washing_in_progress)
       // the button to access this page become disabled
       const checkExistingPickupRequestOrder =
         await prisma.pickupRequest.findFirst({
@@ -96,7 +107,7 @@ export class PickupRequestService {
       const availableOutlets = await prisma.$queryRaw`
           SELECT
           id, name, lat, lng, price_per_kg, price_per_km, max_distance_km,
-          (
+          ROUND((
           6371 * 2 * ASIN(
             SQRT(
               POWER(SIN(RADIANS(lat - ${userLat}) / 2), 2) +
@@ -104,7 +115,7 @@ export class PickupRequestService {
               POWER(SIN(RADIANS(lng - ${userLng}) / 2), 2)
             )
           )
-        ) AS distance_km
+        )::numeric, 2) AS distance_km
       FROM outlets /* <--- EXACT MATCH TO YOUR @@map("outlets") */
       WHERE is_deleted = false
       AND (
@@ -132,11 +143,13 @@ export class PickupRequestService {
   }
 
   async createPickupRequest(
-    userId: string,
-    addressId: string,
-    outletId: string,
+    userId: PickupRequestIdParamsDto["id"],
+    payload: CreatePickupRequestDto,
   ) {
     try {
+      // destructure and get the address id and the outlet id
+      const { addressId, outletId } = payload;
+
       // check if the user is valid
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) throw new HttpError(404, "User not found");
@@ -235,7 +248,10 @@ export class PickupRequestService {
     }
   }
 
-  async cancelPickupRequest(userId: string, OrderId: string) {
+  async cancelPickupRequest(
+    userId: PickupRequestIdParamsDto["id"],
+    OrderId: PickupRequestIdParamsDto["id"],
+  ) {
     try {
       // check if the user is valid
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -255,7 +271,10 @@ export class PickupRequestService {
       });
 
       if (!existingPickupRequest)
-        throw new HttpError(404, "Pickup request id not found");
+        throw new HttpError(
+          404,
+          "Pickup request id not found! because you are the little hacker",
+        );
 
       // cancel the pickup request and the order
       const cancel = await prisma.$transaction(async (tx) => {
@@ -297,19 +316,20 @@ export class PickupRequestService {
   }
 
   // check status of the order (not only pickup request for customer)
-  async checkOrderStatus(userId: string) {
+  async checkOrderStatus(userId: PickupRequestIdParamsDto["id"]) {
     try {
       // check if the user is valid
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
       if (!user) throw new HttpError(404, "User not found");
 
       // check the status of the order
       const order = await prisma.order.findFirst({
         where: {
           customer_id: userId,
-          status: {
-            not: "delivered",
-          },
+          status: "waiting_for_driver_pickup",
+          driver_pickup_id: null,
         },
         select: {
           id: true,
