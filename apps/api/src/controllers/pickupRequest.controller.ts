@@ -2,7 +2,10 @@
 import { PickupRequestService } from "@/services/pickupRequest.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
-import { CreatePickupRequestDto } from "@/validations/pickupRequest.validation";
+import {
+  CreatePickupRequestDto,
+  PickupRequestIdParamsDto,
+} from "@/validations/pickupRequest.validation";
 
 export class PickupRequestController {
   private pickupRequestService: PickupRequestService;
@@ -20,11 +23,10 @@ export class PickupRequestController {
     try {
       // get the id from middlewere
       const userId = req.user?.id ?? req.access_token?.sub;
-      console.log(userId);
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       // call the service
-      const { success, message, availableOutlets, data } =
+      const { success, message, availableOutlets, data, address } =
         await this.pickupRequestService.checkAddressFirst(userId);
 
       //response
@@ -32,7 +34,10 @@ export class PickupRequestController {
         res.status(200).json({
           success: success,
           message: message,
-          data: availableOutlets,
+          data: {
+            nearestOutlet: availableOutlets,
+            address,
+          },
         });
       } else {
         res.status(409).json({
@@ -59,16 +64,13 @@ export class PickupRequestController {
       // from frontend form (from previous function)
       // if(!req.body) throw new HttpError(400, "Missing body");
       // const { addressId, outletId } = req.body;
-      const { addressId, outletId } = req.validated!
-        .body as CreatePickupRequestDto;
-      if (!addressId || !outletId)
-        throw new HttpError(400, "Missing addressId or outletId");
+      const payload = req.validated!.body as CreatePickupRequestDto;
+      if (!payload) throw new HttpError(400, "Missing addressId or outletId");
 
       // call the servuice
       const pickupRequest = await this.pickupRequestService.createPickupRequest(
         userId,
-        addressId,
-        outletId,
+        payload,
       );
       res.status(201).json({
         success: true,
@@ -95,7 +97,16 @@ export class PickupRequestController {
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       // from the frontend error from check address
-      const pickupRequestOrderId = req.params.id;
+      if (!req.validated) {
+        throw new HttpError(
+          400,
+          "Please don't hack me, otherwise you forgot your pickup request id",
+        );
+      }
+
+      const { id: pickupRequestOrderId } = req.validated
+        .params as PickupRequestIdParamsDto;
+
       if (!pickupRequestOrderId)
         throw new HttpError(400, "Missing pickupRequestOrderId");
 

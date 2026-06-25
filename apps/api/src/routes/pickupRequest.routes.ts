@@ -46,6 +46,9 @@ export class PickupRequestRoute {
       "/pickup-requests/:id",
       authenticationMiddleware,
       authorizationMiddleware("customer"),
+      Validator.validate({
+        params: PickupRequestValidation.PickupRequestIdParamsSchema,
+      }),
       this.controller.cancelPickupRequest,
     );
   }
