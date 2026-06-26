@@ -58,7 +58,7 @@ export class PickupOrderController {
           userId,
         );
       res.status(200).json({
-        success: true,
+        success: success,
         message: message,
         data,
       });
@@ -100,16 +100,16 @@ export class PickupOrderController {
         .params as PickupIdParamsDto;
       const userId = req.access_token?.sub;
       //const status = req.body.status;
-      const { status } = req.validated!.body as UpdateStatusDto;
+      // const { status } = req.validated!.body as UpdateStatusDto;
       if (!userId) throw new HttpError(401, "User id not found");
       if (!pickupRequestId)
         throw new HttpError(400, "Pickup request id not found");
-      if (!status) throw new HttpError(400, "Status not found");
+      // if (!status) throw new HttpError(400, "Status not found");
 
       const result = await this.pickupOrderService.upateStatusDriver(
         userId,
         pickupRequestId,
-        status,
+        // status,
       );
       res.status(200).json({
         success: true,

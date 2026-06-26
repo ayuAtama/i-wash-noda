@@ -31,6 +31,26 @@ export class PickupOrderValidation {
         id: "123e4567-e89b-12d3-a456-426614174000",
       },
     });
+
+  static OutletIdSchema = z
+    .uuid()
+    .meta({
+      description: "Outlet ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    })
+    .meta({
+      id: "OutletId",
+    });
+
+  static UserIdSchema = z
+    .uuid()
+    .meta({
+      description: "User ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    })
+    .meta({
+      id: "UserId",
+    });
 }
 
 export type UpdateStatusDto = z.infer<
@@ -39,3 +59,5 @@ export type UpdateStatusDto = z.infer<
 export type PickupIdParamsDto = z.infer<
   typeof PickupOrderValidation.PickupIdParamsSchema
 >;
+export type OutletIdDto = z.infer<typeof PickupOrderValidation.OutletIdSchema>;
+export type UserIdDto = z.infer<typeof PickupOrderValidation.UserIdSchema>;

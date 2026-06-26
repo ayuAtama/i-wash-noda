@@ -56,12 +56,12 @@ export class PickupOrderRoute {
 
   private updateStatus() {
     this.router.patch(
-      "/pickup-requests/:id/status",
+      "/pickup-requests/:id/next",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
       Validator.validate({
-        body: PickupOrderValidation.UpdateStatusSchema,
+        // body: PickupOrderValidation.UpdateStatusSchema,
         params: PickupOrderValidation.PickupIdParamsSchema,
       }),
       this.controller.updateStatus,
