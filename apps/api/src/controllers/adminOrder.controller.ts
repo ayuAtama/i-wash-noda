@@ -10,6 +10,7 @@ import {
   ManualOrderInputDTO,
   UpdateOrderItemInputDTO,
   OrderIdParamsSchemaDTO,
+  IDParamSchemaDTO,
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderController {
@@ -79,32 +80,59 @@ export class AdminOrderController {
     }
   };
 
-  // createOrder = async (req: Request, res: Response, next: NextFunction) => {
-  //   try {
-  //     // 1. validate request body
-  //     const payload = req.validated!.body as AdminOrderInputDTO;
-  //     const { id } = req.validated!.params as AdminOrderParamsSchemaDTO;
-  //     if (!id) throw new HttpError(400, "Missing order id");
+  // update the data for the walkin customer
+  updateWalkinCustomer = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const id = req.validated!.params as IDParamSchemaDTO;
+      const body = req.validated!.body as WalkInCustomerValidationDTO;
+      if (!id || !body) {
+        throw new HttpError(400, "Missing id or data");
+      }
+      // make a payload
+      const payload = { ...id, ...body };
+      // call the services
+      const { success, data, message } =
+        await this.adminOrderService.updateWalkInCustomer(payload);
+      return res.status(200).json({
+        success,
+        message,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-  //     const outletId = req.context?.outlet_id;
-  //     if (!outletId) throw new HttpError(401, "Outlet id not found");
+  // delete the walkin customer by the id
+  deleteWalkinCustomer = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      // get the id from the params
+      const { id } = req.validated!.params as IDParamSchemaDTO;
+      if (!id) {
+        throw new HttpError(400, "Missing id");
+      }
 
-  //     // 2. call service after used middleware (DTO validation)
-  //     const result = await this.adminOrderService.createOrder(
-  //       payload,
-  //       id,
-  //       outletId,
-  //     );
+      //call the service
+      const { success, data, message } =
+        await this.adminOrderService.deleteWalkinCustomer(id);
 
-  //     // 3. response
-  //     return res.status(200).json({
-  //       message: "Order created",
-  //       order: result,
-  //     });
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // };
+      return res.status(200).json({
+        success,
+        message,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   manualCreateOrderWalkIn = async (
     req: Request,
@@ -172,8 +200,7 @@ export class AdminOrderController {
 
       // get the payload
       const body = req.validated.body as UpdateOrderItemInputDTO;
-      const { orderId} = req.validated
-        .params as OrderIdParamsSchemaDTO;
+      const { orderId } = req.validated.params as OrderIdParamsSchemaDTO;
       // get the outlet_id
       if (!req.context) throw new HttpError(401, "Outlet id not found");
       const outletId = req.context.outlet_id;

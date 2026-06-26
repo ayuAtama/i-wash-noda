@@ -23,6 +23,47 @@ export const keywordWalkInCustomerSchema = z.object({
   }),
 });
 
+export const UpdateWalkInCustomerSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").optional().meta({
+      description: "Name of the customer",
+      example: "John Doe",
+    }),
+    phone: z
+      .string()
+      .regex(/^(?:\+62|62|0)8[1-9][0-9]{6,11}$/, "Invalid phone number")
+      .optional()
+      .meta({
+        description: "Phone number of the customer",
+        example: "+6281234567890 or 081234567890",
+      }),
+  })
+  .refine((data) => !!data.name || !!data.phone, {
+    message:
+      "Either name or phone is required and what the you update without a data?",
+    // path: ["name"], // or ["phone"], or omit to make it a form-level error
+  });
+
+export const IDParamSchema = z.object({
+  id: z.uuid().meta({
+    description: "Order ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+});
+
+export class UpdateWalkInCustomerValidation {
+  static UpdateWalkInCustomerSchema = UpdateWalkInCustomerSchema;
+  static IDParamSchema = IDParamSchema;
+}
+export type UpdateWalkInCustomerValidationDTO = z.infer<
+  typeof UpdateWalkInCustomerValidation.UpdateWalkInCustomerSchema
+>;
+export type IDParamSchemaDTO = z.infer<
+  typeof UpdateWalkInCustomerValidation.IDParamSchema
+>;
+export type UpdatePayloadDTO = UpdateWalkInCustomerValidationDTO &
+  IDParamSchemaDTO;
+
 export class WalkInCustomerValidation {
   static CreateWalkInCustomerSchema = CreateWalkInCustomerSchema;
   static keywordWalkInCustomerSchema = keywordWalkInCustomerSchema;
