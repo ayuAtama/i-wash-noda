@@ -67,11 +67,12 @@
 - [x] Check more carfully about the validation to pickup request and api responses
 - [ ] complete crud for the walk-in customer (update and delete)
 - [x] status progression update by the driver (by using on endpoint :id/next)
+- [ ] update the database of walkin customer with the id of the admin_outlet
 
 ## Admin Outlets Orders
 
-- [x] create the data for the first user walk-in
-- [x] endpoint to search the user walk-in used for debouncing berfore creating the order
+- [x] create the data for the first user walk-in (create)
+- [x] endpoint to search the user walk-in used for debouncing berfore creating the order (read)
 - [x] create the order by the admin manually for the walk in customer
 - [x] fetch all the orders that already on the outlet by the admin_outlet
 - [x] Update the order's item quantity and status by the admin outlet from the driver.

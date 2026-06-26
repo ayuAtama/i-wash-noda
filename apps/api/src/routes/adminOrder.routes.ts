@@ -7,6 +7,7 @@ import {
   AdminOrderValidation,
   ManualOrderValidation,
   UpdateOrderItemValidation,
+  UpdateWalkInCustomerValidation,
   WalkInCustomerValidation,
 } from "@/validations/adminOrder.validation";
 import { authorizationMiddleware } from "@/middleware/authorization";
@@ -22,6 +23,8 @@ export class AdminOrderRoute {
     //this.createOrder();
     this.createWalkinCustomerOrder();
     this.checkWalkinCustomer();
+    this.updateWalkinCustomer();
+    this.deleteWalkinCustomer();
     this.manualCreateOrderWalkIn();
     this.getAllOrderOnTheOutlet();
     this.updateItemOfOrder();
@@ -59,6 +62,33 @@ export class AdminOrderRoute {
         query: WalkInCustomerValidation.keywordWalkInCustomerSchema,
       }),
       this.controller.checkWalkinCustomer,
+    );
+  }
+
+  private updateWalkinCustomer() {
+    this.router.patch(
+      "/walk-in-customer/:id",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        params: UpdateWalkInCustomerValidation.IDParamSchema,
+        body: UpdateWalkInCustomerValidation.UpdateWalkInCustomerSchema,
+      }),
+      this.controller.updateWalkinCustomer,
+    );
+  }
+
+  private deleteWalkinCustomer() {
+    this.router.delete(
+      "/walk-in-customer/:id",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        params: UpdateWalkInCustomerValidation.IDParamSchema,
+      }),
+      this.controller.deleteWalkinCustomer,
     );
   }
 
