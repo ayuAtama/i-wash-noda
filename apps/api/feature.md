@@ -64,8 +64,9 @@
 
 ## TO DO
 
-- [ ] Check more carfully about the validation to pickup request and api responses (so mess up)
+- [x] Check more carfully about the validation to pickup request and api responses
 - [ ] complete crud for the walk-in customer (update and delete)
+- [x] status progression update by the driver (by using on endpoint :id/next)
 
 ## Admin Outlets Orders
 
