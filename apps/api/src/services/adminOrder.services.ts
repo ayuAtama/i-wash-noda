@@ -3,6 +3,8 @@ import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
   AdminOrderInputDTO,
+  CheckWalkInCustomerValidationDTO,
+  DeletePayloadDTO,
   IDParamSchemaDTO,
   ManualOrderInputDTO,
   ManualOrderPayloadValidationDTO,
@@ -11,6 +13,7 @@ import {
   UpdateOrderItemPayloadValidationDTO,
   UpdatePayloadDTO,
   UpdateWalkInCustomerValidationDTO,
+  WalkInCustomerPayloadDTO,
 } from "@/validations/adminOrder.validation";
 import {
   KeywordWalkInCustomerSchmaDTO,
@@ -18,11 +21,30 @@ import {
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderService {
-  async createNewWalkInCustomer(data: WalkInCustomerValidationDTO) {
+  async createNewWalkInCustomer(data: WalkInCustomerPayloadDTO) {
     try {
+      // destructing the data
+      const { name, phone, admin_id, outlet_id } = data;
+
+      // create the user
       const customer = await prisma.walkInCustomer.create({
-        data,
+        data: {
+          name,
+          phone,
+          created_by: admin_id,
+          outlet_id: outlet_id,
+        },
       });
+      // const customer = await prisma.walkInCustomer.create({
+      //   data,
+      // });
+      if (!customer) {
+        throw new HttpError(
+          400,
+          "Walkin Customer not created, please try again",
+        );
+      }
+
       return {
         success: true,
         message: "New Walk-In customer created",
@@ -33,14 +55,18 @@ export class AdminOrderService {
     }
   }
 
-  async checkWalkInCustomer(keyword: KeywordWalkInCustomerSchmaDTO["keyword"]) {
+  async checkWalkInCustomer(payload: CheckWalkInCustomerValidationDTO) {
     try {
+      // destructing the data
+      const { keyword, outlet_id } = payload;
+
       // check if the keyword valid
       if (!keyword.trim()) throw new HttpError(400, "Invalid keyword");
 
       // check if the keyword valid
       const customer = await prisma.walkInCustomer.findMany({
         where: {
+          outlet_id,
           OR: [
             {
               name: {
@@ -77,11 +103,12 @@ export class AdminOrderService {
   async updateWalkInCustomer(data: UpdatePayloadDTO) {
     try {
       // strip the id
-      const { id, ...rest } = data;
+      const { id, outlet_id, ...rest } = data;
       // update the data of the Walkin Customer
       const update = await prisma.walkInCustomer.update({
         where: {
           id,
+          outlet_id,
         },
         data: rest,
       });
@@ -96,12 +123,16 @@ export class AdminOrderService {
     }
   }
 
-  async deleteWalkinCustomer(id: IDParamSchemaDTO["id"]) {
+  async deleteWalkinCustomer(payload: DeletePayloadDTO) {
     try {
+      // destructing the data
+      const { id, outlet_id } = payload;
+
       // delete the account of the Walkin Customer
       const query = await prisma.walkInCustomer.findUnique({
         where: {
           id,
+          outlet_id,
         },
       });
 

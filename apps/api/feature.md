@@ -67,7 +67,8 @@
 - [x] Check more carfully about the validation to pickup request and api responses
 - [x] complete crud for the walk-in customer (update and delete)
 - [x] status progression update by the driver (by using on endpoint :id/next)
-- [ ] update the database of walkin customer with the id of the admin_outlet
+- [x] update the database of walkin customer with the id of the admin_outlet
+- [x] update the logic for the walkin customer, not allowed if not in same outlet
 
 ## Admin Outlets Orders
 

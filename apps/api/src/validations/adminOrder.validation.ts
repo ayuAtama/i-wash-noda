@@ -23,6 +23,20 @@ export const keywordWalkInCustomerSchema = z.object({
   }),
 });
 
+export const outletIDSchema = z.object({
+  outlet_id: z.uuid().meta({
+    description: "Outlet ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+});
+
+export const adminIDSchema = z.object({
+  admin_id: z.uuid().meta({
+    description: "Admin ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+});
+
 export const UpdateWalkInCustomerSchema = z
   .object({
     name: z.string().min(1, "Name is required").optional().meta({
@@ -62,7 +76,10 @@ export type IDParamSchemaDTO = z.infer<
   typeof UpdateWalkInCustomerValidation.IDParamSchema
 >;
 export type UpdatePayloadDTO = UpdateWalkInCustomerValidationDTO &
-  IDParamSchemaDTO;
+  IDParamSchemaDTO &
+  outletIDSchemaDTO;
+
+export type DeletePayloadDTO = IDParamSchemaDTO & outletIDSchemaDTO;
 
 export class WalkInCustomerValidation {
   static CreateWalkInCustomerSchema = CreateWalkInCustomerSchema;
@@ -71,6 +88,17 @@ export class WalkInCustomerValidation {
 export type WalkInCustomerValidationDTO = z.infer<
   typeof WalkInCustomerValidation.CreateWalkInCustomerSchema
 >;
+
+export type adminIDSchemaDTO = z.infer<typeof adminIDSchema>;
+export type outletIDSchemaDTO = z.infer<typeof outletIDSchema>;
+
+export type WalkInCustomerPayloadDTO = WalkInCustomerValidationDTO &
+  outletIDSchemaDTO &
+  adminIDSchemaDTO;
+
+export type CheckWalkInCustomerValidationDTO = KeywordWalkInCustomerSchmaDTO &
+  outletIDSchemaDTO;
+
 export type KeywordWalkInCustomerSchmaDTO = z.infer<
   typeof WalkInCustomerValidation.keywordWalkInCustomerSchema
 >;

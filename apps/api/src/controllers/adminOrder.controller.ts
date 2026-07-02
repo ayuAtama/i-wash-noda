@@ -11,6 +11,10 @@ import {
   UpdateOrderItemInputDTO,
   OrderIdParamsSchemaDTO,
   IDParamSchemaDTO,
+  WalkInCustomerPayloadDTO,
+  CheckWalkInCustomerValidationDTO,
+  UpdatePayloadDTO,
+  DeletePayloadDTO,
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderController {
@@ -28,7 +32,23 @@ export class AdminOrderController {
   ) => {
     try {
       // validate the data from the request (controller)
-      const data = req.validated!.body as WalkInCustomerValidationDTO;
+      const body = req.validated!.body as WalkInCustomerValidationDTO;
+
+      // get the userid from (outlet_admin)
+      const userId = req.access_token!.sub;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+
+      // get the outlet_id from the request(req.context)
+      const outletId = req.context!.outlet_id;
+      if (!outletId)
+        throw new HttpError(401, "This user is not standard user (anomaly)");
+
+      // make the payload for passing to the service
+      const data = {
+        ...body,
+        admin_id: userId,
+        outlet_id: outletId,
+      } as WalkInCustomerPayloadDTO;
 
       // call the service
       const {
@@ -54,13 +74,29 @@ export class AdminOrderController {
     next: NextFunction,
   ) => {
     try {
+      // fetch the user id and outlet id from the middlewere
+      const userId = req.access_token!.sub;
+      const outletId = req.context!.outlet_id;
+
+      if (!userId || !outletId)
+        throw new HttpError(401, "This user is not standard user (anomaly)");
+
+      // fetch the query
       const { keyword } = req.validated!.query as KeywordWalkInCustomerSchmaDTO;
       if (!keyword) throw new HttpError(400, "Missing keyword");
+
+      // make the payload
+      const data = {
+        keyword,
+        outlet_id: outletId,
+      } as CheckWalkInCustomerValidationDTO;
+
+      // call the service
       const {
         success,
         data: result,
         message,
-      } = await this.adminOrderService.checkWalkInCustomer(keyword);
+      } = await this.adminOrderService.checkWalkInCustomer(data);
 
       if (!success) {
         return res.status(400).json({
@@ -89,11 +125,17 @@ export class AdminOrderController {
     try {
       const id = req.validated!.params as IDParamSchemaDTO;
       const body = req.validated!.body as WalkInCustomerValidationDTO;
+      const outletId = req.context!.outlet_id;
+
       if (!id || !body) {
         throw new HttpError(400, "Missing id or data");
       }
       // make a payload
-      const payload = { ...id, ...body };
+      const payload = {
+        ...id,
+        ...body,
+        outlet_id: outletId,
+      } as UpdatePayloadDTO;
       // call the services
       const { success, data, message } =
         await this.adminOrderService.updateWalkInCustomer(payload);
@@ -120,9 +162,20 @@ export class AdminOrderController {
         throw new HttpError(400, "Missing id");
       }
 
+      // get the outlet id from the request
+      const outletId = req.context!.outlet_id;
+      if (!outletId) {
+        throw new HttpError(401, "Outlet id not found");
+      }
+
+      const payload = {
+        id,
+        outlet_id: outletId,
+      } as DeletePayloadDTO;
+
       //call the service
       const { success, data, message } =
-        await this.adminOrderService.deleteWalkinCustomer(id);
+        await this.adminOrderService.deleteWalkinCustomer(payload);
 
       return res.status(200).json({
         success,

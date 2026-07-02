@@ -46,6 +46,7 @@ export class AdminOrderRoute {
       "/walk-in-customer",
       authenticationMiddleware,
       authorizationMiddleware("outlet_admin"),
+      resolveContext,
       Validator.validate({
         body: WalkInCustomerValidation.CreateWalkInCustomerSchema,
       }),
@@ -58,6 +59,7 @@ export class AdminOrderRoute {
       "/walk-in-customer",
       authenticationMiddleware,
       authorizationMiddleware("outlet_admin"),
+      resolveContext,
       Validator.validate({
         query: WalkInCustomerValidation.keywordWalkInCustomerSchema,
       }),

@@ -139,7 +139,9 @@ model WalkInCustomer {
   id         String   @id @default(uuid()) @db.Uuid
   name       String
   phone      String
-  created_by  String   @db.Uuid
+  created_by String   @db.Uuid
+  outlet_id  String   @db.Uuid
+  outletId   Outlet   @relation("WalkInCustomerOutletId", fields: [outlet_id], references: [id])
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -226,9 +228,10 @@ model Outlet {
   updated_at      DateTime @updatedAt
 
   //relations
-  users  User[]
-  orders Order[]
-  shifts WorkerShift[]
+  users           User[]
+  orders          Order[]
+  shifts          WorkerShift[]
+  walkInCustomers WalkInCustomer[] @relation("WalkInCustomerOutletId")
 
   @@map("outlets")
 }
