@@ -120,12 +120,13 @@ model User {
   ironingOrders  Order[]              @relation("IroningWorker")
   packingOrders  Order[]              @relation("PackingWorker")
 
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  emailVerified   Boolean          @default(false)
+  image           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  walkInCustomers WalkInCustomer[] @relation("WalkInCustomerCreatedBy")
 
   @@map("users")
 }
@@ -138,11 +139,13 @@ model WalkInCustomer {
   id         String   @id @default(uuid()) @db.Uuid
   name       String
   phone      String
+  created_by  String   @db.Uuid
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   // relation
-  order Order[] @relation("WalkInCustumerOrder")
+  order     Order[] @relation("WalkInCustumerOrder")
+  createdBy User    @relation("WalkInCustomerCreatedBy", fields: [created_by], references: [id])
 
   @@unique([phone])
   @@map("walk_in_customers")
