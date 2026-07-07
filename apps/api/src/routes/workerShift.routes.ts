@@ -11,6 +11,7 @@ import {
   WorkerShiftIdParamsSechema,
 } from "@/validations/workerShift.validation";
 import { resolveContext } from "@/middleware/resolveContext";
+import ensureWorkerOnShift from "@/middleware/ensureWorkerOnShift";
 
 export class WorkerShiftRoute {
   public router = Router();
@@ -38,6 +39,9 @@ export class WorkerShiftRoute {
   private getSchedule() {
     this.router.get(
       "/:id",
+      authenticationMiddleware,
+      resolveContext,
+      ensureWorkerOnShift,
       Validator.validate({
         params: WorkerShiftIdParamsSechema,
       }),

@@ -110,12 +110,16 @@
 
 ## TODO
 
-- [x] Edit the schema so the schedule can also used for the driver not only to worker (by making worker station to optional)
 - [v] Change the soft delete to permanently delete the shift because too much data and not really important
-- [ ] make a utility to change local time (hours) to full utc time format
-- [ ] middleware to check if the worker and driver are on shift or not
-- [ ] new endpoint to fetch all worker id with the same outlet id by outlet admin
+- [ ] new endpoint to fetch all worker id with the same outlet id by outlet admin and sperate them by worker station and driver
+- [ ] new endpoint to fetch washing worker schedule or id by outlet admin (/api/admin/schedule/washing)
+- [ ] new endpoint to fetch ironing worker schedule or id by outlet admin (/api/admin/schedule/ironing)
+- [ ] new endpoint to fetch packing worker schedule or id by outlet admin (/api/admin/schedule/packing)
+- [ ] new endpoint to fetch driver schedule or id by outlet admin (/api/admin/schedule/driver)
 - [ ] rework the payload of worker schedule update endpoint (/api/admin/schedule/:id)
+- [x] Edit the schema so the schedule can also used for the driver not only to worker (by making worker station to optional)
+- [x] make a utility to change local time (hours) to full utc time format for saving to db (prisma)
+- [x] middleware to check if the worker and driver are on shift or not
 
 ---
 
