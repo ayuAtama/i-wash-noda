@@ -4,9 +4,9 @@
 
 ### Registration
 
-- [x] Send OTP to Regristration Email
-- [x] Email verification by link
-- [x] Email verification by code
+- [x] Send OTP to registration email
+- [x] Email verification via link
+- [x] Email verification via code
 - [x] Complete registration form (name and password)
 - [x] Resend OTP
 
@@ -21,73 +21,105 @@
 
 - [x] Password reset
 - [x] Email change
+- [x] Get current user's information
+
+---
 
 ## Address Management
 
 - [x] Address search\*
 - [x] Address creation\*
-- [x] Address updating\*
+- [x] Address update\*
 - [x] Address deletion\*
-- [x] Address set default\*
+- [x] Set default address\*
+
+---
 
 ## Outlet Coverage Management
 
-- [x] Outlet coverage search by lat and lng
-- [x] Outlet list all
+- [x] Search outlet coverage by latitude and longitude
+- [x] List all outlets
 - [x] Outlet creation\*\*
-- [x] Outlet updating\*\*
+- [x] Outlet update\*\*
 - [x] Outlet deletion\*\*
+
+---
 
 ## Laundry Item Management
 
-- [x] Item list all
+- [x] List all items
 - [x] Item creation\*\*
-- [x] Item updating\*\*
+- [x] Item update\*\*
 - [x] Item deletion\*\*
-- [x] searchable item list by keyword | used in frontend to filter the item or create new one if not exist (using order endpoint by the outlet admin automatically)\*\*
+- [x] Searchable item list by keyword, used by the frontend to filter items or create a new one if it does not exist (using the order endpoint automatically by the outlet admin)\*\*
 
-## Pickup Requests to do a laundry user (customer)
+---
 
-- [x] Check if the user has address and filter out the outlets that out of coverage. And existing pickup requests (only one order allowed)\*\* (using raw query because it is faster than fitering it in server side)
+## Pickup Requests (Customer)
+
+- [x] Check whether the user has an address, filter out outlets outside the coverage area, and validate existing pickup requests (only one order allowed)\*\* (using a raw query because it is faster than filtering on the server side)
 - [x] Pickup request creation\*\*
-- [x] Pickup request canceling before accepted by the driver\*\*
-- [x] To check status order by the user
+- [x] Cancel pickup request before it is accepted by the driver\*\*
+- [x] Check order status
+- [x] Review pickup request validation and API responses more carefully
 
-## Pickup Requests to do a laundry (driver)
+---
 
-- [x] Pickup request fetching added coords for the driver\*\*
-- [x] Pickup request fetching list for the driver\*\*
-- [x] Accepting Pickup request by the driver\*\*
-- [x] Fetching all accepted pickup requests for the driver (WIP)\*\*
-- [x] Update the status of the pickup request by the driver (same outlet)\*\*
-- [x] Get all finished order (pickup request) by the driver\*\*
+## Pickup Requests (Driver)
 
-## TO DO
+- [x] Fetch pickup requests with coordinates for the driver\*\*
+- [x] Fetch pickup request list for the driver\*\*
+- [x] Accept pickup requests\*\*
+- [x] Fetch all accepted pickup requests for the driver (WIP)\*\*
+- [x] Update pickup request status by the driver (same outlet)\*\*
+- [x] Update status progression by the driver using the `:id/next` endpoint\*\*
+- [x] Get all completed pickup requests for the driver\*\*
 
-- [x] Check more carfully about the validation to pickup request and api responses
-- [x] complete crud for the walk-in customer (update and delete)
-- [x] status progression update by the driver (by using on endpoint :id/next)
-- [x] update the database of walkin customer with the id of the admin_outlet
-- [x] update the logic for the walkin customer, not allowed if not in same outlet
+---
 
-## Admin Outlets Orders
+## Admin Outlet Orders
 
-- [x] create the data for the first user walk-in (create)
-- [x] endpoint to search the user walk-in used for debouncing berfore creating the order (read)
-- [x] create the order by the admin manually for the walk in customer
-- [x] fetch all the orders that already on the outlet by the admin_outlet
-- [x] Update the order's item quantity and status by the admin outlet from the driver.
+- [x] Create the first walk-in customer record (create)
+- [x] Search walk-in customers for frontend debouncing before creating an order (read)
+- [x] Create orders manually for walk-in customers
+- [x] Fetch all orders assigned to the outlet by the outlet admin
+- [x] Update order item quantity and status by the outlet admin from the driver
+
+### Walk-in Customer Management
+
+- [x] Complete CRUD for walk-in customers (update and delete)
+- [x] Update the walk-in customer database with the `admin_outlet` ID
+- [x] Update walk-in customer logic to allow accessed by outlet admin only when within the same outlet
+
+---
 
 ## Worker
 
-- [ ] Worker get all the list of the available order in each station
-- [ ] Worker had to re-input quantity of the item before accepting the order (either conflict and need acc from outlet admin or auto accept if there is no missmatch)[worker can accept multiple orders at the same time]
-- [ ] Worker get the button to mark the order as done and passed it to another worker station (Status Page)
-- [ ] Worker get the past history of the order already done.
+- [ ] Get the list of available orders for each worker station
+- [ ] Re-input item quantities before accepting an order (either create a conflict that requires outlet admin approval or automatically accept if there is no mismatch). Workers can accept multiple orders simultaneously.
+- [ ] Mark an order as completed and pass it to the next worker station (Status Page)
+- [ ] View completed order history
+
+---
 
 ## Presigned URLs
 
 - [x] Presigned URL creation
 
-\*: Login required
-\*\*: Specified role required
+---
+
+## TODO
+
+- [x] Edit the schema so the schedule can also used for the driver not only to worker (by making worker station to optional)
+- [v] Change the soft delete to permanently delete the shift because too much data and not really important
+- [ ] make a utility to change local time (hours) to full utc time format
+- [ ] middleware to check if the worker and driver are on shift or not
+- [ ] new endpoint to fetch all worker id with the same outlet id by outlet admin
+- [ ] rework the payload of worker schedule update endpoint (/api/admin/schedule/:id)
+
+---
+
+### Notes
+
+- \* Login required
+- \*\* Specified role required

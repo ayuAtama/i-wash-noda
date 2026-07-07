@@ -10,6 +10,7 @@ import {
   CreateWorkerShiftSchema,
   WorkerShiftIdParamsSechema,
 } from "@/validations/workerShift.validation";
+import { resolveContext } from "@/middleware/resolveContext";
 
 export class WorkerShiftRoute {
   public router = Router();
@@ -23,7 +24,10 @@ export class WorkerShiftRoute {
 
   private createSchedule() {
     this.router.post(
-      "/schedule",
+      "/",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
       Validator.validate({
         body: CreateWorkerShiftSchema,
       }),
@@ -33,7 +37,7 @@ export class WorkerShiftRoute {
 
   private getSchedule() {
     this.router.get(
-      "/schedule/:id",
+      "/:id",
       Validator.validate({
         params: WorkerShiftIdParamsSechema,
       }),
