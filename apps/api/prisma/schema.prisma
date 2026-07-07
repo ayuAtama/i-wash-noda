@@ -244,11 +244,10 @@ model WorkerShift {
   id          String         @id @default(uuid()) @db.Uuid
   worker_id   String         @db.Uuid
   outlet_id   String         @db.Uuid
-  station     StationName
+  station     StationName?
   day_of_week WorkerShiftDay
   start_time  DateTime       @db.Time
   end_time    DateTime       @db.Time
-  is_deleted  Boolean        @default(false)
   created_at  DateTime       @default(now())
 
   //relations

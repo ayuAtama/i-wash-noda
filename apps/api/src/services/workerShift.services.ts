@@ -2,7 +2,11 @@
 import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import { validateNoOverlap } from "@/utils/validateNoOverlap";
-import { CreateWorkerShiftInputDTO } from "@/validations/workerShift.validation";
+import timeToUtcDate from "@/utils/timeToUTCDate";
+import {
+  CreateSchedulePayloadDTO,
+  CreateWorkerShiftInputDTO,
+} from "@/validations/workerShift.validation";
 
 export class WorkerShiftService {
   async getShiftsByWorkerId(workerId: string) {
@@ -27,46 +31,52 @@ export class WorkerShiftService {
     }
   }
 
-  async replaceWeeklySchedule(data: CreateWorkerShiftInputDTO) {
+  async replaceWeeklySchedule(data: CreateSchedulePayloadDTO) {
     try {
-      const { outletId, workerId, station, schedules } = data;
+      const { workerId, schedules, outlet_id: outletId } = data;
+      // worker id from fetch in dasboard
+      // outled id from req.contex
+      // station?? fetch in service layer?
 
-      function timeToUtcDate(time: string): Date {
-        const [h, m] = time.split(":").map(Number);
+      // get the station or skip if the driver
+      const station = await prisma.user.findFirst({
+        where: { id: workerId },
+        select: { role: true, worker_station: true },
+      });
 
-        // IMPORTANT: use UTC setters
-        const d = new Date(Date.UTC(1970, 0, 1, h, m, 0));
-
-        return d;
+      if (!station) {
+        throw new HttpError(404, "Worker not found");
       }
 
       // validate overlap in request
       validateNoOverlap(schedules);
+
       // IMPORTANT:
       // One transaction = atomic weekly replacement
-      await prisma.$transaction(async (tx) => {
-        // 1. delete existing shifts for this worker + outlet (soft delete)
-        await tx.workerShift.updateMany({
+      const res = await prisma.$transaction(async (tx) => {
+        // permanent delete old shifts
+        await tx.workerShift.deleteMany({
           where: {
             outlet_id: outletId,
             worker_id: workerId,
-            is_deleted: false,
           },
-          data: { is_deleted: true },
         });
 
         // 2. create new shifts
-        await tx.workerShift.createMany({
+        const res = await tx.workerShift.createManyAndReturn({
           data: schedules.map((s) => ({
             outlet_id: outletId,
             worker_id: workerId,
-            station,
+            station: station.worker_station,
             day_of_week: s.day,
             start_time: timeToUtcDate(s.start),
             end_time: timeToUtcDate(s.end),
           })),
         });
+
+        return res;
       });
+      return res;
     } catch (error) {
       throw error;
     }

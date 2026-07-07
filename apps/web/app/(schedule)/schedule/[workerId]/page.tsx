@@ -12,7 +12,7 @@ export default function ScheduleEditPage() {
   useEffect(() => {
     async function load() {
       const res = await fetch(
-        `http://localhost:3000/api/admin/schedule/${workerId}`
+        `http://localhost:3000/api/admin/schedule/${workerId}`,
       );
       const data = await res.json();
 
@@ -20,7 +20,7 @@ export default function ScheduleEditPage() {
         outletId: "35dd708b-1be9-4598-81d7-834b3b44fd51",
         workerId,
         station: "washing",
-        shifts: mapScheduleToForm(data),
+        shifts: mapScheduleToForm(data.data),
       });
     }
 

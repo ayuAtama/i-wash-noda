@@ -3,6 +3,7 @@ import { WorkerShiftService } from "@/services/workerShift.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
 import {
+  CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
   WorkerShiftIdParamsDTO,
 } from "@/validations/workerShift.validation";
@@ -25,15 +26,23 @@ export class WorkerShiftController {
       //   });
       // }
 
+      // get the outlet id
+      if (!req.context) throw new HttpError(500, "This is an invalid user");
+      const outletId = req.context.outlet_id;
+
       // 2. call service after used middleware (DTO validation)
       const body = req.validated!.body as CreateWorkerShiftInputDTO;
-      await this.workerShiftService.replaceWeeklySchedule(body);
+      const payload = {
+        ...body,
+        outlet_id: outletId,
+      } as CreateSchedulePayloadDTO;
+      const test = await this.workerShiftService.replaceWeeklySchedule(payload);
 
       // 3. response
       return res.status(200).json({
         success: true,
         message: "Worker weekly schedule saved",
-        data: null,
+        data: test,
       });
     } catch (error) {
       next(error);

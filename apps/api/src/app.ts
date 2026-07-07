@@ -92,7 +92,7 @@ export class App {
   }
 
   private initializeAdminRoutes() {
-    this.app.use("/api/admin", workerShiftRoutes); // test
+    this.app.use("/api/admin/schedule", workerShiftRoutes); // on project
   }
 
   private initializePickupRoutes() {
