@@ -14,7 +14,6 @@ export class WorkerShiftService {
       return await prisma.workerShift.findMany({
         where: {
           worker_id: workerId,
-          is_deleted: false,
         },
         select: {
           day_of_week: true,
@@ -27,7 +26,7 @@ export class WorkerShiftService {
         },
       });
     } catch (error) {
-      throw new HttpError(500, "Failed to get shifts, desuwa~");
+      throw error;
     }
   }
 
