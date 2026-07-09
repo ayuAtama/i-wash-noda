@@ -83,13 +83,39 @@ export const OutletIDSchema = z
     },
   });
 
+export const FetchUnScheduledWorkerSchema = z
+  .object({
+    keyword: z.string().min(1, "Keyword is required").optional().meta({
+      description: "Keyword to search for workers without schedules sift",
+      example: "John",
+    }),
+    role: z.enum(["driver", "worker"]).optional().meta({
+      description: "Role of the worker",
+      example: "driver",
+    }),
+  })
+  .meta({
+    id: "FetchUnScheduledWorker",
+    description: "Payload for fetching workers without schedules sift",
+    example: {
+      keyword: "John",
+      role: "driver",
+    },
+  });
+
 export class WorkerShiftValidation {
   static CreateWorkerShiftSchema = CreateWorkerShiftSchema;
   static WorkerShiftIdParamsSchema = WorkerShiftIdParamsSechema;
   static OutletIDSchema = OutletIDSchema;
+  static FetchUnScheduledWorkerSchema = FetchUnScheduledWorkerSchema;
 }
 
 export type CreateWorkerShiftInputDTO = z.infer<typeof CreateWorkerShiftSchema>;
 export type WorkerShiftIdParamsDTO = z.infer<typeof WorkerShiftIdParamsSechema>;
 export type OutletIDDTO = z.infer<typeof OutletIDSchema>;
 export type CreateSchedulePayloadDTO = CreateWorkerShiftInputDTO & OutletIDDTO;
+export type FetchUnScheduledWorkerDTO = z.infer<
+  typeof FetchUnScheduledWorkerSchema
+>;
+export type UnScheduleWorkerPayloadDTO = FetchUnScheduledWorkerDTO &
+  OutletIDDTO;

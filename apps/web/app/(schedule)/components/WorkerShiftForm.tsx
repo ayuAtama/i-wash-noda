@@ -77,6 +77,7 @@ export function WorkerShiftForm({ initialValues, submitLabel }: Props) {
 
     const res = await fetch("http://localhost:3000/api/admin/schedule", {
       method: "POST",
+      credentials: "include", // <-- REQUIRED
       headers: {
         "Content-Type": "application/json",
       },

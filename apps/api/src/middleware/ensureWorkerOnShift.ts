@@ -13,6 +13,12 @@ export default async function ensureWorkerOnShift(
     if (!req.access_token)
       throw new HttpError(500, "Please add authentication middleware first");
     const userId = req.access_token.sub;
+    // bypass if super_admin and outlet_admin
+    if (
+      req.access_token.role === "super_admin" ||
+      req.access_token.role === "outlet_admin"
+    )
+      return next();
     if (!userId)
       throw new HttpError(401, "Please add authentication middleware first");
     // get the outlet id from req.contex (need resolveContext middleware)

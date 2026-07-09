@@ -110,6 +110,11 @@
 
 ## TODO
 
+- [] use filter to fetch the list of worker schedule by outlet admin(/api/admin/schedule?query=xxx)
+- [] also add the a little info as total worker, total driver, total schedule, and on duty today when fetching the list of worker schedule by outlet admin (/api/admin/schedule)
+- [] add a support for pagination on endpoint (/api/admin/schedule)
+- [x] new endpoint to fetch the worker with no schedule and support filtering (debounce used on front end) by admin outlet. custom query to get all the worker with no schedule.
+
 - [v] Change the soft delete to permanently delete the shift because too much data and not really important
 - [ ] new endpoint to fetch all worker id with the same outlet id by outlet admin and sperate them by worker station and driver
 - [ ] new endpoint to fetch washing worker schedule or id by outlet admin (/api/admin/schedule/washing)
