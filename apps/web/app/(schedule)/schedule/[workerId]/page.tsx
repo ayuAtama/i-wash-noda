@@ -13,6 +13,9 @@ export default function ScheduleEditPage() {
     async function load() {
       const res = await fetch(
         `http://localhost:3000/api/admin/schedule/${workerId}`,
+        {
+          credentials: "include", // <-- REQUIRED
+        },
       );
       const data = await res.json();
 

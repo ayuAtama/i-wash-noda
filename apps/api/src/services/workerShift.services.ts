@@ -6,7 +6,9 @@ import timeToUtcDate from "@/utils/timeToUTCDate";
 import {
   CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
+  UnScheduleWorkerPayloadDTO,
 } from "@/validations/workerShift.validation";
+import { Prisma } from "@/generated/prisma/client";
 
 export class WorkerShiftService {
   async getShiftsByWorkerId(workerId: string) {
@@ -39,7 +41,7 @@ export class WorkerShiftService {
 
       // get the station or skip if the driver
       const station = await prisma.user.findFirst({
-        where: { id: workerId },
+        where: { id: workerId, outlet_id: outletId },
         select: { role: true, worker_station: true },
       });
 
@@ -76,6 +78,49 @@ export class WorkerShiftService {
         return res;
       });
       return res;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async fetchUnScheduledWorker(data: UnScheduleWorkerPayloadDTO) {
+    try {
+      // destructure the data
+      const { outlet_id: outletId, keyword, role } = data;
+
+      // fetch the id of the worker and related data
+      const where = {
+        outlet_id: outletId,
+        ...(role
+          ? { role: role }
+          : { role: { notIn: ["super_admin", "outlet_admin", "customer"] } }),
+        name: {
+          contains: keyword,
+          mode: "insensitive",
+        },
+        workerShifts: {
+          none: {},
+        },
+      } as Prisma.UserWhereInput;
+
+      const workers = await prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          worker_station: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+      if (workers.length === 0) {
+        throw new HttpError(404, "No worker or driver shift found");
+      }
+
+      return workers;
     } catch (error) {
       throw error;
     }

@@ -5,6 +5,8 @@ import { HttpError } from "@/utils/httpError";
 import {
   CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
+  FetchUnScheduledWorkerDTO,
+  UnScheduleWorkerPayloadDTO,
   WorkerShiftIdParamsDTO,
 } from "@/validations/workerShift.validation";
 
@@ -66,6 +68,37 @@ export class WorkerShiftController {
         success: true,
         message: "Schedule fetched successfully",
         data: schedule,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchUnScheduledWorker = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      // get the outlet id from the outlet admin (req.context)
+      const outletId = req.context!.outlet_id;
+
+      // destructure the query from req.validated
+      const query = req.validated!.query as FetchUnScheduledWorkerDTO;
+
+      // make the payload
+      const payload = {
+        ...query,
+        outlet_id: outletId,
+      } as UnScheduleWorkerPayloadDTO;
+
+      // call the service
+      const workers = await this.workerShiftService.fetchUnScheduledWorker(payload);
+
+      return res.status(200).json({
+        success: true,
+        message: "Unscheduled workers fetched successfully",
+        data: workers,
       });
     } catch (error) {
       next(error);
