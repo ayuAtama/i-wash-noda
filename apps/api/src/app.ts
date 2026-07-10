@@ -130,15 +130,15 @@ export class App {
     this.app.use(errorHandler);
   }
 
-  // for server start (optional)
-  public listen(port: number) {
-    this.app.listen(port, () => {
-      console.log(`🚀 Server running on http://localhost:${port}`);
-      console.log(`📚 API Docs at http://localhost:${port}/docs`);
+  // for server start (optional) (express only)
+  // public listen(port: number) {
+  //   this.app.listen(port, () => {
+  //     console.log(`🚀 Server running on http://localhost:${port}`);
+  //     console.log(`📚 API Docs at http://localhost:${port}/docs`);
 
-      console.log("\n=== Registered Endpoints ===");
-      console.log(listEndpoints(this.app));
-      console.log("===========================\n");
-    });
-  }
+  //     console.log("\n=== Registered Endpoints ===");
+  //     console.log(listEndpoints(this.app));
+  //     console.log("===========================\n");
+  //   });
+  // }
 }

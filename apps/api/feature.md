@@ -111,7 +111,7 @@
 ## TODO
 
 - [] use filter to fetch the list of worker schedule by outlet admin(/api/admin/schedule?query=xxx)
-- [] also add the a little info as total worker, total driver, total schedule, and on duty today when fetching the list of worker schedule by outlet admin (/api/admin/schedule)
+- [] new endpoint, add a little info as total worker, total driver, total schedule, and on duty today on the dashboard (/api/admin/schedule/summary)
 - [] add a support for pagination on endpoint (/api/admin/schedule)
 - [x] new endpoint to fetch the worker with no schedule and support filtering (debounce used on front end) by admin outlet. custom query to get all the worker with no schedule.
 
@@ -125,6 +125,10 @@
 - [x] Edit the schema so the schedule can also used for the driver not only to worker (by making worker station to optional)
 - [x] make a utility to change local time (hours) to full utc time format for saving to db (prisma)
 - [x] middleware to check if the worker and driver are on shift or not
+
+---
+
+## Try to learn socket.io (realtime)
 
 ---
 
