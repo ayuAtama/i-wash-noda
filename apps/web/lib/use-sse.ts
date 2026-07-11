@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { createEventSource, type EventSourceMessage } from "eventsource-client";
 
 const SSE_URL =
@@ -23,6 +23,8 @@ export function useSSE({ onEvent }: UseSSEOptions = {}) {
   const [status, setStatus] = useState<SSEStatus>("disconnected");
   const [events, setEvents] = useState<SSEEvent[]>([]);
   const esRef = useRef<ReturnType<typeof createEventSource> | null>(null);
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
 
   const connect = useCallback(() => {
     if (esRef.current) {
@@ -33,6 +35,7 @@ export function useSSE({ onEvent }: UseSSEOptions = {}) {
 
     const es = createEventSource({
       url: SSE_URL,
+      credentials: "include",
       onMessage: ({ data, event }: EventSourceMessage) => {
         const eventName = event || "message";
 
@@ -48,12 +51,12 @@ export function useSSE({ onEvent }: UseSSEOptions = {}) {
           },
         ]);
 
-        onEvent?.(eventName, data);
+        onEventRef.current?.(eventName, data);
       },
     });
 
     esRef.current = es;
-  }, [onEvent]);
+  }, []);
 
   const disconnect = useCallback(() => {
     esRef.current?.close();
@@ -64,6 +67,14 @@ export function useSSE({ onEvent }: UseSSEOptions = {}) {
   const clearEvents = useCallback(() => {
     setEvents([]);
   }, []);
+
+  useEffect(() => {
+    connect();
+    return () => {
+      esRef.current?.close();
+      esRef.current = null;
+    };
+  }, [connect]);
 
   return { status, events, connect, disconnect, clearEvents };
 }

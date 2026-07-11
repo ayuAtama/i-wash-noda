@@ -75,14 +75,21 @@ pnpm add better-sse --filter api
 
 ### 1.2 SSE Service (singleton)
 
-A shared channel that all controllers can broadcast to.
+A shared channel with typed session state and targeted broadcast helpers.
 
 ```ts
 // apps/api/src/services/sse.services.ts
-import { createChannel } from "better-sse";
+import { createChannel, type Session } from "better-sse";
+import type { UserRole } from "@/types/role";
+
+export interface SessionState {
+  userId: string;
+  role: UserRole;
+  outletId?: string | null;
+}
 
 class SSEService {
-  private readonly channel = createChannel();
+  private readonly channel = createChannel<{}, SessionState>();
 
   broadcast(...args: Parameters<typeof this.channel.broadcast>) {
     return this.channel.broadcast(...args);
@@ -91,6 +98,42 @@ class SSEService {
   register(...args: Parameters<typeof this.channel.register>) {
     return this.channel.register(...args);
   }
+
+  // ── Targeted broadcast helpers ──────────────────────────────
+
+  broadcastToRole(data: unknown, eventName: string, role: UserRole) {
+    return this.channel.broadcast(data, eventName, {
+      filter: (session: Session<SessionState>) => session.state.role === role,
+    });
+  }
+
+  broadcastToOutlet(data: unknown, eventName: string, outletId: string) {
+    return this.channel.broadcast(data, eventName, {
+      filter: (session: Session<SessionState>) =>
+        session.state.outletId === outletId,
+    });
+  }
+
+  broadcastToUser(data: unknown, eventName: string, userId: string) {
+    return this.channel.broadcast(data, eventName, {
+      filter: (session: Session<SessionState>) =>
+        session.state.userId === userId,
+    });
+  }
+
+  broadcastToRoles(data: unknown, eventName: string, roles: UserRole[]) {
+    return this.channel.broadcast(data, eventName, {
+      filter: (session: Session<SessionState>) =>
+        roles.includes(session.state.role),
+    });
+  }
+
+  broadcastExceptUser(data: unknown, eventName: string, excludeUserId: string) {
+    return this.channel.broadcast(data, eventName, {
+      filter: (session: Session<SessionState>) =>
+        session.state.userId !== excludeUserId,
+    });
+  }
 }
 
 export const sseService = new SSEService();
@@ -98,19 +141,18 @@ export const sseService = new SSEService();
 
 ### 1.3 SSE Controller
 
-Two handlers:
-
-- `connect` — client hits `GET /`, creates a session and registers it to the shared channel
-- `sendData` — any code calls `broadcast()` to push to all connected clients
+The `connect` handler authenticates the user and stores their identity in `session.state`. This enables targeted broadcasting via the filter helpers.
 
 ```ts
 // apps/api/src/controllers/sse.controller.ts
 import { createSession } from "better-sse";
 import type { Request, Response, NextFunction } from "express";
+import { prisma } from "@/config/prisma";
 import { sseService } from "@/services/sse.services";
+import { isUserRole, type UserRole } from "@/types/role";
 
 export class SSEController {
-  private SSE: typeof sseService;
+  private SSE: typeof sseervice;
 
   constructor(sseservice: typeof sseService) {
     this.SSE = sseservice;
@@ -118,8 +160,36 @@ export class SSEController {
 
   connect = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const session = await createSession(req, res);
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const role = (req.access_token?.role ?? req.user?.role) as
+        | string
+        | undefined;
+
+      if (!userId || !isUserRole(role)) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+
+      // Fetch outlet_id (not available in JWT payload or Better Auth session)
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { outlet_id: true },
+      });
+
+      const session = await createSession(req, res, {
+        state: {
+          userId,
+          role: role as UserRole,
+          outletId: user?.outlet_id ?? null,
+        },
+      });
+
       this.SSE.register(session);
+
+      session.push(
+        JSON.stringify({ userId, role, outletId: user?.outlet_id ?? null }),
+        "connected",
+      );
     } catch (error) {
       next(error);
     }
@@ -128,7 +198,8 @@ export class SSEController {
   sendData = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const query = req.query.data;
-      this.SSE.broadcast(query);
+      const eventName = req.query.eventName as string;
+      this.SSE.broadcast(query, eventName);
       res.json({
         success: true,
         message: "Data sent successfully",
@@ -143,24 +214,40 @@ export class SSEController {
 
 ### 1.4 Routes
 
+The `GET /` endpoint requires `authenticationMiddleware` so each session is tied to a real user. Test endpoints are unauthenticated for easy curl testing.
+
 ```ts
 // apps/api/src/routes/sse.routes.ts
 import { Router } from "express";
 import { SSEController } from "@/controllers/sse.controller";
 import { sseService } from "@/services/sse.services";
+import { authenticationMiddleware } from "@/middleware/authentication";
 
-export class PickupRequestRoute {
+export class SseRoute {
   public router = Router();
   private controller: SSEController;
 
   constructor() {
     this.controller = new SSEController(sseService);
-    this.router.get("/", this.controller.connect);
+    this.createRoutes();
+  }
+
+  private createRoutes() {
+    // Authenticated SSE stream
+    this.router.get("/", authenticationMiddleware, this.controller.connect);
     this.router.post("/", this.controller.sendData);
+
+    // Test broadcast endpoints (no auth)
+    this.router.post("/test/all", this.controller.testBroadcastAll);
+    this.router.post("/test/role", this.controller.testBroadcastToRole);
+    this.router.post("/test/outlet", this.controller.testBroadcastToOutlet);
+    this.router.post("/test/user", this.controller.testBroadcastToUser);
+    this.router.post("/test/roles", this.controller.testBroadcastToRoles);
+    this.router.post("/test/exclude", this.controller.testBroadcastExceptUser);
   }
 }
 
-export default new PickupRequestRoute().router;
+export default new SseRoute().router;
 ```
 
 ### 1.5 Register in app.ts
@@ -170,24 +257,31 @@ import sseRoutes from "@/routes/sse.routes";
 this.app.use("/api/sse", sseRoutes);
 ```
 
-### 1.6 Broadcast from any controller after a DB write
+### 1.6 Broadcast from any service after a DB write
 
 ```ts
 import { sseService } from "@/services/sse.services";
 
 // After Prisma create/update/delete:
-const item = await prisma.item.create({ data: { name: "New Item" } });
 
-// Notify all connected clients
-sseService.broadcast("item:updated", "item:updated");
+// Notify everyone
+sseService.broadcast(data, "item:updated");
 
-return item;
+// Notify only users at the same outlet
+sseService.broadcastToOutlet(data, "ScheduleUpdated", outletId);
+
+// Notify only super admins
+sseService.broadcastToRole(data, "SystemAlert", "super_admin");
+
+// Notify a specific user
+sseService.broadcastToUser(data, "Notification", userId);
+
+// Notify workers and drivers only
+sseService.broadcastToRoles(data, "ShiftChange", ["worker", "driver"]);
+
+// Notify everyone except the person who triggered it
+sseService.broadcastExceptUser(data, "UserAction", triggeredByUserId);
 ```
-
-`broadcast(data, eventName)`:
-
-- First arg = data (string)
-- Second arg = event name (what the client receives as the `event` field)
 
 ---
 
@@ -272,6 +366,7 @@ export function useSSE({ onEvent }: UseSSEOptions = {}) {
 
     const es = createEventSource({
       url: SSE_URL,
+      credentials: "include", // REQUIRED for cross-origin cookies
       onMessage: ({ data, event }: EventSourceMessage) => {
         const eventName = event || "message";
         setStatus("connected");
@@ -305,6 +400,7 @@ export function useSSE({ onEvent }: UseSSEOptions = {}) {
 **What this does**:
 
 - Uses `eventsource-client` (built on `fetch` + `ReadableStream`, not native `EventSource`)
+- `credentials: "include"` sends cookies cross-origin (port 3001 → 3000) — **required** for auth
 - `onMessage` catches **ALL events** regardless of event name
 - `event` field contains the actual event name dynamically (or `"message"` for unnamed events)
 - `onEvent` callback lets the **consumer** decide what to do — the hook never touches query cache
@@ -402,8 +498,25 @@ export default function MyPage() {
 // In any controller or service:
 import { sseService } from "@/services/sse.services";
 
-// After create/update/delete:
-sseService.broadcast("your-event-name", "your-event-name");
+// After create/update/delete — pick the right helper:
+
+// Everyone
+sseService.broadcast(data, "your-event-name");
+
+// Single outlet
+sseService.broadcastToOutlet(data, "your-event-name", outletId);
+
+// Single role
+sseService.broadcastToRole(data, "your-event-name", "worker");
+
+// Multiple roles
+sseService.broadcastToRoles(data, "your-event-name", ["worker", "driver"]);
+
+// Single user
+sseService.broadcastToUser(data, "your-event-name", userId);
+
+// Everyone except one user
+sseService.broadcastExceptUser(data, "your-event-name", excludeUserId);
 ```
 
 ### Client side — add event handler in onEvent
@@ -426,14 +539,50 @@ const { status, events, connect, disconnect } = useSSE({
 
 That's it. No hook changes needed. No event name registration. Just add a new `if` branch.
 
-### Testing with curl
+---
+
+## Part 4: Test Endpoints
+
+Unauthenticated POST endpoints for testing each broadcast filter. All accept an optional `?event=` param to set the event name (defaults shown).
+
+| Endpoint                     | Params                      | What it tests                                     |
+| ---------------------------- | --------------------------- | ------------------------------------------------- |
+| `POST /api/sse/test/all`     | `?event=`                   | Broadcast to **every** connected client           |
+| `POST /api/sse/test/role`    | `?role=` `?event=`          | Broadcast to a **single role**                    |
+| `POST /api/sse/test/outlet`  | `?outletId=` `?event=`      | Broadcast to a **single outlet**                  |
+| `POST /api/sse/test/user`    | `?userId=` `?event=`        | Broadcast to a **single user**                    |
+| `POST /api/sse/test/roles`   | `?roles=` `?event=`         | Broadcast to **multiple roles** (comma-separated) |
+| `POST /api/sse/test/exclude` | `?excludeUserId=` `?event=` | Broadcast to **everyone except** one user         |
+
+### Examples
 
 ```bash
-# Trigger a broadcast (server sends this to all connected SSE clients)
-curl -X POST "http://localhost:3000/api/sse?data=item:updated"
+# Broadcast to all clients with default event name
+curl -X POST "http://localhost:3000/api/sse/test/all"
 
-# Send any random data — it shows in the event log but does NOT trigger refetch
-curl -X POST "http://localhost:3000/api/sse?data=anything"
+# Broadcast only to workers with custom event name
+curl -X POST "http://localhost:3000/api/sse/test/role?role=worker&event=NewOrder"
+
+# Broadcast to everyone at a specific outlet
+curl -X POST "http://localhost:3000/api/sse/test/outlet?outletId=<uuid>"
+
+# Broadcast to a specific user
+curl -X POST "http://localhost:3000/api/sse/test/user?userId=<uuid>&event=PersonalNotif"
+
+# Broadcast to workers AND drivers
+curl -X POST "http://localhost:3000/api/sse/test/roles?roles=worker,driver"
+
+# Broadcast to everyone except the triggering user
+curl -X POST "http://localhost:3000/api/sse/test/exclude?excludeUserId=<uuid>"
+```
+
+Each returns:
+
+```json
+{
+  "success": true,
+  "message": "Broadcast to role \"worker\" only [event: NewOrder]"
+}
 ```
 
 ---
@@ -445,55 +594,57 @@ curl -X POST "http://localhost:3000/api/sse?data=anything"
 ```
 1. User creates an item (POST /api/items)
 2. Server inserts into DB
-3. Server calls: sseService.broadcast("item:updated", "item:updated")
+3. Server calls: sseService.broadcast(data, "item:updated")
 4. better-sse pushes to all connected sessions
 5. eventsource-client receives the event via onMessage
-6. onMessage fires with { data: "item:updated", event: "item:updated" }
+6. onMessage fires with { data: ..., event: "item:updated" }
 7. Event is added to the events array (shows in event log)
-8. onEvent callback fires with ("item:updated", "item:updated")
+8. onEvent callback fires with ("item:updated", ...)
 9. Your callback checks: eventName === "item:updated" → true
 10. queryClient.invalidateQueries({ queryKey: ["items"] })
 11. TanStack Query refetches GET /api/items
 12. Table updates with fresh data
 ```
 
-### When a test event is sent via curl (should NOT refetch)
+### When a schedule is updated (should only refetch for that outlet)
 
 ```
-1. Someone runs: curl -X POST "http://localhost:3000/api/sse?data=anything"
-2. Server calls: sseService.broadcast("anything")
-3. better-sse pushes to all connected sessions (sends as "message" event)
-4. eventsource-client receives the event via onMessage
-5. onMessage fires with { data: "anything", event: undefined }
-6. eventName defaults to "message"
-7. Event is added to the events array (shows in event log)
-8. onEvent callback fires with ("message", "anything")
-9. Your callback checks: "message" === "item:updated" → false
-10. NO invalidation. NO refetch. Items table stays unchanged.
+1. Admin updates a worker's schedule
+2. Server writes to DB
+3. Server calls: sseService.broadcastToOutlet(data, "ScheduleUpdated", outletId)
+4. better-sse checks each session's state.outletId
+5. Only sessions matching the outlet receive the event
+6. Workers at other outlets? NOT notified.
+7. Same-outlet clients: onEvent fires → invalidate schedules query → UI updates
 ```
 
 ### When connecting (should NOT refetch)
 
 ```
 1. User clicks "Connect"
-2. EventSource connects to GET /api/sse
-3. Server sends: session.push("Hello world!", "message")
-4. onMessage fires with { data: "Hello world!", event: "message" }
-5. Event shows in event log as: message — Hello world! — 12:00:00 PM
-6. onEvent fires with ("message", "Hello world!")
-7. "message" === "item:updated" → false → NO refetch
+2. EventSource connects to GET /api/sse (with credentials: "include")
+3. Server authenticates (reads access_token cookie)
+4. Server creates session with state: { userId, role, outletId }
+5. Server sends: session.push(JSON.stringify({...}), "connected")
+6. onMessage fires with { data: "...", event: "connected" }
+7. Event shows in event log
+8. onEvent fires with ("connected", ...)
+9. "connected" === "item:updated" → false → NO refetch
 ```
 
 ---
 
 ## Key Rules
 
-| Rule                                                 | Why                                                                      |
-| ---------------------------------------------------- | ------------------------------------------------------------------------ |
-| `useSSE` is a **pure event receiver**                | It catches all events, stores them, calls `onEvent`. Nothing else.       |
-| `onEvent` decides what to invalidate                 | Keeps invalidation logic in the page, not the hook                       |
-| Only match **exact event names**                     | `eventName === "item:updated"` not `eventName.includes(...)` or wildcard |
-| The hook **never** imports `QueryClient`             | Separation of concerns — SSE transport vs data fetching                  |
-| `eventsource-client` catches ALL events              | Native `EventSource` can't — it requires known event names upfront       |
-| `broadcast(data, eventName)` — data must be a string | `better-sse` sends raw strings                                           |
-| Clean up on unmount                                  | `esRef.current?.close()` prevents memory leaks                           |
+| Rule                                             | Why                                                                      |
+| ------------------------------------------------ | ------------------------------------------------------------------------ |
+| `useSSE` is a **pure event receiver**            | It catches all events, stores them, calls `onEvent`. Nothing else.       |
+| `onEvent` decides what to invalidate             | Keeps invalidation logic in the page, not the hook                       |
+| Only match **exact event names**                 | `eventName === "item:updated"` not `eventName.includes(...)` or wildcard |
+| The hook **never** imports `QueryClient`         | Separation of concerns — SSE transport vs data fetching                  |
+| `eventsource-client` catches ALL events          | Native `EventSource` can't — it requires known event names upfront       |
+| `credentials: "include"` is required             | Cross-origin (port 3001 → 3000) needs explicit credential passing        |
+| Use `broadcastToOutlet` for outlet-scoped events | Workers only see updates for their outlet, not every outlet              |
+| Use `broadcastToRole` for role-scoped events     | Customers don't see admin notifications                                  |
+| `event=` query param on test endpoints           | Set custom event names when testing via curl                             |
+| Clean up on unmount                              | `esRef.current?.close()` prevents memory leaks                           |

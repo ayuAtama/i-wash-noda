@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 import {
   MultiShiftFormSchema,
@@ -35,9 +37,6 @@ function buildSchedulePayload(values: MultiShiftFormValues) {
 }
 
 export function WorkerShiftForm({ initialValues, submitLabel }: Props) {
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-
   const {
     control,
     register,
@@ -67,31 +66,14 @@ export function WorkerShiftForm({ initialValues, submitLabel }: Props) {
     [values.shifts],
   );
 
-  async function onSubmit(values: MultiShiftFormValues) {
-    setSubmitError(null);
-    setSubmitSuccess(null);
+  const mutation = useMutation({
+    mutationFn: (payload: ReturnType<typeof buildSchedulePayload>) =>
+      api.post("/api/admin/schedule", payload).then((r) => r.data),
+  });
 
+  function onSubmit(values: MultiShiftFormValues) {
     if (overlapErrors.length > 0) return;
-
-    const payload = buildSchedulePayload(values);
-
-    const res = await fetch("http://localhost:3000/api/admin/schedule", {
-      method: "POST",
-      credentials: "include", // <-- REQUIRED
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setSubmitError(data.message || "Failed");
-      return;
-    }
-
-    setSubmitSuccess(data.message || "Saved");
+    mutation.mutate(buildSchedulePayload(values));
   }
 
   return (
@@ -195,10 +177,22 @@ export function WorkerShiftForm({ initialValues, submitLabel }: Props) {
         + Add Shift
       </button>
       <br />
-      <br /> {submitError && <p style={{ color: "red" }}>{submitError}</p>}
-      {submitSuccess && <p style={{ color: "green" }}>{submitSuccess}</p>}
-      <button type="submit" disabled={overlapErrors.length > 0}>
-        {submitLabel}
+      <br />{" "}
+      {mutation.isError && (
+        <p style={{ color: "red" }}>
+          {(mutation.error as any)?.response?.data?.message ||
+            mutation.error?.message ||
+            "Failed"}
+        </p>
+      )}
+      {mutation.isSuccess && (
+        <p style={{ color: "green" }}>Saved successfully</p>
+      )}
+      <button
+        type="submit"
+        disabled={overlapErrors.length > 0 || mutation.isPending}
+      >
+        {mutation.isPending ? "Saving..." : submitLabel}
       </button>
       <div
         style={{

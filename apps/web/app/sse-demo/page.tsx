@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import api from "@/lib/api";
 import { useSSE } from "@/lib/use-sse";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 interface Item {
   id: string;
@@ -20,15 +18,11 @@ interface ItemsResponse {
 }
 
 function fetchItems(): Promise<ItemsResponse> {
-  return axios.get(`${API_URL}/api/items`).then((r) => r.data);
+  return api.get("/api/items").then((r) => r.data);
 }
 
 function createItem(name: string) {
-  return axios.post(
-    `${API_URL}/api/items`,
-    { name },
-    { withCredentials: true },
-  );
+  return api.post("/api/items", { name });
 }
 
 function StatusBadge({ status }: { status: string }) {

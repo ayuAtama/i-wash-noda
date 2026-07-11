@@ -81,8 +81,7 @@ export class WorkerShiftService {
         return res;
       });
       // send the sse event before the http response
-      //sse
-      sseService.broadcast(res, "ScheduleUpdated");
+      sseService.broadcastToOutlet(res, "ScheduleUpdated", outletId);
 
       return res;
     } catch (error) {
