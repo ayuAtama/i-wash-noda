@@ -21,6 +21,22 @@ export default function SocketTest() {
       console.log("Received new order:", order);
     });
 
+    socket.on("connect_error", (err) => {
+      console.error("WebSocket connection failed:", err.message);
+
+      if (err.message.startsWith("Unauthorized")) {
+        console.log("User needs to login.");
+      }
+    });
+
+    socket.io.on("reconnect_attempt", (attempt) => {
+      console.log(`Reconnect attempt #${attempt}`);
+    });
+
+    socket.io.on("error", (err) => {
+      console.error(err);
+    });
+
     return () => {
       socket.off("connect");
       socket.off("hello");
