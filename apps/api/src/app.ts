@@ -22,6 +22,7 @@ import adminOrderRoutes from "./routes/adminOrder.routes";
 import cloudinaryRoutes from "./routes/cloudinary.routes";
 import OutletRoute from "./routes/outlet.routes";
 import ItemRoute from "./routes/item.routes";
+import { socketService } from "@/socket";
 
 export class App {
   public app: Application;
@@ -41,6 +42,7 @@ export class App {
     this.initializePickupRoutes();
     this.initializeOrderRoutes();
     this.initializePreSignedURLRoutes();
+    this.initializeTestBroadcast();
     this.initializeRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
@@ -123,6 +125,42 @@ export class App {
 
   private initializePreSignedURLRoutes() {
     this.app.use("/api", cloudinaryRoutes);
+  }
+
+  private initializeTestBroadcast() {
+    this.app.post("/api/test/broadcast", (req, res) => {
+      const { eventName, data } = req.query;
+      const name = (eventName as string) || "test";
+      const payload = (data as string) || "hello from test endpoint";
+      socketService.broadcast(name, payload);
+      res.json({ success: true, event: name, data: payload });
+    });
+
+    this.app.post("/api/test/broadcast/role", (req, res) => {
+      const { role, eventName, data } = req.query;
+      if (!role) {
+        return res
+          .status(400)
+          .json({ success: false, message: "role is required" });
+      }
+      const name = (eventName as string) || "test";
+      const payload = (data as string) || "hello from test endpoint";
+      socketService.broadcastToRole(role as string, name, payload);
+      res.json({ success: true, role, event: name, data: payload });
+    });
+
+    this.app.post("/api/test/broadcast/user", (req, res) => {
+      const { userId, eventName, data } = req.query;
+      if (!userId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "userId is required" });
+      }
+      const name = (eventName as string) || "test";
+      const payload = (data as string) || "hello from test endpoint";
+      socketService.broadcastToUser(userId as string, name, payload);
+      res.json({ success: true, userId, event: name, data: payload });
+    });
   }
 
   private initializeErrorHandler() {

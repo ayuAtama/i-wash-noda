@@ -7,6 +7,7 @@ import {
   ParamsItemDto,
   QueryItemDto,
 } from "@/validations/item.validation";
+import { socketService } from "@/socket";
 
 export class ItemController {
   private ItemService: ItemService;
@@ -46,6 +47,7 @@ export class ItemController {
     try {
       const newItem = req.validated!.body as CreateItemDto;
       const item = await this.ItemService.createItem(newItem);
+      socketService.broadcast("item:updated", "item:updated");
       res.status(201).json({
         success: true,
         message: "Item created successfully",
@@ -69,6 +71,8 @@ export class ItemController {
       //call the service
       const editedItem = await this.ItemService.editItem(id, data);
 
+      socketService.broadcast("item:updated", "item:updated");
+
       //response
       res.status(200).json({
         success: true,
@@ -85,6 +89,7 @@ export class ItemController {
       //const id = req.params.id;
       const id = req.validated!.params as ParamsItemDto;
       const deletedItem = await this.ItemService.deleteItem(id);
+      socketService.broadcast("item:updated", "item:updated");
       res.status(200).json({
         success: true,
         message: "Item deleted successfully",

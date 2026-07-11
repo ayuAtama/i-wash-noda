@@ -13,7 +13,7 @@ import http from "http";
 import listEndpoints from "express-list-endpoints";
 
 import { App } from "./app";
-import { initializeSocket } from "./socket";
+import { socketService } from "./socket";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
@@ -23,7 +23,7 @@ const app = new App();
 const server = http.createServer(app.app);
 
 // Attach Socket.IO
-initializeSocket(server);
+socketService.init(server);
 
 // Start server
 server.listen(PORT, () => {

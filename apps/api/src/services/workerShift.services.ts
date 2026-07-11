@@ -9,7 +9,7 @@ import {
   UnScheduleWorkerPayloadDTO,
 } from "@/validations/workerShift.validation";
 import { Prisma } from "@/generated/prisma/client";
-import { getIO } from "@/socket";
+import { socketService } from "@/socket";
 
 export class WorkerShiftService {
   async getShiftsByWorkerId(workerId: string) {
@@ -78,7 +78,7 @@ export class WorkerShiftService {
 
         return res;
       });
-      getIO().emit("schedule:new", res);
+      socketService.broadcast("ScheduleUpdated", JSON.stringify(res));
       return res;
     } catch (error) {
       throw error;
