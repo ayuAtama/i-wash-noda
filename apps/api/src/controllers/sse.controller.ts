@@ -36,7 +36,7 @@ export class SSEController {
 
       // 3. Broadcast to the shared channel.
       // Do NOT create a new session here.
-      this.SSE.broadcast(query, "orderItem:updated");
+      this.SSE.broadcast(query, "item:deleted");
 
       res.json({
         success: true,

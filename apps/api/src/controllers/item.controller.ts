@@ -7,6 +7,7 @@ import {
   ParamsItemDto,
   QueryItemDto,
 } from "@/validations/item.validation";
+import { sseService } from "@/services/sse.services";
 
 export class ItemController {
   private ItemService: ItemService;
@@ -46,6 +47,9 @@ export class ItemController {
     try {
       const newItem = req.validated!.body as CreateItemDto;
       const item = await this.ItemService.createItem(newItem);
+
+      sseService.broadcast("item:updated", "item:updated");
+
       res.status(201).json({
         success: true,
         message: "Item created successfully",
