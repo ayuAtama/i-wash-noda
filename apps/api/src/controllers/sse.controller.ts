@@ -29,6 +29,7 @@ export class SSEController {
   sendData = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const query = req.query.data;
+      const eventName = req.query.eventName as string;
       // const session = await createSession(req, res);
       // const channel = createChannel();
       // channel.register(session);
@@ -36,7 +37,7 @@ export class SSEController {
 
       // 3. Broadcast to the shared channel.
       // Do NOT create a new session here.
-      this.SSE.broadcast(query, "item:deleted");
+      this.SSE.broadcast(query, eventName);
 
       res.json({
         success: true,

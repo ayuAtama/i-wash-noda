@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import type { QueryClient } from "@tanstack/react-query";
+import { useRef, useState, useCallback } from "react";
+import { createEventSource, type EventSourceMessage } from "eventsource-client";
 
 const SSE_URL =
   process.env.NEXT_PUBLIC_SSE_URL || "http://localhost:3000/api/sse";
@@ -16,72 +16,53 @@ export interface SSEEvent {
 }
 
 interface UseSSEOptions {
-  queryClient: QueryClient;
-  eventNames: string[];
-  queryKey?: string[];
+  onEvent?: (eventName: string, data: string) => void;
 }
 
-export function useSSE({ queryClient, eventNames, queryKey }: UseSSEOptions) {
+export function useSSE({ onEvent }: UseSSEOptions = {}) {
   const [status, setStatus] = useState<SSEStatus>("disconnected");
   const [events, setEvents] = useState<SSEEvent[]>([]);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const esRef = useRef<ReturnType<typeof createEventSource> | null>(null);
 
   const connect = useCallback(() => {
-    if (eventSourceRef.current) eventSourceRef.current.close();
-
-    setStatus("connecting");
-    const es = new EventSource(SSE_URL);
-
-    es.onopen = () => setStatus("connected");
-
-    const pushEvent = (eventName: string, e: MessageEvent) => {
-      setEvents((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          event: eventName,
-          data: e.data,
-          time: new Date(),
-        },
-      ]);
-      if (queryKey) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-    };
-
-    es.addEventListener("message", (e: MessageEvent) => {
-      pushEvent("message", e);
-    });
-
-    for (const name of eventNames) {
-      es.addEventListener(name, (e: MessageEvent) => {
-        pushEvent(name, e);
-      });
+    if (esRef.current) {
+      esRef.current.close();
     }
 
-    es.onerror = () => {
-      setStatus("error");
-      es.close();
-      eventSourceRef.current = null;
-    };
+    setStatus("connecting");
 
-    eventSourceRef.current = es;
-  }, [queryClient, eventNames, queryKey]);
+    const es = createEventSource({
+      url: SSE_URL,
+      onMessage: ({ data, event }: EventSourceMessage) => {
+        const eventName = event || "message";
+
+        setStatus("connected");
+
+        setEvents((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            event: eventName,
+            data,
+            time: new Date(),
+          },
+        ]);
+
+        onEvent?.(eventName, data);
+      },
+    });
+
+    esRef.current = es;
+  }, [onEvent]);
 
   const disconnect = useCallback(() => {
-    eventSourceRef.current?.close();
-    eventSourceRef.current = null;
+    esRef.current?.close();
+    esRef.current = null;
     setStatus("disconnected");
   }, []);
 
   const clearEvents = useCallback(() => {
     setEvents([]);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      eventSourceRef.current?.close();
-    };
   }, []);
 
   return { status, events, connect, disconnect, clearEvents };

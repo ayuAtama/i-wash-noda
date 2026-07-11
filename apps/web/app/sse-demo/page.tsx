@@ -76,9 +76,11 @@ export default function SSEDemoPage() {
   });
 
   const { status, events, connect, disconnect, clearEvents } = useSSE({
-    queryClient,
-    eventNames: ["item:updated"],
-    queryKey: ["items"],
+    onEvent: (eventName) => {
+      if (eventName === "item:updated") {
+        queryClient.invalidateQueries({ queryKey: ["items"] });
+      }
+    },
   });
 
   const mutation = useMutation({
