@@ -22,6 +22,7 @@ import adminOrderRoutes from "./routes/adminOrder.routes";
 import cloudinaryRoutes from "./routes/cloudinary.routes";
 import OutletRoute from "./routes/outlet.routes";
 import ItemRoute from "./routes/item.routes";
+import sseRoutes from "./routes/sse.routes";
 
 export class App {
   public app: Application;
@@ -32,6 +33,7 @@ export class App {
     this.initializeCors();
     this.initializeBetterAuth();
     this.initializeMiddlewares();
+    this.initializeSSE();
     this.initializeAdminRoutes();
     this.initializeUserAndAuth();
     this.initializeAdminManageUserRoutes();
@@ -76,6 +78,10 @@ export class App {
 
   private initializeBetterAuth() {
     this.app.use("/api/auth", authRoutes);
+  }
+
+  private initializeSSE() {
+    this.app.use("/api/sse", sseRoutes);
   }
 
   private initializeUserAndAuth() {

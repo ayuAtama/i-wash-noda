@@ -10,6 +10,9 @@ import {
 } from "@/validations/workerShift.validation";
 import { Prisma } from "@/generated/prisma/client";
 
+// sse experiment
+import { sseService } from "./sse.services";
+
 export class WorkerShiftService {
   async getShiftsByWorkerId(workerId: string) {
     try {
@@ -77,6 +80,10 @@ export class WorkerShiftService {
 
         return res;
       });
+      // send the sse event before the http response
+      //sse
+      sseService.broadcast(res, "ScheduleUpdated");
+
       return res;
     } catch (error) {
       throw error;
