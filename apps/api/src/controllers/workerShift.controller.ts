@@ -3,7 +3,10 @@ import { WorkerShiftService } from "@/services/workerShift.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
 import {
+  CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
+  FetchUnScheduledWorkerDTO,
+  UnScheduleWorkerPayloadDTO,
   WorkerShiftIdParamsDTO,
 } from "@/validations/workerShift.validation";
 
@@ -25,15 +28,23 @@ export class WorkerShiftController {
       //   });
       // }
 
+      // get the outlet id
+      if (!req.context) throw new HttpError(500, "This is an invalid user");
+      const outletId = req.context.outlet_id;
+
       // 2. call service after used middleware (DTO validation)
       const body = req.validated!.body as CreateWorkerShiftInputDTO;
-      await this.workerShiftService.replaceWeeklySchedule(body);
+      const payload = {
+        ...body,
+        outlet_id: outletId,
+      } as CreateSchedulePayloadDTO;
+      const test = await this.workerShiftService.replaceWeeklySchedule(payload);
 
       // 3. response
       return res.status(200).json({
         success: true,
         message: "Worker weekly schedule saved",
-        data: null,
+        data: test,
       });
     } catch (error) {
       next(error);
@@ -57,6 +68,37 @@ export class WorkerShiftController {
         success: true,
         message: "Schedule fetched successfully",
         data: schedule,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchUnScheduledWorker = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      // get the outlet id from the outlet admin (req.context)
+      const outletId = req.context!.outlet_id;
+
+      // destructure the query from req.validated
+      const query = req.validated!.query as FetchUnScheduledWorkerDTO;
+
+      // make the payload
+      const payload = {
+        ...query,
+        outlet_id: outletId,
+      } as UnScheduleWorkerPayloadDTO;
+
+      // call the service
+      const workers = await this.workerShiftService.fetchUnScheduledWorker(payload);
+
+      return res.status(200).json({
+        success: true,
+        message: "Unscheduled workers fetched successfully",
+        data: workers,
       });
     } catch (error) {
       next(error);

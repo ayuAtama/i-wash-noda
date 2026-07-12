@@ -358,8 +358,21 @@ export class AuthUserController {
         throw new HttpError(400, "Email and password required");
 
       // login
-      const { accessToken, refreshToken, success, message } =
-        await this.authUserService.login(email, password, userAgent, ipAddress);
+      const {
+        accessToken,
+        refreshToken,
+        success,
+        message,
+        name,
+        role,
+        email: emailUser,
+        worker_station,
+      } = await this.authUserService.login(
+        email,
+        password,
+        userAgent,
+        ipAddress,
+      );
 
       // set the jwt cookie httponly
       // access token 30 minute expires (jwt 15 minutes)
@@ -384,7 +397,12 @@ export class AuthUserController {
       return res.status(200).json({
         success: success,
         message: message,
-        data: null,
+        data: {
+          name,
+          email: emailUser,
+          role,
+          worker_station: worker_station ? worker_station : undefined,
+        },
       });
     } catch (error) {
       next(error);

@@ -27,14 +27,18 @@ enum WorkerStation {
 
 enum OrderStatus {
   waiting_for_driver_pickup
+  out_for_pickup
   in_transit_to_outlet
   arrived_at_outlet
   washing_in_progress
   ironing_in_progress
   packing_in_progrees
   waiting_for_payment
+  waiting_for_driver_deliver
   out_for_delivery
   delivered
+  cancelled
+  finished
 }
 
 enum StationName {
@@ -71,6 +75,11 @@ enum WorkerShiftDay {
   fri
   sat
   sun
+}
+
+enum OrderSource {
+  customer_app
+  walk_in
 }
 
 // -----------------------
@@ -111,14 +120,37 @@ model User {
   ironingOrders  Order[]              @relation("IroningWorker")
   packingOrders  Order[]              @relation("PackingWorker")
 
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  emailVerified   Boolean          @default(false)
+  image           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  walkInCustomers WalkInCustomer[] @relation("WalkInCustomerCreatedBy")
 
   @@map("users")
+}
+
+// -----------------------
+// WALKIN COSTUMER (NO ACCOUNT)
+// -----------------------
+
+model WalkInCustomer {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  phone      String
+  created_by String   @db.Uuid
+  outlet_id  String   @db.Uuid
+  outletId   Outlet   @relation("WalkInCustomerOutletId", fields: [outlet_id], references: [id])
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // relation
+  order     Order[] @relation("WalkInCustumerOrder")
+  createdBy User    @relation("WalkInCustomerCreatedBy", fields: [created_by], references: [id])
+
+  @@unique([phone])
+  @@map("walk_in_customers")
 }
 
 // -----------------------
@@ -196,9 +228,10 @@ model Outlet {
   updated_at      DateTime @updatedAt
 
   //relations
-  users  User[]
-  orders Order[]
-  shifts WorkerShift[]
+  users           User[]
+  orders          Order[]
+  shifts          WorkerShift[]
+  walkInCustomers WalkInCustomer[] @relation("WalkInCustomerOutletId")
 
   @@map("outlets")
 }
@@ -211,11 +244,10 @@ model WorkerShift {
   id          String         @id @default(uuid()) @db.Uuid
   worker_id   String         @db.Uuid
   outlet_id   String         @db.Uuid
-  station     StationName
+  station     StationName?
   day_of_week WorkerShiftDay
   start_time  DateTime       @db.Time
   end_time    DateTime       @db.Time
-  is_deleted  Boolean        @default(false)
   created_at  DateTime       @default(now())
 
   //relations
@@ -247,8 +279,10 @@ model Item {
 
 model Order {
   id                   String      @id @default(uuid()) @db.Uuid
-  customer_id          String      @db.Uuid
+  customer_id          String?     @db.Uuid
+  walkin_customer_id   String?     @db.Uuid
   pickup_address_id    String?     @db.Uuid
+  source               OrderSource @default(customer_app)
   outlet_id            String      @db.Uuid
   driver_pickup_id     String?     @db.Uuid
   driver_delivery_id   String?     @db.Uuid
@@ -270,7 +304,8 @@ model Order {
   updated_at           DateTime    @updatedAt
 
   //relation
-  customer         User                 @relation("CustomerOrders", fields: [customer_id], references: [id])
+  customer         User?                @relation("CustomerOrders", fields: [customer_id], references: [id])
+  walkInCustomer   WalkInCustomer?      @relation("WalkInCustumerOrder", fields: [walkin_customer_id], references: [id])
   pickupDriver     User?                @relation("PickupDriver", fields: [driver_pickup_id], references: [id])
   deliveryDriver   User?                @relation("DeliveryDriver", fields: [driver_delivery_id], references: [id])
   washingWorker    User?                @relation("WashingWorker", fields: [washing_worker_id], references: [id])
@@ -303,6 +338,7 @@ model OrderItem {
   order Order @relation(fields: [order_id], references: [id])
   item  Item  @relation(fields: [item_id], references: [id])
 
+  @@unique([order_id, item_id])
   @@map("order_items")
 }
 

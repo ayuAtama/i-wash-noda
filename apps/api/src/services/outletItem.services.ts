@@ -22,7 +22,7 @@ export class OutletItemService {
             lat,
             lng,
             Number(outlet.lat),
-            Number(outlet.lng)
+            Number(outlet.lng),
           );
 
           // return the distance and mutate it into the outlet
@@ -44,6 +44,9 @@ export class OutletItemService {
     return prisma.outlet.findMany({
       where: {
         is_deleted: false,
+      },
+      orderBy: {
+        created_at: "desc",
       },
     });
   }

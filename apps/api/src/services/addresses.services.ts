@@ -2,6 +2,10 @@
 import { prisma } from "@/config/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { HttpError } from "@/utils/httpError";
+import {
+  CreateAddressDto,
+  UpdateAddressDto,
+} from "@/validations/address.validation";
 
 export class AddressService {
   async getAll(userId: string) {
@@ -10,22 +14,26 @@ export class AddressService {
       const addresses = await prisma.userAddress.findMany({
         where: {
           user_id: userId,
+          is_deleted: false,
         },
         orderBy: {
           created_at: "desc",
         },
       });
 
-      return addresses;
+      const totalAddresses = addresses.length;
+
+      return { totalAddresses, addresses };
     } catch (error) {
       throw error;
     }
   }
 
-  async create(data: Prisma.UserAddressUncheckedCreateInput) {
+  async create(userId: string, data: CreateAddressDto) {
     try {
       // get the data
-      const { label, address, lat, lng, is_default, user_id: userId } = data;
+      console.log("data from controller:", data);
+      const { label, address, lat, lng, isDefault: is_default } = data;
 
       // create the address
       const { newAddress } = await prisma.$transaction(async (tx) => {
@@ -39,10 +47,12 @@ export class AddressService {
         // if this is the first one, make it is_default true
         const finalIsDefault = addressCount === 0 ? true : Boolean(is_default);
 
+        console.log(is_default, finalIsDefault);
+
         // check if the address is_default true
         if (finalIsDefault) {
           // change the previous is_default address' into false
-          await tx.userAddress.updateMany({
+          const test1 = await tx.userAddress.updateMany({
             where: {
               user_id: userId,
               is_default: true,
@@ -74,14 +84,10 @@ export class AddressService {
     }
   }
 
-  async update(
-    userId: string,
-    addressId: string,
-    data: Prisma.UserAddressUpdateInput,
-  ) {
+  async update(userId: string, addressId: string, data: UpdateAddressDto) {
     try {
       // get the data
-      const { label, address, lat, lng, is_default } = data;
+      const { label, address, lat, lng, isDefault: is_default } = data;
 
       // update the address
       const { updatedAddress } = await prisma.$transaction(async (tx) => {
@@ -134,16 +140,20 @@ export class AddressService {
           where: {
             id: addressId,
             user_id: userId,
+            is_deleted: false,
           },
         });
 
         if (!address) throw new HttpError(404, "Address not found");
 
-        // delete the address
-        const deleted = await tx.userAddress.delete({
+        // delete the address (soft delete)
+        const deleted = await tx.userAddress.update({
           where: {
             id: addressId,
             user_id: userId,
+          },
+          data: {
+            is_deleted: true,
           },
         });
 
@@ -153,6 +163,7 @@ export class AddressService {
           const oldestAddress = await tx.userAddress.findFirst({
             where: {
               user_id: userId,
+              is_deleted: false,
             },
             orderBy: {
               created_at: "asc",

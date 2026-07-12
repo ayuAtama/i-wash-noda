@@ -2,7 +2,16 @@
 import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import { validateNoOverlap } from "@/utils/validateNoOverlap";
-import { CreateWorkerShiftInputDTO } from "@/validations/workerShift.validation";
+import timeToUtcDate from "@/utils/timeToUTCDate";
+import {
+  CreateSchedulePayloadDTO,
+  CreateWorkerShiftInputDTO,
+  UnScheduleWorkerPayloadDTO,
+} from "@/validations/workerShift.validation";
+import { Prisma } from "@/generated/prisma/client";
+
+// sse experiment
+import { sseService } from "./sse.services";
 
 export class WorkerShiftService {
   async getShiftsByWorkerId(workerId: string) {
@@ -10,7 +19,6 @@ export class WorkerShiftService {
       return await prisma.workerShift.findMany({
         where: {
           worker_id: workerId,
-          is_deleted: false,
         },
         select: {
           day_of_week: true,
@@ -23,50 +31,102 @@ export class WorkerShiftService {
         },
       });
     } catch (error) {
-      throw new HttpError(500, "Failed to get shifts, desuwa~");
+      throw error;
     }
   }
 
-  async replaceWeeklySchedule(data: CreateWorkerShiftInputDTO) {
+  async replaceWeeklySchedule(data: CreateSchedulePayloadDTO) {
     try {
-      const { outletId, workerId, station, schedules } = data;
+      const { workerId, schedules, outlet_id: outletId } = data;
+      // worker id from fetch in dasboard
+      // outled id from req.contex
+      // station?? fetch in service layer?
 
-      function timeToUtcDate(time: string): Date {
-        const [h, m] = time.split(":").map(Number);
+      // get the station or skip if the driver
+      const station = await prisma.user.findFirst({
+        where: { id: workerId, outlet_id: outletId },
+        select: { role: true, worker_station: true },
+      });
 
-        // IMPORTANT: use UTC setters
-        const d = new Date(Date.UTC(1970, 0, 1, h, m, 0));
-
-        return d;
+      if (!station) {
+        throw new HttpError(404, "Worker not found");
       }
 
       // validate overlap in request
       validateNoOverlap(schedules);
+
       // IMPORTANT:
       // One transaction = atomic weekly replacement
-      await prisma.$transaction(async (tx) => {
-        // 1. delete existing shifts for this worker + outlet (soft delete)
-        await tx.workerShift.updateMany({
+      const res = await prisma.$transaction(async (tx) => {
+        // permanent delete old shifts
+        await tx.workerShift.deleteMany({
           where: {
             outlet_id: outletId,
             worker_id: workerId,
-            is_deleted: false,
           },
-          data: { is_deleted: true },
         });
 
         // 2. create new shifts
-        await tx.workerShift.createMany({
+        const res = await tx.workerShift.createManyAndReturn({
           data: schedules.map((s) => ({
             outlet_id: outletId,
             worker_id: workerId,
-            station,
+            station: station.worker_station,
             day_of_week: s.day,
             start_time: timeToUtcDate(s.start),
             end_time: timeToUtcDate(s.end),
           })),
         });
+
+        return res;
       });
+      // send the sse event before the http response
+      sseService.broadcastToOutlet(res, "ScheduleUpdated", outletId);
+
+      return res;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async fetchUnScheduledWorker(data: UnScheduleWorkerPayloadDTO) {
+    try {
+      // destructure the data
+      const { outlet_id: outletId, keyword, role } = data;
+
+      // fetch the id of the worker and related data
+      const where = {
+        outlet_id: outletId,
+        ...(role
+          ? { role: role }
+          : { role: { notIn: ["super_admin", "outlet_admin", "customer"] } }),
+        name: {
+          contains: keyword,
+          mode: "insensitive",
+        },
+        workerShifts: {
+          none: {},
+        },
+      } as Prisma.UserWhereInput;
+
+      const workers = await prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          worker_station: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+      if (workers.length === 0) {
+        throw new HttpError(404, "No worker or driver shift found");
+      }
+
+      return workers;
     } catch (error) {
       throw error;
     }

@@ -9,7 +9,10 @@ import { Validator } from "@/middleware/validate";
 import {
   CreateWorkerShiftSchema,
   WorkerShiftIdParamsSechema,
+  FetchUnScheduledWorkerSchema,
 } from "@/validations/workerShift.validation";
+import { resolveContext } from "@/middleware/resolveContext";
+import ensureWorkerOnShift from "@/middleware/ensureWorkerOnShift";
 
 export class WorkerShiftRoute {
   public router = Router();
@@ -18,12 +21,16 @@ export class WorkerShiftRoute {
   constructor() {
     this.controller = new WorkerShiftController(new WorkerShiftService());
     this.createSchedule();
+    this.fetchUnScheduledWorker();
     this.getSchedule();
   }
 
   private createSchedule() {
     this.router.post(
-      "/schedule",
+      "/",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
       Validator.validate({
         body: CreateWorkerShiftSchema,
       }),
@@ -33,11 +40,27 @@ export class WorkerShiftRoute {
 
   private getSchedule() {
     this.router.get(
-      "/schedule/:id",
+      "/:id",
+      authenticationMiddleware,
+      resolveContext,
+      ensureWorkerOnShift,
       Validator.validate({
         params: WorkerShiftIdParamsSechema,
       }),
       this.controller.getScheduleById,
+    );
+  }
+
+  private fetchUnScheduledWorker() {
+    this.router.get(
+      "/no-shift-workers",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        query: FetchUnScheduledWorkerSchema,
+      }),
+      this.controller.fetchUnScheduledWorker,
     );
   }
 }

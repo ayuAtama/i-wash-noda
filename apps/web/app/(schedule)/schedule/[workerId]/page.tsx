@@ -1,33 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { WorkerShiftForm } from "../../components/WorkerShiftForm";
 import { mapScheduleToForm } from "../../utils/mapScheduleToForm";
 
 export default function ScheduleEditPage() {
   const { workerId } = useParams() as { workerId: string };
-  const [initialValues, setInitialValues] = useState<any>(null);
 
-  useEffect(() => {
-    async function load() {
-      const res = await fetch(
-        `http://localhost:3000/api/admin/schedule/${workerId}`
-      );
-      const data = await res.json();
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["schedule", workerId],
+    queryFn: () =>
+      api.get(`/api/admin/schedule/${workerId}`).then((r) => r.data),
+  });
 
-      setInitialValues({
-        outletId: "35dd708b-1be9-4598-81d7-834b3b44fd51",
-        workerId,
-        station: "washing",
-        shifts: mapScheduleToForm(data),
-      });
-    }
+  if (isLoading) return <p>Loading schedule...</p>;
+  if (isError) return <p style={{ color: "red" }}>Failed to load schedule.</p>;
 
-    load();
-  }, [workerId]);
-
-  if (!initialValues) return <p>Loading schedule...</p>;
+  const initialValues = {
+    outletId: "35dd708b-1be9-4598-81d7-834b3b44fd51",
+    workerId,
+    station: "washing" as const,
+    shifts: mapScheduleToForm(data.data),
+  };
 
   return (
     <WorkerShiftForm

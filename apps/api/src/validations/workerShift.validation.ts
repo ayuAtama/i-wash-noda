@@ -6,7 +6,7 @@ import "zod-openapi";
 export const ScheduleItemSchema = z.object({
   day: z.enum(WorkerShiftDay).meta({
     description: "Day of the week",
-    example: "MONDAY",
+    example: "mon",
   }),
   start: z
     .string()
@@ -26,26 +26,18 @@ export const ScheduleItemSchema = z.object({
 
 export const CreateWorkerShiftSchema = z
   .object({
-    outletId: z.uuid().meta({
-      description: "Outlet ID (UUID)",
-      example: "123e4567-e89b-12d3-a456-426614174000",
-    }),
     workerId: z.uuid().meta({
       description: "Worker ID (UUID)",
       example: "123e4567-e89b-12d3-a456-426614174001",
     }),
-    station: z.enum(StationName).meta({
-      description: "Station name",
-      example: "WASHING",
-    }),
     schedules: z
       .array(ScheduleItemSchema)
-      .min(1, "At least one day must be selected")
+      .min(1, "You must provide schedule for at least one day")
       .meta({
         description: "Weekly schedule array",
         example: [
-          { day: "MONDAY", start: "08:00", end: "16:00" },
-          { day: "TUESDAY", start: "08:00", end: "16:00" },
+          { day: "mon", start: "08:00", end: "16:00" },
+          { day: "tue", start: "08:00", end: "16:00" },
         ],
       }),
   })
@@ -53,12 +45,10 @@ export const CreateWorkerShiftSchema = z
     id: "CreateWorkerShift",
     description: "Payload for creating worker shift schedule",
     example: {
-      outletId: "123e4567-e89b-12d3-a456-426614174000",
       workerId: "123e4567-e89b-12d3-a456-426614174001",
-      station: "WASHING",
       schedules: [
-        { day: "MONDAY", start: "08:00", end: "16:00" },
-        { day: "TUESDAY", start: "08:00", end: "16:00" },
+        { day: "mon", start: "08:00", end: "16:00" },
+        { day: "tue", start: "08:00", end: "16:00" },
       ],
     },
   });
@@ -78,10 +68,54 @@ export const WorkerShiftIdParamsSechema = z
     },
   });
 
+export const OutletIDSchema = z
+  .object({
+    outlet_id: z.uuid().meta({
+      description: "Outlet ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  })
+  .meta({
+    id: "OutletID",
+    description: "Payload for updating a worker shift",
+    example: {
+      outlet_id: "123e4567-e89b-12d3-a456-426614174000",
+    },
+  });
+
+export const FetchUnScheduledWorkerSchema = z
+  .object({
+    keyword: z.string().min(1, "Keyword is required").optional().meta({
+      description: "Keyword to search for workers without schedules sift",
+      example: "John",
+    }),
+    role: z.enum(["driver", "worker"]).optional().meta({
+      description: "Role of the worker",
+      example: "driver",
+    }),
+  })
+  .meta({
+    id: "FetchUnScheduledWorker",
+    description: "Payload for fetching workers without schedules sift",
+    example: {
+      keyword: "John",
+      role: "driver",
+    },
+  });
+
 export class WorkerShiftValidation {
   static CreateWorkerShiftSchema = CreateWorkerShiftSchema;
   static WorkerShiftIdParamsSchema = WorkerShiftIdParamsSechema;
+  static OutletIDSchema = OutletIDSchema;
+  static FetchUnScheduledWorkerSchema = FetchUnScheduledWorkerSchema;
 }
 
 export type CreateWorkerShiftInputDTO = z.infer<typeof CreateWorkerShiftSchema>;
 export type WorkerShiftIdParamsDTO = z.infer<typeof WorkerShiftIdParamsSechema>;
+export type OutletIDDTO = z.infer<typeof OutletIDSchema>;
+export type CreateSchedulePayloadDTO = CreateWorkerShiftInputDTO & OutletIDDTO;
+export type FetchUnScheduledWorkerDTO = z.infer<
+  typeof FetchUnScheduledWorkerSchema
+>;
+export type UnScheduleWorkerPayloadDTO = FetchUnScheduledWorkerDTO &
+  OutletIDDTO;

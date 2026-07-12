@@ -12,18 +12,6 @@ export class AddressValidation {
         description: "Street address",
         example: "123 Main St",
       }),
-      city: z.string().meta({
-        description: "City name",
-        example: "Jakarta",
-      }),
-      province: z.string().meta({
-        description: "Province name",
-        example: "DKI Jakarta",
-      }),
-      postalCode: z.string().optional().meta({
-        description: "Postal code",
-        example: "12345",
-      }),
       lat: z.number().meta({
         description: "Latitude coordinate",
         example: -6.2088,
@@ -32,6 +20,10 @@ export class AddressValidation {
         description: "Longitude coordinate",
         example: 106.8456,
       }),
+      isDefault: z.boolean().default(false).meta({
+        description: "Indicates if the address is the default address",
+        example: false,
+      }),
     })
     .meta({
       id: "CreateAddress",
@@ -39,11 +31,9 @@ export class AddressValidation {
       example: {
         label: "Home",
         address: "123 Main St",
-        city: "Jakarta",
-        province: "DKI Jakarta",
-        postalCode: "12345",
         lat: -6.2088,
         lng: 106.8456,
+        isDefault: false,
       },
     });
 
@@ -57,18 +47,6 @@ export class AddressValidation {
         description: "Street address",
         example: "789 New Street",
       }),
-      city: z.string().optional().meta({
-        description: "City name",
-        example: "Bandung",
-      }),
-      province: z.string().optional().meta({
-        description: "Province name",
-        example: "Jawa Barat",
-      }),
-      postalCode: z.string().optional().meta({
-        description: "Postal code",
-        example: "12346",
-      }),
       lat: z.number().optional().meta({
         description: "Latitude coordinate",
         example: -6.9147,
@@ -77,6 +55,10 @@ export class AddressValidation {
         description: "Longitude coordinate",
         example: 107.6098,
       }),
+      isDefault: z.boolean().optional().default(false).meta({
+        description: "Indicates if the address is the default address",
+        example: false,
+      }),
     })
     .meta({
       id: "UpdateAddress",
@@ -84,17 +66,21 @@ export class AddressValidation {
       example: {
         label: "Home Updated",
         address: "789 New Street",
-        city: "Bandung",
-        province: "Jawa Barat",
+        lat: -6.9147,
+        lng: 107.6098,
       },
     });
 
   static ParamsAddressSchema = z
     .object({
-      id: z.uuid().meta({
-        description: "Address ID (UUID)",
-        example: "123e4567-e89b-12d3-a456-426614174000",
-      }),
+      id: z
+        .uuid({
+          error: "Address ID must be a valid UUID",
+        })
+        .meta({
+          description: "Address ID (UUID)",
+          example: "123e4567-e89b-12d3-a456-426614174000",
+        }),
     })
     .meta({
       id: "ParamsAddress",

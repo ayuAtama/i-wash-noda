@@ -1,12 +1,16 @@
 "use client";
 
-import { useForm, useFieldArray } from "react-hook-form";
+import { useEffect, useMemo } from "react";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
+
 import {
   MultiShiftFormSchema,
   MultiShiftFormValues,
 } from "../validation/shiftForm.schema";
+
 import { WorkerShiftDay } from "../validation/prisma.enum";
 import { detectOverlaps } from "../utils/shiftOverlap";
 
@@ -17,28 +21,33 @@ type Props = {
   submitLabel: string;
 };
 
-export function WorkerShiftForm({ initialValues, submitLabel }: Props) {
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+function buildSchedulePayload(values: MultiShiftFormValues) {
+  return {
+    outletId: values.outletId,
+    workerId: values.workerId,
+    station: values.station,
+    schedules: values.shifts.flatMap((shift) =>
+      shift.days.map((day) => ({
+        day,
+        start: shift.start,
+        end: shift.end,
+      })),
+    ),
+  };
+}
 
+export function WorkerShiftForm({ initialValues, submitLabel }: Props) {
   const {
     control,
     register,
     handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
     reset,
+    formState: { errors },
   } = useForm<MultiShiftFormValues>({
     resolver: zodResolver(MultiShiftFormSchema),
     defaultValues: initialValues,
   });
 
-  /**
-   * IMPORTANT:
-   * When initialValues change (edit page),
-   * we MUST reset the form
-   */
   useEffect(() => {
     reset(initialValues);
   }, [initialValues, reset]);
@@ -48,126 +57,164 @@ export function WorkerShiftForm({ initialValues, submitLabel }: Props) {
     name: "shifts",
   });
 
-  const shifts = watch("shifts");
-  const overlapErrors = detectOverlaps(shifts ?? []);
+  const values = useWatch({
+    control,
+  }) as MultiShiftFormValues;
 
-  async function onSubmit(values: MultiShiftFormValues) {
-    setSubmitError(null);
-    setSubmitSuccess(null);
+  const overlapErrors = useMemo(
+    () => detectOverlaps(values.shifts ?? []),
+    [values.shifts],
+  );
 
+  const mutation = useMutation({
+    mutationFn: (payload: ReturnType<typeof buildSchedulePayload>) =>
+      api.post("/api/admin/schedule", payload).then((r) => r.data),
+  });
+
+  function onSubmit(values: MultiShiftFormValues) {
     if (overlapErrors.length > 0) return;
-
-    const schedules = values.shifts.flatMap((shift) =>
-      shift.days.map((day) => ({
-        day,
-        start: shift.start,
-        end: shift.end,
-      }))
-    );
-
-    const res = await fetch("http://localhost:3000/api/admin/schedule", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        outletId: values.outletId,
-        workerId: values.workerId,
-        station: values.station,
-        schedules,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setSubmitError(data.message || "Failed to save schedule");
-      return;
-    }
-
-    setSubmitSuccess(data.message || "Schedule saved");
+    mutation.mutate(buildSchedulePayload(values));
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <input type="hidden" {...register("outletId")} />
-      <input type="hidden" {...register("workerId")} />
-      <input type="hidden" {...register("station")} />
-
+      <input hidden {...register("outletId")} />
+      <input hidden {...register("workerId")} />
+      <input hidden {...register("station")} />
       <h2>Worker Schedule</h2>
-
       {overlapErrors.length > 0 && (
-        <div style={{ color: "red", marginBottom: 12 }}>
-          {overlapErrors.map((msg, i) => (
-            <div key={i}>{msg}</div>
+        <div style={{ color: "red", marginBottom: 16 }}>
+          {overlapErrors.map((e, i) => (
+            <div key={i}>{e}</div>
           ))}
         </div>
-      )}
+      )}{" "}
+      {fields.map((field, index) => (
+        <div
+          key={field.id}
+          style={{
+            border: "1px solid #ccc",
+            padding: 12,
+            marginBottom: 12,
+          }}
+        >
+          <strong>Shift {index + 1}</strong>
 
-      {fields.map((field, index) => {
-        const selectedDays = shifts?.[index]?.days ?? [];
+          <Controller
+            control={control}
+            name={`shifts.${index}.days`}
+            render={({ field }) => (
+              <div style={{ marginTop: 12, marginBottom: 12 }}>
+                {DAYS.map((day) => (
+                  <label
+                    key={day}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      marginRight: 12,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={field.value?.includes(day) ?? false}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          field.onChange([...field.value, day]);
+                        } else {
+                          field.onChange(field.value.filter((d) => d !== day));
+                        }
+                      }}
+                    />
 
-        return (
+                    <span style={{ marginLeft: 4 }}>{day}</span>
+                  </label>
+                ))}
+
+                {errors.shifts?.[index]?.days && (
+                  <p style={{ color: "red" }}>
+                    {errors.shifts[index]?.days?.message}
+                  </p>
+                )}
+              </div>
+            )}
+          />
+
           <div
-            key={field.id}
             style={{
-              border: "1px solid #ccc",
-              padding: 12,
+              display: "flex",
+              gap: 12,
               marginBottom: 12,
             }}
           >
-            <strong>Shift {index + 1}</strong>
-
             <div>
-              {DAYS.map((day) => (
-                <label key={day} style={{ marginRight: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedDays.includes(day)}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setValue(
-                        `shifts.${index}.days`,
-                        checked
-                          ? [...selectedDays, day]
-                          : selectedDays.filter((d) => d !== day)
-                      );
-                    }}
-                  />
-                  {day}
-                </label>
-              ))}
-              {errors.shifts?.[index]?.days && (
-                <p>{errors.shifts[index]?.days?.message}</p>
-              )}
+              <label>Start</label>
+              <br />
+              <input type="time" {...register(`shifts.${index}.start`)} />
             </div>
 
             <div>
-              <input type="time" {...register(`shifts.${index}.start`)} />
+              <label>End</label>
+              <br />
               <input type="time" {...register(`shifts.${index}.end`)} />
             </div>
-
-            <button type="button" onClick={() => remove(index)}>
-              Remove shift
-            </button>
           </div>
-        );
-      })}
 
+          <button type="button" onClick={() => remove(index)}>
+            Remove Shift
+          </button>
+        </div>
+      ))}
       <button
         type="button"
-        onClick={() => append({ days: [], start: "", end: "" })}
+        onClick={() =>
+          append({
+            days: [],
+            start: "",
+            end: "",
+          })
+        }
       >
-        + Add shift
+        + Add Shift
       </button>
-
       <br />
-      <br />
-
-      {submitError && <p style={{ color: "red" }}>{submitError}</p>}
-      {submitSuccess && <p style={{ color: "green" }}>{submitSuccess}</p>}
-
-      <button type="submit" disabled={overlapErrors.length > 0}>
-        {submitLabel}
+      <br />{" "}
+      {mutation.isError && (
+        <p style={{ color: "red" }}>
+          {(mutation.error as any)?.response?.data?.message ||
+            mutation.error?.message ||
+            "Failed"}
+        </p>
+      )}
+      {mutation.isSuccess && (
+        <p style={{ color: "green" }}>Saved successfully</p>
+      )}
+      <button
+        type="submit"
+        disabled={overlapErrors.length > 0 || mutation.isPending}
+      >
+        {mutation.isPending ? "Saving..." : submitLabel}
       </button>
+      <div
+        style={{
+          marginTop: 24,
+          padding: 16,
+          border: "1px solid #ddd",
+          borderRadius: 8,
+          background: "#000000",
+        }}
+      >
+        <h3>Payload Preview</h3>
+
+        <pre
+          style={{
+            overflowX: "auto",
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          {JSON.stringify(buildSchedulePayload(values), null, 2)}
+        </pre>
+      </div>
     </form>
   );
 }

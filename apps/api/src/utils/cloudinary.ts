@@ -5,12 +5,14 @@ import "dotenv/config";
 if (process.env.CLOUDINARY_URL) {
   cloudinary.config({
     cloudinary_url: process.env.CLOUDINARY_URL,
+    secure: true,
   });
 } else {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true,
   });
 }
 
@@ -107,6 +109,7 @@ export function createCloudinaryStorage(
 }
 
 export { cloudinary };
+export default cloudinary;
 
 export async function deleteImage(imageUrl: string): Promise<void> {
   if (!imageUrl || !imageUrl.includes("cloudinary.com")) {
@@ -125,3 +128,4 @@ export async function deleteImage(imageUrl: string): Promise<void> {
     console.error("Failed to delete image from Cloudinary:", error);
   }
 }
+

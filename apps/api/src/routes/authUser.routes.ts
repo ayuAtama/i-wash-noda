@@ -3,12 +3,7 @@ import { Router } from "express";
 import { AuthUserService } from "../services/authUser.services";
 import { AuthUserController } from "../controllers/authUser.controller";
 import { requireStep } from "@/middleware/requireStep";
-import {
-  registerEndpointRateLimiter,
-  verifyOTPEndpointRateLimiter,
-  resendOTPEndpointRateLimiter,
-  commpleteRegisterEndpointRateLimiter,
-} from "@/middleware/rateLimitter";
+import rateLimiter from "@/middleware/rateLimitter";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { refreshTokenMiddleware } from "@/middleware/refreshToken";
 import { Validator } from "@/middleware/validate";
@@ -32,7 +27,7 @@ export class AuthUserRoute {
   private register() {
     this.router.post(
       "/register",
-      registerEndpointRateLimiter,
+      rateLimiter(10),
       Validator.validate({
         body: AuthValidation.RegisterSchema,
       }),
@@ -40,7 +35,7 @@ export class AuthUserRoute {
     );
     this.router.post(
       "/verify",
-      verifyOTPEndpointRateLimiter,
+      rateLimiter(5),
       Validator.validate({
         body: AuthValidation.VerifySchemaTokenBody,
         query: AuthValidation.VerifySchemaTokenParams,
@@ -50,7 +45,7 @@ export class AuthUserRoute {
     );
     this.router.post(
       "/complete-register",
-      commpleteRegisterEndpointRateLimiter,
+      rateLimiter(3),
       Validator.validate({
         body: AuthValidation.CompleteRegisterSchema,
       }),
@@ -59,7 +54,7 @@ export class AuthUserRoute {
     );
     this.router.post(
       "/resend-otp",
-      resendOTPEndpointRateLimiter,
+      rateLimiter(3),
       Validator.validate({
         body: AuthValidation.ResendSchema,
       }),

@@ -1,0 +1,260 @@
+Commit:  859c2dd
+Tanggal: Rabu, 20 Mei 2026 pukul 21:00:21
+Relatif: 5 days ago
+Pesan:   feat: implement laundry item management with CRUD operations and validation
+------------------------------------------------------------
+Commit:  d8103f0
+Tanggal: Selasa, 19 Mei 2026 pukul 15:39:27
+Relatif: 7 days ago
+Pesan:   feat: enhance outlet management with CRUD operations, validation, and coverage search
+------------------------------------------------------------
+Commit:  1a3bd27
+Tanggal: Senin, 11 Mei 2026 pukul 16:01:23
+Relatif: 2 weeks ago
+Pesan:   feat: update address management to support soft delete, enhance create and update logic with user ID handling
+------------------------------------------------------------
+Commit:  20a46e7
+Tanggal: Kamis, 07 Mei 2026 pukul 15:14:27
+Relatif: 3 weeks ago
+Pesan:   feat: enhance address management with search, default address handling, and validation updates
+------------------------------------------------------------
+Commit:  41da20f
+Tanggal: Jumat, 24 April 2026 pukul 10:02:27
+Relatif: 5 weeks ago
+Pesan:   feat: enhance Cloudinary service and routes with user-based upload signature generation and validation
+------------------------------------------------------------
+Commit:  fae10c7
+Tanggal: Rabu, 22 April 2026 pukul 12:39:05
+Relatif: 5 weeks ago
+Pesan:   feat: integrate Cloudinary for image upload, add routes and services for upload signature generation
+------------------------------------------------------------
+Commit:  45a2034
+Tanggal: Kamis, 09 April 2026 pukul 16:21:16
+Relatif: 7 weeks ago
+Pesan:   feat: update API routes for OTP and password reset, enhance user update logic with DTO validation
+------------------------------------------------------------
+Commit:  ca5354c
+Tanggal: Rabu, 08 April 2026 pukul 13:05:34
+Relatif: 7 weeks ago
+Pesan:   feat: enhance authentication flow by adding DTOs for registration, email change, and login processes
+------------------------------------------------------------
+Commit:  891bbe1
+Tanggal: Selasa, 07 April 2026 pukul 14:03:55
+Relatif: 7 weeks ago
+Pesan:   feat&fix: implement health check endpoint and enhance validation schemas for OTP verification. fix can't verify email
+------------------------------------------------------------
+Commit:  0dbb4bc
+Tanggal: Sabtu, 04 April 2026 pukul 14:40:33
+Relatif: 7 weeks ago
+Pesan:   feat: update route definitions and enhance API structure with new pickup request routes
+------------------------------------------------------------
+Commit:  8b3a0c9
+Tanggal: Sabtu, 04 April 2026 pukul 14:22:08
+Relatif: 7 weeks ago
+Pesan:   feat: update API response structure and enhance error handling across controllers
+------------------------------------------------------------
+Commit:  0e99024
+Tanggal: Selasa, 31 Maret 2026 pukul 13:23:07
+Relatif: 8 weeks ago
+Pesan:   feat: update seed data status and refactor app initialization for better structure
+------------------------------------------------------------
+Commit:  332f81e
+Tanggal: Minggu, 08 Maret 2026 pukul 14:12:26
+Relatif: 3 months ago
+Pesan:   feat: refactor controllers and services to use DTOs for validation and data handling
+------------------------------------------------------------
+Commit:  23caee8
+Tanggal: Sabtu, 07 Maret 2026 pukul 16:23:02
+Relatif: 3 months ago
+Pesan:   feat: integrate validation middleware for user registration and update validation schemas
+------------------------------------------------------------
+Commit:  28e9572
+Tanggal: Sabtu, 07 Maret 2026 pukul 13:44:41
+Relatif: 3 months ago
+Pesan:   chore: make a list to fix
+------------------------------------------------------------
+Commit:  5d2c852
+Tanggal: Sabtu, 07 Maret 2026 pukul 13:16:08
+Relatif: 3 months ago
+Pesan:   fix: update cookie sameSite attribute for improved security and consistency
+------------------------------------------------------------
+Commit:  47797c0
+Tanggal: Sabtu, 07 Maret 2026 pukul 11:25:56
+Relatif: 3 months ago
+Pesan:   feat: make openapi docs and enhance validation schemas with metadata and new structures
+------------------------------------------------------------
+Commit:  ace7739
+Tanggal: Sabtu, 07 Maret 2026 pukul 10:56:40
+Relatif: 3 months ago
+Pesan:   feat: add washing station services and order validation
+------------------------------------------------------------
+Commit:  05294e6
+Tanggal: Kamis, 08 Januari 2026 pukul 15:09:04
+Relatif: 5 months ago
+Pesan:   feat: enhance pickup order status update with transaction handling and improve response structure
+------------------------------------------------------------
+Commit:  70e49fc
+Tanggal: Rabu, 07 Januari 2026 pukul 18:59:29
+Relatif: 5 months ago
+Pesan:   feat(pickup-order): implement pickup order functionality with context resolution and driver job status management
+------------------------------------------------------------
+Commit:  3b45075
+Tanggal: Sabtu, 03 Januari 2026 pukul 16:33:54
+Relatif: 5 months ago
+Pesan:   feat(pickup-request): add pickup request functionality with address validation and outlet coverage check
+------------------------------------------------------------
+Commit:  f1cd813
+Tanggal: Sabtu, 03 Januari 2026 pukul 11:18:52
+Relatif: 5 months ago
+Pesan:   feat(schedule): implement worker shift validation and overlap detection
+------------------------------------------------------------
+Commit:  104de1d
+Tanggal: Rabu, 17 Desember 2025 pukul 18:52:55
+Relatif: 5 months ago
+Pesan:   feat: implement soft delete functionality across models and enhance user registration process with account created by admin (worker, driver)
+------------------------------------------------------------
+Commit:  44c2b68
+Tanggal: Rabu, 17 Desember 2025 pukul 08:41:12
+Relatif: 5 months ago
+Pesan:   feat: fetch outlet based on location and coverage
+------------------------------------------------------------
+Commit:  1782b07
+Tanggal: Selasa, 16 Desember 2025 pukul 16:27:44
+Relatif: 5 months ago
+Pesan:   feat: add address management functionality with CRUD operations and authorization middleware endpoint /api/address
+------------------------------------------------------------
+Commit:  1352d31
+Tanggal: Senin, 15 Desember 2025 pukul 15:47:26
+Relatif: 5 months ago
+Pesan:   feat: integrate better auth and manual jwt authentication
+------------------------------------------------------------
+Commit:  49e48c3
+Tanggal: Minggu, 14 Desember 2025 pukul 19:16:59
+Relatif: 5 months ago
+Pesan:   feat: reset password, fetch & updadte me, and change email endpoints
+------------------------------------------------------------
+Commit:  f404d35
+Tanggal: Minggu, 14 Desember 2025 pukul 14:33:12
+Relatif: 5 months ago
+Pesan:   feat: reset password
+------------------------------------------------------------
+Commit:  8680c54
+Tanggal: Sabtu, 13 Desember 2025 pukul 18:10:39
+Relatif: 5 months ago
+Pesan:   feat(api): add refresh token middleware for token validation and renewal
+------------------------------------------------------------
+Commit:  c99e084
+Tanggal: Kamis, 11 Desember 2025 pukul 17:15:26
+Relatif: 6 months ago
+Pesan:   feat: implement logout functionality and add rate limiting for registration endpoints
+------------------------------------------------------------
+Commit:  58738b4
+Tanggal: Kamis, 11 Desember 2025 pukul 12:12:11
+Relatif: 6 months ago
+Pesan:   chore: update nextjs version to fix reactshell exploit
+------------------------------------------------------------
+Commit:  a20ce4e
+Tanggal: Kamis, 11 Desember 2025 pukul 12:07:12
+Relatif: 6 months ago
+Pesan:   feat: complete registration flow and error handling when cookie token missing
+------------------------------------------------------------
+Commit:  f18a3a7
+Tanggal: Selasa, 09 Desember 2025 pukul 16:40:41
+Relatif: 6 months ago
+Pesan:   feat(middleware): add requireStep middleware for step validation and token verification
+------------------------------------------------------------
+Commit:  4c43be4
+Tanggal: Senin, 08 Desember 2025 pukul 19:45:39
+Relatif: 6 months ago
+Pesan:   feat: make an error handler middleware
+------------------------------------------------------------
+Commit:  ff14d45
+Tanggal: Senin, 08 Desember 2025 pukul 13:40:45
+Relatif: 6 months ago
+Pesan:   feat: make an endpoint /api/complete-register for completing registration process
+------------------------------------------------------------
+Commit:  0e33a2d
+Tanggal: Kamis, 04 Desember 2025 pukul 13:27:18
+Relatif: 6 months ago
+Pesan:   chore: setup built ts using tsup
+------------------------------------------------------------
+Commit:  a19937f
+Tanggal: Rabu, 03 Desember 2025 pukul 21:04:27
+Relatif: 6 months ago
+Pesan:   feat: make an endpoint /api/verify for verifying the user using token or magic link
+------------------------------------------------------------
+Commit:  0388ca3
+Tanggal: Senin, 01 Desember 2025 pukul 17:05:35
+Relatif: 6 months ago
+Pesan:   chore: change the token colomn into unique and use bcrypt instead of sha256
+------------------------------------------------------------
+Commit:  af84c54
+Tanggal: Senin, 01 Desember 2025 pukul 15:59:28
+Relatif: 6 months ago
+Pesan:   feat: make an endpoint /api/register and send email verification
+------------------------------------------------------------
+Commit:  21ad051
+Tanggal: Senin, 01 Desember 2025 pukul 12:44:20
+Relatif: 6 months ago
+Pesan:   feat: simple frontend social login
+------------------------------------------------------------
+Commit:  71a6b34
+Tanggal: Selasa, 25 November 2025 pukul 19:14:42
+Relatif: 6 months ago
+Pesan:   feat: implementing better-auth social login github in backend and delete unused table in prisma schema
+------------------------------------------------------------
+Commit:  ed998a9
+Tanggal: Selasa, 25 November 2025 pukul 19:13:21
+Relatif: 6 months ago
+Pesan:   feat: implemant social login github better-auth and deleted unused table and duplicate colomn in prisma schema
+------------------------------------------------------------
+Commit:  78cce42
+Tanggal: Jumat, 21 November 2025 pukul 21:53:47
+Relatif: 6 months ago
+Pesan:   feat: make the schema, and a little bit of documentation
+------------------------------------------------------------
+Commit:  b344eda
+Tanggal: Jumat, 21 November 2025 pukul 20:22:59
+Relatif: 6 months ago
+Pesan:   chore: make prisma.schema
+------------------------------------------------------------
+Commit:  d84bdb0
+Tanggal: Rabu, 19 November 2025 pukul 22:52:59
+Relatif: 6 months ago
+Pesan:   chore: intalled and configure prisma v7
+------------------------------------------------------------
+Commit:  aee0fdb
+Tanggal: Rabu, 19 November 2025 pukul 20:46:39
+Relatif: 6 months ago
+Pesan:   chore: small refactoring
+------------------------------------------------------------
+Commit:  a11a690
+Tanggal: Rabu, 19 November 2025 pukul 18:26:11
+Relatif: 6 months ago
+Pesan:   feat: full crud + OOP aplied
+------------------------------------------------------------
+Commit:  6586d45
+Tanggal: Rabu, 19 November 2025 pukul 13:04:39
+Relatif: 6 months ago
+Pesan:   feat: added express + prisma orm example and deleted unused docs
+------------------------------------------------------------
+Commit:  3d354bf
+Tanggal: Rabu, 19 November 2025 pukul 07:32:58
+Relatif: 6 months ago
+Pesan:   feat(create-turbo): install dependencies
+------------------------------------------------------------
+Commit:  ed94b28
+Tanggal: Rabu, 19 November 2025 pukul 07:31:52
+Relatif: 6 months ago
+Pesan:   feat(create-turbo): apply pnpm-eslint transform
+------------------------------------------------------------
+Commit:  203ae7e
+Tanggal: Rabu, 19 November 2025 pukul 07:31:52
+Relatif: 6 months ago
+Pesan:   feat(create-turbo): apply official-starter transform
+------------------------------------------------------------
+Commit:  31c7386
+Tanggal: Rabu, 19 November 2025 pukul 07:31:51
+Relatif: 6 months ago
+Pesan:   feat(create-turbo): create basic
+------------------------------------------------------------

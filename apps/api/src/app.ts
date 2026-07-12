@@ -15,11 +15,14 @@ import userRoutes from "@/routes/user.routes";
 import authUserRoutes from "@/routes/authUser.routes";
 import adminRoutes from "@/routes/admin.routes";
 import AddressRoute from "@/routes/address.routes";
-import OutletItemRoute from "@/routes/outletItem.routes";
 import workerShiftRoutes from "@/routes/workerShift.routes";
 import pickupRequestRoutes from "./routes/pickupRequest.routes";
 import pickupOrderRoutes from "./routes/pickupOrder.routes";
 import adminOrderRoutes from "./routes/adminOrder.routes";
+import cloudinaryRoutes from "./routes/cloudinary.routes";
+import OutletRoute from "./routes/outlet.routes";
+import ItemRoute from "./routes/item.routes";
+import sseRoutes from "./routes/sse.routes";
 
 export class App {
   public app: Application;
@@ -30,11 +33,16 @@ export class App {
     this.initializeCors();
     this.initializeBetterAuth();
     this.initializeMiddlewares();
+    this.initializeSSE();
     this.initializeAdminRoutes();
     this.initializeUserAndAuth();
     this.initializeAdminManageUserRoutes();
+    this.initializeOutletRoutes();
+    this.initializeItemRoutes();
     this.initializeAddressRoutes();
     this.initializePickupRoutes();
+    this.initializeOrderRoutes();
+    this.initializePreSignedURLRoutes();
     this.initializeRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
@@ -72,9 +80,13 @@ export class App {
     this.app.use("/api/auth", authRoutes);
   }
 
+  private initializeSSE() {
+    this.app.use("/api/sse", sseRoutes);
+  }
+
   private initializeUserAndAuth() {
     this.app.use("/api/users", userRoutes); //  deprecated and testing only
-    this.app.use("/api", authUserRoutes);
+    this.app.use("/api", authUserRoutes); // user for jwt
   }
 
   private initializeAdminManageUserRoutes() {
@@ -86,7 +98,7 @@ export class App {
   }
 
   private initializeAdminRoutes() {
-    this.app.use("/api/admin", workerShiftRoutes); // test
+    this.app.use("/api/admin/schedule", workerShiftRoutes); // on project
   }
 
   private initializePickupRoutes() {
@@ -95,12 +107,28 @@ export class App {
   }
 
   private initializeRoutes() {
-    this.app.use("/api", OutletItemRoute);
+    //this.app.use("/api", OutletItemRoute);
     this.app.use("/api", adminOrderRoutes);
+  }
+
+  private initializeOrderRoutes() {
+    this.app.use("/api/admin/orders", adminOrderRoutes);
+  }
+
+  private initializeOutletRoutes() {
+    this.app.use("/api/outlets", OutletRoute);
+  }
+
+  private initializeItemRoutes() {
+    this.app.use("/api/items", ItemRoute);
   }
 
   private initializeSwagger() {
     this.app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
+  }
+
+  private initializePreSignedURLRoutes() {
+    this.app.use("/api", cloudinaryRoutes);
   }
 
   private initializeErrorHandler() {

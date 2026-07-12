@@ -13,9 +13,9 @@ export class AddressRoute {
     this.controller = new AddressController(new AddressService());
     this.getAddress();
     this.createAddress();
+    this.setDefaultAddress();
     this.updateAddress();
     this.deleteAddress();
-    this.setDefaultAddress();
   }
 
   private getAddress() {
@@ -38,6 +38,13 @@ export class AddressRoute {
   }
 
   private updateAddress() {
+    //handle if the user input no address id
+    this.router.put(
+      "/addresses",
+      authenticationMiddleware,
+      this.controller.idNotFound,
+    );
+
     this.router.put(
       "/addresses/:id",
       authenticationMiddleware,
@@ -50,6 +57,13 @@ export class AddressRoute {
   }
 
   private deleteAddress() {
+    //handle if the user input no address id
+    this.router.delete(
+      "/addresses",
+      authenticationMiddleware,
+      this.controller.idNotFound,
+    );
+
     this.router.delete(
       "/addresses/:id",
       authenticationMiddleware,
@@ -61,6 +75,13 @@ export class AddressRoute {
   }
 
   private setDefaultAddress() {
+    //handle if the user input no address id
+    this.router.put(
+      "/addresses/set-default",
+      authenticationMiddleware,
+      this.controller.idNotFound,
+    );
+
     this.router.put(
       "/addresses/:id/set-default",
       authenticationMiddleware,
