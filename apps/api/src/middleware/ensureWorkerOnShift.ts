@@ -1,7 +1,7 @@
 import { prisma } from "@/config/prisma";
 import { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
-import { WorkerShiftDay } from "@/generated/prisma/enums";
+import { now, today } from "@/utils/today";
 
 export default async function ensureWorkerOnShift(
   req: Request,
@@ -31,19 +31,19 @@ export default async function ensureWorkerOnShift(
     if (!outlet_id) throw new HttpError(400, "Outlet not found");
 
     // check the current date/time
-    const now = new Date();
-    const today: WorkerShiftDay = [
-      WorkerShiftDay.sun,
-      WorkerShiftDay.mon,
-      WorkerShiftDay.tue,
-      WorkerShiftDay.wed,
-      WorkerShiftDay.thu,
-      WorkerShiftDay.fri,
-      WorkerShiftDay.sat,
-    ][now.getDay()]; // js index starts from sunday
+    // const now = new Date();
+    // const today: WorkerShiftDay = [
+    //   WorkerShiftDay.sun,
+    //   WorkerShiftDay.mon,
+    //   WorkerShiftDay.tue,
+    //   WorkerShiftDay.wed,
+    //   WorkerShiftDay.thu,
+    //   WorkerShiftDay.fri,
+    //   WorkerShiftDay.sat,
+    // ][now.getDay()]; // js index starts from sunday
     // make the time object to full js date
     const currentTime = new Date(
-      Date.UTC(1970, 0, 1, now.getHours(), now.getMinutes(), 0),
+      Date.UTC(1970, 0, 1, now().getHours(), now().getMinutes(), 0),
     ); // local time
 
     // fetch the result if valid it means on shift
@@ -51,7 +51,7 @@ export default async function ensureWorkerOnShift(
       where: {
         worker_id: userId,
         outlet_id,
-        day_of_week: today,
+        day_of_week: today(),
         start_time: {
           lte: currentTime,
         },

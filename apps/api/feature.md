@@ -110,8 +110,9 @@
 
 ## TODO
 
-- [] use filter to fetch the list of worker schedule by outlet admin(/api/admin/schedule?query=xxx)
-- [] also add the a little info as total worker, total driver, total schedule, and on duty today when fetching the list of worker schedule by outlet admin (/api/admin/schedule)
+- [x] also add the a little info as total worker, total driver, total schedule, and on duty today when fetching the list of worker schedule by outlet admin (outlet_id) (/api/admin/schedule)
+- [x] use filter to fetch the list of worker schedule by outlet admin(/api/admin/schedule?query=xxx)
+
 - [] add a support for pagination on endpoint (/api/admin/schedule)
 - [x] new endpoint to fetch the worker with no schedule and support filtering (debounce used on front end) by admin outlet. custom query to get all the worker with no schedule.
 
