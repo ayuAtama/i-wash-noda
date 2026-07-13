@@ -81,6 +81,9 @@ export class AdminOrderService {
             },
           ],
         },
+        orderBy: {
+          created_at: "desc",
+        },
       });
 
       if (customer.length === 0) {

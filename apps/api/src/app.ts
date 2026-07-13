@@ -18,9 +18,11 @@ import AddressRoute from "@/routes/address.routes";
 import workerShiftRoutes from "@/routes/workerShift.routes";
 import pickupRequestRoutes from "./routes/pickupRequest.routes";
 import pickupOrderRoutes from "./routes/pickupOrder.routes";
-import adminOrderRoutes from "./routes/adminOrder.routes";
+import adminOrderRoutes, {
+  adminWalkInOrderRoutes,
+} from "./routes/adminOrder.routes";
 import cloudinaryRoutes from "./routes/cloudinary.routes";
-import OutletRoute from "./routes/outlet.routes";
+import OutletRoute, { adminOutletRoutes } from "./routes/outlet.routes";
 import ItemRoute from "./routes/item.routes";
 
 export class App {
@@ -41,7 +43,7 @@ export class App {
     this.initializePickupRoutes();
     this.initializeOrderRoutes();
     this.initializePreSignedURLRoutes();
-    this.initializeRoutes();
+    //this.initializeRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
   }
@@ -75,20 +77,20 @@ export class App {
   }
 
   private initializeBetterAuth() {
-    this.app.use("/api/auth", authRoutes);
+    //this.app.use("/api/auth", authRoutes);
   }
 
   private initializeUserAndAuth() {
-    this.app.use("/api/users", userRoutes); //  deprecated and testing only
-    this.app.use("/api", authUserRoutes); // user for jwt
+    //this.app.use("/api/users", userRoutes); //  deprecated and testing only
+    this.app.use("/api/auth", authRoutes); // user for better auth
+    this.app.use("/api", authUserRoutes); // user for jwt (login/register/etc)
+  }
+  private initializeAddressRoutes() {
+    this.app.use("/api/addresses", AddressRoute); // customer address
   }
 
   private initializeAdminManageUserRoutes() {
-    this.app.use("/api/admin", adminRoutes);
-  }
-
-  private initializeAddressRoutes() {
-    this.app.use("/api", AddressRoute);
+    this.app.use("/api/admin", adminRoutes); // register worker & driver and etc
   }
 
   private initializeAdminRoutes() {
@@ -96,25 +98,27 @@ export class App {
   }
 
   private initializePickupRoutes() {
-    this.app.use("/api/", pickupRequestRoutes);
-    this.app.use("/api/", pickupOrderRoutes);
+    this.app.use("/api/pickup-requests", pickupRequestRoutes); // customer
+    this.app.use("/api/pickup-requests", pickupOrderRoutes); // driver
   }
 
-  private initializeRoutes() {
-    //this.app.use("/api", OutletItemRoute);
-    this.app.use("/api", adminOrderRoutes);
-  }
+  // private initializeRoutes() {
+  //   //this.app.use("/api", OutletItemRoute);
+  //   //this.app.use("/api", adminOrderRoutes);
+  // }
 
   private initializeOrderRoutes() {
     this.app.use("/api/admin/orders", adminOrderRoutes);
+    this.app.use("/api/admin/walk-in-customer", adminWalkInOrderRoutes);
   }
 
   private initializeOutletRoutes() {
     this.app.use("/api/outlets", OutletRoute);
+    this.app.use("/api/admin/outlets", adminOutletRoutes);
   }
 
   private initializeItemRoutes() {
-    this.app.use("/api/items", ItemRoute);
+    this.app.use("/api/admin/items", ItemRoute);
   }
 
   private initializeSwagger() {

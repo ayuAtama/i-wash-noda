@@ -29,5 +29,10 @@ declare module "express" {
       outlet_id: string;
       worker_station?: string;
     };
+    pagination?: {
+      page: number;
+      limit: number;
+      skip: number;
+    };
   }
 }

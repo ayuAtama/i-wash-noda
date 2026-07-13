@@ -110,19 +110,16 @@
 
 ## TODO
 
+- [] change the user id in the request body into params (/api/admin/walk-in-customer/orders/:id)
+- [] fetched data into descending order by date
+- [] add a support for pagination on endpoint (/api/admin/schedule)
+- [] Do all to endpoint that return data to be paginated
+- [] Add a support for filtering for certain endpoints
 - [x] also add the a little info as total worker, total driver, total schedule, and on duty today when fetching the list of worker schedule by outlet admin (outlet_id) (/api/admin/schedule)
 - [x] use filter to fetch the list of worker schedule by outlet admin(/api/admin/schedule?query=xxx)
-
-- [] add a support for pagination on endpoint (/api/admin/schedule)
 - [x] new endpoint to fetch the worker with no schedule and support filtering (debounce used on front end) by admin outlet. custom query to get all the worker with no schedule.
-
-- [v] Change the soft delete to permanently delete the shift because too much data and not really important
-- [ ] new endpoint to fetch all worker id with the same outlet id by outlet admin and sperate them by worker station and driver
-- [ ] new endpoint to fetch washing worker schedule or id by outlet admin (/api/admin/schedule/washing)
-- [ ] new endpoint to fetch ironing worker schedule or id by outlet admin (/api/admin/schedule/ironing)
-- [ ] new endpoint to fetch packing worker schedule or id by outlet admin (/api/admin/schedule/packing)
-- [ ] new endpoint to fetch driver schedule or id by outlet admin (/api/admin/schedule/driver)
-- [ ] rework the payload of worker schedule update endpoint (/api/admin/schedule/:id)
+- [x] Change the soft delete to permanently delete the shift because too much data and not really important
+- [x] rework the payload of worker schedule update endpoint (/api/admin/schedule/:id)
 - [x] Edit the schema so the schedule can also used for the driver not only to worker (by making worker station to optional)
 - [x] make a utility to change local time (hours) to full utc time format for saving to db (prisma)
 - [x] middleware to check if the worker and driver are on shift or not

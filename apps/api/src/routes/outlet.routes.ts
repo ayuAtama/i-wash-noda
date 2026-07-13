@@ -14,9 +14,6 @@ export class OutletRoute {
     this.controller = new OutletController(new OutletService());
     this.getCoveragedOutlet();
     this.getAllOutlets();
-    this.createOutlet();
-    this.updateOutlet();
-    this.deleteOutlet();
   }
 
   private getCoveragedOutlet() {
@@ -31,6 +28,18 @@ export class OutletRoute {
 
   private getAllOutlets() {
     this.router.get("/", this.controller.getAll);
+  }
+}
+
+export class AdminOutletRoute {
+  public router = Router();
+  private controller: OutletController;
+
+  constructor() {
+    this.controller = new OutletController(new OutletService());
+    this.createOutlet();
+    this.updateOutlet();
+    this.deleteOutlet();
   }
 
   private createOutlet() {
@@ -87,4 +96,5 @@ export class OutletRoute {
   }
 }
 
+export const adminOutletRoutes = new AdminOutletRoute().router;
 export default new OutletRoute().router;

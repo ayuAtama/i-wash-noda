@@ -21,11 +21,6 @@ export class AdminOrderRoute {
   constructor() {
     this.controller = new AdminOrderController(new AdminOrderService());
     //this.createOrder();
-    this.createWalkinCustomerOrder();
-    this.checkWalkinCustomer();
-    this.updateWalkinCustomer();
-    this.deleteWalkinCustomer();
-    this.manualCreateOrderWalkIn();
     this.getAllOrderOnTheOutlet();
     this.updateItemOfOrder();
   }
@@ -40,72 +35,6 @@ export class AdminOrderRoute {
   //     this.controller.createOrder,
   //   );
   // }
-
-  private createWalkinCustomerOrder() {
-    this.router.post(
-      "/walk-in-customer",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
-      Validator.validate({
-        body: WalkInCustomerValidation.CreateWalkInCustomerSchema,
-      }),
-      this.controller.createNewWalkinCustomer,
-    );
-  }
-
-  private checkWalkinCustomer() {
-    this.router.get(
-      "/walk-in-customer",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
-      Validator.validate({
-        query: WalkInCustomerValidation.keywordWalkInCustomerSchema,
-      }),
-      this.controller.checkWalkinCustomer,
-    );
-  }
-
-  private updateWalkinCustomer() {
-    this.router.patch(
-      "/walk-in-customer/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
-      Validator.validate({
-        params: UpdateWalkInCustomerValidation.IDParamSchema,
-        body: UpdateWalkInCustomerValidation.UpdateWalkInCustomerSchema,
-      }),
-      this.controller.updateWalkinCustomer,
-    );
-  }
-
-  private deleteWalkinCustomer() {
-    this.router.delete(
-      "/walk-in-customer/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
-      Validator.validate({
-        params: UpdateWalkInCustomerValidation.IDParamSchema,
-      }),
-      this.controller.deleteWalkinCustomer,
-    );
-  }
-
-  private manualCreateOrderWalkIn() {
-    this.router.post(
-      "/walk-in-customer/orders",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
-      Validator.validate({
-        body: ManualOrderValidation.CreateManualOrderSchema,
-      }),
-      this.controller.manualCreateOrderWalkIn,
-    );
-  }
 
   private getAllOrderOnTheOutlet() {
     this.router.get(
@@ -132,4 +61,85 @@ export class AdminOrderRoute {
   }
 }
 
+export class AdminWalkInOrderRoute {
+  public router = Router();
+  private controller: AdminOrderController;
+
+  constructor() {
+    this.controller = new AdminOrderController(new AdminOrderService());
+    this.createWalkinCustomerOrder();
+    this.checkWalkinCustomer();
+    this.updateWalkinCustomer();
+    this.deleteWalkinCustomer();
+    this.manualCreateOrderWalkIn();
+  }
+
+  private createWalkinCustomerOrder() {
+    this.router.post(
+      "/",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        body: WalkInCustomerValidation.CreateWalkInCustomerSchema,
+      }),
+      this.controller.createNewWalkinCustomer,
+    );
+  }
+
+  private checkWalkinCustomer() {
+    this.router.get(
+      "/",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        query: WalkInCustomerValidation.keywordWalkInCustomerSchema,
+      }),
+      this.controller.checkWalkinCustomer,
+    );
+  }
+
+  private updateWalkinCustomer() {
+    this.router.patch(
+      "/:id",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        params: UpdateWalkInCustomerValidation.IDParamSchema,
+        body: UpdateWalkInCustomerValidation.UpdateWalkInCustomerSchema,
+      }),
+      this.controller.updateWalkinCustomer,
+    );
+  }
+
+  private deleteWalkinCustomer() {
+    this.router.delete(
+      "/:id",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        params: UpdateWalkInCustomerValidation.IDParamSchema,
+      }),
+      this.controller.deleteWalkinCustomer,
+    );
+  }
+
+  private manualCreateOrderWalkIn() {
+    this.router.post(
+      "/orders",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        body: ManualOrderValidation.CreateManualOrderSchema,
+      }),
+      this.controller.manualCreateOrderWalkIn,
+    );
+  }
+}
+
+export const adminWalkInOrderRoutes = new AdminWalkInOrderRoute().router;
 export default new AdminOrderRoute().router;

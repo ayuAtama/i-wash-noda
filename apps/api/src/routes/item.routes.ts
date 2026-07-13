@@ -21,7 +21,12 @@ class ItemRoute {
   }
 
   private getAllItems() {
-    this.router.get("/", this.controller.getAllItems);
+    this.router.get(
+      "/",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      this.controller.getAllItems,
+    );
   }
 
   private searchItem() {
@@ -46,6 +51,8 @@ class ItemRoute {
     );
     this.router.get(
       "/:id",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin"),
       Validator.validate({
         params: ItemValidation.ParamsItemSchema,
       }),
