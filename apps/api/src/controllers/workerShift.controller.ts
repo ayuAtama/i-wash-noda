@@ -6,6 +6,7 @@ import {
   CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
   FetchUnScheduledWorkerDTO,
+  FilterQueryScheduleDTO,
   UnScheduleWorkerPayloadDTO,
   WorkerShiftIdParamsDTO,
 } from "@/validations/workerShift.validation";
@@ -19,32 +20,30 @@ export class WorkerShiftController {
 
   createSchedule = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // 1. validate request body
-      // const parsed = CreateWorkerShiftSchema.safeParse(req.body);
-      // if (!parsed.success) {
-      //   return res.status(400).json({
-      //     message: "Validation error",
-      //     errors: parsed.error.issues,
-      //   });
-      // }
-
       // get the outlet id
       if (!req.context) throw new HttpError(500, "This is an invalid user");
       const outletId = req.context.outlet_id;
 
-      // 2. call service after used middleware (DTO validation)
+      //  call service after used middleware (DTO validation)
       const body = req.validated!.body as CreateWorkerShiftInputDTO;
+
+      const params = req.validated!.params as WorkerShiftIdParamsDTO;
+
       const payload = {
+        ...params,
         ...body,
         outlet_id: outletId,
       } as CreateSchedulePayloadDTO;
-      const test = await this.workerShiftService.replaceWeeklySchedule(payload);
+
+      // 2. call service
+      const result =
+        await this.workerShiftService.replaceWeeklySchedule(payload);
 
       // 3. response
       return res.status(200).json({
         success: true,
         message: "Worker weekly schedule saved",
-        data: test,
+        data: result,
       });
     } catch (error) {
       next(error);
@@ -93,12 +92,51 @@ export class WorkerShiftController {
       } as UnScheduleWorkerPayloadDTO;
 
       // call the service
-      const workers = await this.workerShiftService.fetchUnScheduledWorker(payload);
+      const workers =
+        await this.workerShiftService.fetchUnScheduledWorker(payload);
 
       return res.status(200).json({
         success: true,
         message: "Unscheduled workers fetched successfully",
         data: workers,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  scheduleSummaryDashboard = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { outlet_id } = req.context!;
+      const result = await this.workerShiftService.scheduleSummaryDashboard({
+        outlet_id,
+      });
+      return res.status(200).json({
+        success: true,
+        message: "Dashboard fetched successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getSchedule = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { outlet_id } = req.context!;
+      const query = req.validated!.query as FilterQueryScheduleDTO;
+      const result = await this.workerShiftService.getSchedule({
+        ...query,
+        outlet_id,
+      });
+      return res.status(200).json({
+        success: true,
+        message: "Schedule fetched successfully",
+        data: result,
       });
     } catch (error) {
       next(error);

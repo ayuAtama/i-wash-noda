@@ -26,10 +26,6 @@ export const ScheduleItemSchema = z.object({
 
 export const CreateWorkerShiftSchema = z
   .object({
-    workerId: z.uuid().meta({
-      description: "Worker ID (UUID)",
-      example: "123e4567-e89b-12d3-a456-426614174001",
-    }),
     schedules: z
       .array(ScheduleItemSchema)
       .min(1, "You must provide schedule for at least one day")
@@ -45,7 +41,6 @@ export const CreateWorkerShiftSchema = z
     id: "CreateWorkerShift",
     description: "Payload for creating worker shift schedule",
     example: {
-      workerId: "123e4567-e89b-12d3-a456-426614174001",
       schedules: [
         { day: "mon", start: "08:00", end: "16:00" },
         { day: "tue", start: "08:00", end: "16:00" },
@@ -103,19 +98,52 @@ export const FetchUnScheduledWorkerSchema = z
     },
   });
 
+export const OrderEnum = z.enum(["asc", "desc"]);
+export const RoleEnum = z.enum(["driver", "worker"]);
+export const StationEnum = z.enum(StationName);
+export const FilterQueryScheduleSchema = z
+  .object({
+    role: RoleEnum.optional().meta({
+      description: "Role of the worker",
+      example: "driver",
+    }),
+    station: StationEnum.optional().meta({
+      description: "Station of the worker",
+      example: "Washing",
+    }),
+    name: OrderEnum.optional().meta({
+      description: "Name of the worker",
+      example: "asc",
+    }),
+  })
+  .meta({
+    id: "FilterQuerySchedule",
+    description: "Payload for fetching workers without schedules sift",
+    example: {
+      role: "driver",
+      station: "Washing",
+      name: "asc",
+    },
+  });
+
 export class WorkerShiftValidation {
   static CreateWorkerShiftSchema = CreateWorkerShiftSchema;
   static WorkerShiftIdParamsSchema = WorkerShiftIdParamsSechema;
   static OutletIDSchema = OutletIDSchema;
   static FetchUnScheduledWorkerSchema = FetchUnScheduledWorkerSchema;
+  static FilterQueryScheduleSchema = FilterQueryScheduleSchema;
 }
 
 export type CreateWorkerShiftInputDTO = z.infer<typeof CreateWorkerShiftSchema>;
 export type WorkerShiftIdParamsDTO = z.infer<typeof WorkerShiftIdParamsSechema>;
 export type OutletIDDTO = z.infer<typeof OutletIDSchema>;
-export type CreateSchedulePayloadDTO = CreateWorkerShiftInputDTO & OutletIDDTO;
+export type CreateSchedulePayloadDTO = CreateWorkerShiftInputDTO &
+  OutletIDDTO &
+  WorkerShiftIdParamsDTO;
 export type FetchUnScheduledWorkerDTO = z.infer<
   typeof FetchUnScheduledWorkerSchema
 >;
 export type UnScheduleWorkerPayloadDTO = FetchUnScheduledWorkerDTO &
   OutletIDDTO;
+export type FilterQueryScheduleDTO = z.infer<typeof FilterQueryScheduleSchema>;
+export type GetScheduleDTO = FilterQueryScheduleDTO & OutletIDDTO;

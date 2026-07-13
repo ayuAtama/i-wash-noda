@@ -6,9 +6,13 @@ import timeToUtcDate from "@/utils/timeToUTCDate";
 import {
   CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
+  FilterQueryScheduleDTO,
+  GetScheduleDTO,
+  OutletIDDTO,
   UnScheduleWorkerPayloadDTO,
 } from "@/validations/workerShift.validation";
 import { Prisma } from "@/generated/prisma/client";
+import { today } from "@/utils/today";
 
 export class WorkerShiftService {
   async getShiftsByWorkerId(workerId: string) {
@@ -34,7 +38,7 @@ export class WorkerShiftService {
 
   async replaceWeeklySchedule(data: CreateSchedulePayloadDTO) {
     try {
-      const { workerId, schedules, outlet_id: outletId } = data;
+      const { id: workerId, schedules, outlet_id: outletId } = data;
       // worker id from fetch in dasboard
       // outled id from req.contex
       // station?? fetch in service layer?
@@ -121,6 +125,113 @@ export class WorkerShiftService {
       }
 
       return workers;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  scheduleSummaryDashboard = async (data: OutletIDDTO) => {
+    try {
+      const { outlet_id } = data;
+
+      // fetch the data on transaction for the dashboard
+      const [totalWorker, totalDriver, totalOnDutyByWorker] =
+        await prisma.$transaction([
+          // fetch the total worker
+          prisma.user.count({
+            where: {
+              outlet_id,
+              role: "worker",
+            },
+          }),
+
+          // fetch the total driver
+          prisma.user.count({
+            where: {
+              outlet_id,
+              role: "driver",
+            },
+          }),
+
+          // onduty
+          prisma.workerShift.groupBy({
+            by: ["worker_id"],
+            where: {
+              outlet_id,
+              day_of_week: today(),
+            },
+            _count: {
+              id: true,
+            },
+          }),
+        ]);
+
+      return {
+        totalWorker,
+        totalDriver,
+        totalOnDuty: totalOnDutyByWorker.length,
+        today: today(),
+      };
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  async getSchedule(data: GetScheduleDTO) {
+    try {
+      const { role, station, name, outlet_id } = data;
+
+      // redifine the where
+      const where: Prisma.WorkerShiftWhereInput = {
+        outlet_id: outlet_id,
+      };
+
+      // role the filter
+      if (role === "driver") {
+        where.station = null;
+      } else if (role === "worker") {
+        where.station = { not: null };
+      }
+
+      // station filter
+      if (station) {
+        where.station = station;
+      }
+
+      // throw error if checking role === driver and station
+      if (role === "driver" && station) {
+        throw new HttpError(400, "Invalid request");
+      }
+
+      // get the data
+      const res = await prisma.workerShift.findMany({
+        where,
+        select: {
+          id: true,
+          worker_id: true,
+          day_of_week: true,
+          start_time: true,
+          end_time: true,
+          station: true,
+          worker: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: name ? { worker: { name: name } } : undefined,
+      });
+
+      // normalize
+      const normalized = res.map(({ worker, ...r }) => {
+        return {
+          ...r,
+          name: worker.name,
+          start_time: r.start_time.toISOString().slice(11, 16),
+          end_time: r.end_time.toISOString().slice(11, 16),
+        };
+      });
+      return normalized;
     } catch (error) {
       throw error;
     }
