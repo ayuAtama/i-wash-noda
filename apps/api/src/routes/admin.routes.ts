@@ -5,6 +5,7 @@ import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { AdminValidation } from "@/validations/admin.validation";
 import { AdminService } from "@/services/admin.services";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
 export class AdminRoute {
   public router = Router();
@@ -33,6 +34,7 @@ export class AdminRoute {
       "/users",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
+      Validator.validate({ query: PaginationSchema }),
       this.controller.getAllUser,
     );
 

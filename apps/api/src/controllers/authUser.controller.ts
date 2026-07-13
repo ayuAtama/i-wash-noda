@@ -112,13 +112,10 @@ export class AuthUserController {
 
   verify = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const payload =
-        (req.validated!.body as VerifyDtoBody) ??
-        (req.validated!.query as VerifyDtoParams);
-
-      // store the hashed token from query or the raw token from body
-      //const token = req.query.token || req.body.token;
-      const token = payload.token;
+      // get token from body (6-digit OTP) or query (hashed token for admin bypass)
+      const bodyToken = (req.validated!.body as VerifyDtoBody)?.token;
+      const queryToken = (req.validated!.query as VerifyDtoParams)?.token;
+      const token = bodyToken ?? queryToken;
 
       // bypass the cookies next_step and temp_jwt for account created by admin (worker & driver)
       const userId = (req.query.userId as string) ?? req.access_token?.sub;

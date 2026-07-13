@@ -329,7 +329,7 @@ export class UpdateOrderItemValidation {
       }),
     })
     .meta({
-      id: "OrderIdParams",
+      id: "AdminOrderIdParams",
       description: "Payload for verifying an outlet",
       example: {
         orderId: "123e4567-e89b-12d3-a456-426614174000",

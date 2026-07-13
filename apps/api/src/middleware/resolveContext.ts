@@ -23,7 +23,16 @@ export async function resolveContext(
       },
       select: { outlet_id: true, worker_station: true },
     });
-    if (!outlet_id) throw new HttpError(400, "Outlet not found");
+
+    // For super_admin without an assigned outlet, accept outlet_id from query or body
+    let resolvedOutletId = outlet_id;
+    if (!resolvedOutletId && role === "super_admin") {
+      resolvedOutletId =
+        (req.query.outlet_id as string) ??
+        (req.body?.outlet_id as string) ??
+        (req.context?.outlet_id as string);
+    }
+    if (!resolvedOutletId) throw new HttpError(400, "Outlet not found");
 
     // store the outlet id into req.context (express)
     // req.context = {
@@ -35,7 +44,7 @@ export async function resolveContext(
       outlet_id: string;
       worker_station?: WorkerStation;
     } = {
-      outlet_id: String(outlet_id), // assign outlet_id
+      outlet_id: String(resolvedOutletId), // assign outlet_id
     };
     // checek role if worker
     if (role === "worker") {

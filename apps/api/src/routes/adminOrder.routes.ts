@@ -13,6 +13,8 @@ import {
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { resolveContext } from "@/middleware/resolveContext";
+import { PaymentValidation } from "@/validations/payment.validation";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
 export class AdminOrderRoute {
   public router = Router();
@@ -28,6 +30,7 @@ export class AdminOrderRoute {
     this.manualCreateOrderWalkIn();
     this.getAllOrderOnTheOutlet();
     this.updateItemOfOrder();
+    this.markDelivered();
   }
 
   // private createOrder() {
@@ -107,12 +110,26 @@ export class AdminOrderRoute {
     );
   }
 
+  private markDelivered() {
+    this.router.patch(
+      "/orders/:orderId/deliver",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        params: UpdateOrderItemValidation.OrderIdParamsSchema,
+      }),
+      this.controller.markDelivered,
+    );
+  }
+
   private getAllOrderOnTheOutlet() {
     this.router.get(
       "/",
       authenticationMiddleware,
       authorizationMiddleware("outlet_admin"),
       resolveContext,
+      Validator.validate({ query: PaginationSchema }),
       this.controller.getAllOrderOnOutlet,
     );
   }

@@ -119,7 +119,7 @@ export class AuthUserRoute {
     this.router.post(
       "/me/avatar",
       authenticationMiddleware,
-      registerEndpointRateLimiter,
+      rateLimiter(10),
       cloudinaryUploadMiddleware("avatar", {
         type: "image",
         maxSize: 5,
@@ -131,7 +131,7 @@ export class AuthUserRoute {
     this.router.delete(
       "/me/avatar",
       authenticationMiddleware,
-      registerEndpointRateLimiter,
+      rateLimiter(10),
       this.controller.deleteAvatar,
     );
     this.router.post(

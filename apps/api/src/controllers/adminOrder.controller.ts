@@ -16,6 +16,7 @@ import {
   UpdatePayloadDTO,
   DeletePayloadDTO,
 } from "@/validations/adminOrder.validation";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class AdminOrderController {
   private adminOrderService: AdminOrderService;
@@ -35,7 +36,7 @@ export class AdminOrderController {
       const body = req.validated!.body as WalkInCustomerValidationDTO;
 
       // get the userid from (outlet_admin)
-      const userId = req.access_token!.sub;
+      const userId = req.access_token?.sub ?? req.user?.id;
       if (!userId) throw new HttpError(401, "Invalid user id");
 
       // get the outlet_id from the request(req.context)
@@ -74,8 +75,8 @@ export class AdminOrderController {
     next: NextFunction,
   ) => {
     try {
-      // fetch the user id and outlet id from the middlewere
-      const userId = req.access_token!.sub;
+      // fetch the user id and outlet id from the middleware
+      const userId = req.access_token?.sub ?? req.user?.id;
       const outletId = req.context!.outlet_id;
 
       if (!userId || !outletId)
@@ -230,11 +231,41 @@ export class AdminOrderController {
       }
       const outletId = req.context.outlet_id;
       if (!outletId) throw new HttpError(401, "Outlet id not found");
-      const orders = await this.adminOrderService.getAllOrderOnOutlet(outletId);
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.adminOrderService.getAllOrderOnOutlet(
+        outletId,
+        page,
+        limit,
+      );
       return res.status(200).json({
         success: true,
         message: "Orders fetched successfully",
-        data: orders,
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  markDelivered = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const outletId = req.context?.outlet_id;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
+
+      const { orderId } = req.validated!.params as { orderId: string };
+
+      const result = await this.adminOrderService.markDelivered(
+        orderId,
+        outletId,
+        userId,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Order marked as delivered successfully",
+        data: result,
       });
     } catch (error) {
       next(error);

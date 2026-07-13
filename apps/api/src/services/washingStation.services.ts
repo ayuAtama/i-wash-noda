@@ -43,7 +43,7 @@ export class WashingStationServices {
       if (accecptWashingJob.count === 0)
         throw new HttpError(
           409,
-          "This job already assigned to another worker or unavailable."
+          "This job already assigned to another worker or unavailable.",
         );
 
       // requery because the data won't be returned if use updateMany (only has count)
@@ -69,6 +69,8 @@ export class WashingStationServices {
         select: { id: true, total_kilo: true, items: true, created_at: true },
         orderBy: { created_at: "desc" },
       });
+
+      return activeJobs;
     } catch (error) {
       throw error;
     }
@@ -82,7 +84,7 @@ export class WashingStationServices {
     data: {
       items: { itemId: string; quantity: number }[];
       missMatch: boolean;
-    }
+    },
   ) {
     try {
       const { items, missMatch } = data;
@@ -106,7 +108,7 @@ export class WashingStationServices {
 
       // baseline item to compare to (admin input's id)
       const baselineItems = new Map(
-        order.items.map((item) => [item.item_id, item.quantity_initial])
+        order.items.map((item) => [item.item_id, item.quantity_initial]),
       );
 
       // process the inputted items in transactions
@@ -156,7 +158,7 @@ export class WashingStationServices {
           if (exists) {
             throw new HttpError(
               409,
-              "Reinput data already submitted for this item"
+              "Reinput data already submitted for this item",
             );
           }
 
@@ -230,7 +232,7 @@ export class WashingStationServices {
     orderId: string,
     workerId: string,
     outletId: string,
-    worker_station: string // enum req.contex
+    worker_station: string, // enum req.contex
   ) {
     try {
       // validate the workerstatus enum
@@ -250,7 +252,7 @@ export class WashingStationServices {
       if (!order) {
         throw new HttpError(
           403,
-          "You don't have access to this job or it is already completed"
+          "You don't have access to this job or it is already completed",
         );
       }
 
@@ -283,7 +285,7 @@ export class WashingStationServices {
         if (washingSummaryCount !== itemCount) {
           throw new HttpError(
             400,
-            `Not all items have been processed (${washingSummaryCount}/${itemCount})`
+            `Not all items have been processed (${washingSummaryCount}/${itemCount})`,
           );
         }
         throw new HttpError(400, "Some items are still pending or rejected.");
@@ -302,12 +304,12 @@ export class WashingStationServices {
       if (updateStatus.count === 0) {
         throw new HttpError(
           409,
-          "Job was already marked as done by another process"
+          "Job was already marked as done by another process",
         );
       }
 
       const result = {
-        succes: true,
+        success: true,
         message: "Job with id " + order.id + " was marked as done",
       };
 

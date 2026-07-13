@@ -6,6 +6,7 @@ import {
   PickupIdParamsDto,
   UpdateStatusDto,
 } from "@/validations/pickupOrder.validation";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class PickupOrderController {
   private pickupOrderService: PickupOrderService;
@@ -22,13 +23,17 @@ export class PickupOrderController {
   ) => {
     try {
       const outletId = req.context?.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
       if (!outletId) throw new HttpError(401, "Outlet id not found");
-      const pickupRequests =
-        await this.pickupOrderService.getAllPickupRequests(outletId);
+      const result = await this.pickupOrderService.getAllPickupRequests(
+        outletId,
+        page,
+        limit,
+      );
       res.status(200).json({
         success: true,
         message: "Pickup requests fetched successfully",
-        data: pickupRequests,
+        ...result,
       });
     } catch (error) {
       next(error);
@@ -75,18 +80,20 @@ export class PickupOrderController {
     try {
       const userId = req.access_token?.sub;
       const outletId = req.context?.outlet_id;
-      console.log(userId, outletId);
+      const { page, limit } = req.validated!.query as PaginationDTO;
       if (!outletId) throw new HttpError(401, "Outlet id not found");
       if (!userId) throw new HttpError(401, "User id not found");
 
       const result = await this.pickupOrderService.getAcceptedPickupRequests(
         userId,
         outletId,
+        page,
+        limit,
       );
       res.status(200).json({
         success: true,
         message: "Pickup requests fetched successfully",
-        data: result,
+        ...result,
       });
     } catch (error) {
       next(error);
@@ -129,18 +136,21 @@ export class PickupOrderController {
     try {
       const userId = req.access_token?.sub;
       const outletId = req.context?.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
       if (!outletId) throw new HttpError(401, "Outlet id not found");
       if (!userId) throw new HttpError(401, "User id not found");
 
       const result = await this.pickupOrderService.getAllAlreadyPickedUpJob(
         userId,
         outletId,
+        page,
+        limit,
       );
 
       res.status(200).json({
         success: true,
         message: "Pickup requests fetched successfully",
-        data: result,
+        ...result,
       });
     } catch (error) {
       next(error);

@@ -8,7 +8,11 @@ import {
   FetchUnScheduledWorkerDTO,
   UnScheduleWorkerPayloadDTO,
   WorkerShiftIdParamsDTO,
+  UpdateWorkerShiftInputDTO,
+  FetchWorkerScheduleDTO,
+  FetchWorkerSchedulePayloadDTO,
 } from "@/validations/workerShift.validation";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class WorkerShiftController {
   private workerShiftService: WorkerShiftService;
@@ -80,25 +84,192 @@ export class WorkerShiftController {
     next: NextFunction,
   ) => {
     try {
-      // get the outlet id from the outlet admin (req.context)
       const outletId = req.context!.outlet_id;
-
-      // destructure the query from req.validated
       const query = req.validated!.query as FetchUnScheduledWorkerDTO;
+      const { page, limit } = req.validated!.query as PaginationDTO;
 
-      // make the payload
       const payload = {
         ...query,
         outlet_id: outletId,
       } as UnScheduleWorkerPayloadDTO;
 
-      // call the service
-      const workers = await this.workerShiftService.fetchUnScheduledWorker(payload);
+      const result = await this.workerShiftService.fetchUnScheduledWorker(
+        payload,
+        page,
+        limit,
+      );
 
       return res.status(200).json({
         success: true,
         message: "Unscheduled workers fetched successfully",
-        data: workers,
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateSchedule = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const outletId = req.context!.outlet_id;
+      const { id } = req.validated!.params as WorkerShiftIdParamsDTO;
+      const body = req.validated!.body as UpdateWorkerShiftInputDTO;
+
+      const payload = {
+        workerId: id,
+        schedules: body.schedules,
+        outlet_id: outletId,
+      } as CreateSchedulePayloadDTO;
+
+      const updated =
+        await this.workerShiftService.replaceWeeklySchedule(payload);
+
+      return res.status(200).json({
+        success: true,
+        message: "Worker schedule updated successfully",
+        data: updated,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchAllSchedules = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const outletId = req.context!.outlet_id;
+      const query = req.validated!.query as FetchWorkerScheduleDTO;
+      const payload: FetchWorkerSchedulePayloadDTO = {
+        ...query,
+        outlet_id: outletId,
+      };
+
+      const result = await this.workerShiftService.fetchAllSchedules(payload);
+
+      return res.status(200).json({
+        success: true,
+        message: "Worker schedules fetched successfully",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchWorkers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const outletId = req.context!.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.workerShiftService.fetchWorkersByOutlet(
+        outletId,
+        undefined,
+        undefined,
+        page,
+        limit,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Workers fetched successfully",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchWashingWorkers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const outletId = req.context!.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.workerShiftService.fetchWorkersByOutlet(
+        outletId,
+        "worker",
+        "washing",
+        page,
+        limit,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Washing workers fetched successfully",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchIroningWorkers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const outletId = req.context!.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.workerShiftService.fetchWorkersByOutlet(
+        outletId,
+        "worker",
+        "ironing",
+        page,
+        limit,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Ironing workers fetched successfully",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchPackingWorkers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const outletId = req.context!.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.workerShiftService.fetchWorkersByOutlet(
+        outletId,
+        "worker",
+        "packing",
+        page,
+        limit,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Packing workers fetched successfully",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  fetchDrivers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const outletId = req.context!.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.workerShiftService.fetchWorkersByOutlet(
+        outletId,
+        "driver",
+        undefined,
+        page,
+        limit,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Drivers fetched successfully",
+        ...result,
       });
     } catch (error) {
       next(error);

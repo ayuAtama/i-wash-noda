@@ -7,6 +7,7 @@ import { resolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { PickupOrderValidation } from "@/validations/pickupOrder.validation";
 import { PickupOrderService } from "@/services/pickupOrder.services";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
 export class PickupOrderRoute {
   public router = Router();
@@ -27,6 +28,7 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
+      Validator.validate({ query: PaginationSchema }),
       this.controller.getAllPickupRequests,
     );
   }
@@ -50,6 +52,7 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
+      Validator.validate({ query: PaginationSchema }),
       this.controller.getAcceptedPickupRequests,
     );
   }
@@ -74,6 +77,7 @@ export class PickupOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
+      Validator.validate({ query: PaginationSchema }),
       this.controller.getAllAlreadyPickedUpJob,
     );
   }

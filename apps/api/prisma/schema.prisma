@@ -298,6 +298,7 @@ model Order {
   total_amount         Int
   total_kilo           Decimal     @db.Decimal(5, 2)
   confirmed_at         DateTime?
+  delivered_at         DateTime?
   status               OrderStatus
   paid                 Boolean     @default(false)
   created_at           DateTime    @default(now())

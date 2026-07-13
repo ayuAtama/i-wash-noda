@@ -40,15 +40,22 @@ export class OutletItemService {
     }
   }
 
-  async getAll() {
-    return prisma.outlet.findMany({
-      where: {
-        is_deleted: false,
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-    });
+  async getAll(page: number = 1, limit: number = 10) {
+    const { skip, take } = { skip: (page - 1) * limit, take: limit };
+    const where = { is_deleted: false };
+    const [outlets, total] = await Promise.all([
+      prisma.outlet.findMany({
+        where,
+        orderBy: { created_at: "desc" },
+        skip,
+        take,
+      }),
+      prisma.outlet.count({ where }),
+    ]);
+    return {
+      data: outlets,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async createOutlet(userId: string, data: Prisma.OutletCreateInput) {
@@ -91,9 +98,18 @@ export class OutletItemService {
     });
   }
 
-  async getAllItems() {
+  async getAllItems(page: number = 1, limit: number = 10) {
     try {
-      return await prisma.item.findMany();
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {};
+      const [items, total] = await Promise.all([
+        prisma.item.findMany({ skip, take }),
+        prisma.item.count({ where }),
+      ]);
+      return {
+        data: items,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }

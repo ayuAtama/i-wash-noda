@@ -46,7 +46,7 @@ export async function sendMail({
 export async function sendVerificationEmail(
   email: string,
   code: string,
-  hashedToken: string
+  hashedToken: string,
 ) {
   return sendMail({
     to: email,
@@ -101,7 +101,7 @@ export async function sendVerifyEmailbyAdmin(
   email: string,
   userId: string,
   hashedToken: string,
-  role: string
+  role: string,
 ) {
   return sendMail({
     to: email,
@@ -113,6 +113,24 @@ export async function sendVerifyEmailbyAdmin(
       <br/>
       <a href="${baseUrl}/verify?token=${hashedToken}?userId=${userId}">Verify here!</a>
       <p>This code expires in 1 hour.</p>
+    `,
+  });
+}
+
+// 7. Order completion notification
+export async function sendOrderCompletionEmail(
+  email: string,
+  orderId: string,
+  outletName: string,
+) {
+  return sendMail({
+    to: email,
+    subject: "Your Laundry Order is Ready!",
+    html: `
+      <h2>Your Order is Complete</h2>
+      <p>Your laundry order <strong>#${orderId.slice(0, 8)}</strong> at <strong>${outletName}</strong> has been completed and is ready for pickup.</p>
+      <p>Please collect your order within 24 hours.</p>
+      <p>Thank you for choosing I Wash Noda!</p>
     `,
   });
 }

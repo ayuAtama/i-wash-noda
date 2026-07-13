@@ -4,6 +4,7 @@ import { authenticationMiddleware } from "@/middleware/authentication";
 import { Validator } from "@/middleware/validate";
 import { AddressValidation } from "@/validations/address.validation";
 import { AddressService } from "@/services/addresses.services";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
 export class AddressRoute {
   public router = Router();
@@ -22,6 +23,7 @@ export class AddressRoute {
     this.router.get(
       "/addresses",
       authenticationMiddleware,
+      Validator.validate({ query: PaginationSchema }),
       this.controller.getAll,
     );
   }

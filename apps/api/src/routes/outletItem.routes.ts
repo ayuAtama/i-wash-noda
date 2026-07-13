@@ -5,6 +5,7 @@ import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { OutletValidation } from "@/validations/outlet.validation";
 import { OutletItemService } from "@/services/outletItem.services";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
 export class OutletItemRoute {
   public router = Router();
@@ -26,7 +27,11 @@ export class OutletItemRoute {
   }
 
   private getAllOutlets() {
-    this.router.get("/outlets", this.controller.getAll);
+    this.router.get(
+      "/outlets",
+      Validator.validate({ query: PaginationSchema }),
+      this.controller.getAll,
+    );
   }
 
   private createOutlet() {
@@ -83,7 +88,11 @@ export class OutletItemRoute {
   }
 
   private getAllItems() {
-    this.router.get("/items", this.controller.getAllItems);
+    this.router.get(
+      "/items",
+      Validator.validate({ query: PaginationSchema }),
+      this.controller.getAllItems,
+    );
   }
 
   private createItem() {

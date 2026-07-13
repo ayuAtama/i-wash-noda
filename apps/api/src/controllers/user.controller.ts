@@ -1,6 +1,7 @@
 // /src/controllers/user.controller.ts
 import type { Request, Response, NextFunction } from "express";
 import { UserService } from "../services/user.service";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class UserController {
   // constructor(private userService: UserService) {}
@@ -19,11 +20,12 @@ export class UserController {
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const users = await this.userService.getAll();
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.userService.getAll(page, limit);
       res.json({
         success: true,
         message: "Users fetched successfully",
-        data: users,
+        ...result,
       });
     } catch (err) {
       next(err);

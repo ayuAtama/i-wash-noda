@@ -53,11 +53,22 @@ export class OutletService {
       throw error;
     }
   }
-  public async getAll() {
-    return this.prisma.outlet.findMany({
-      where: { is_deleted: false },
-      orderBy: { created_at: "desc" },
-    });
+  public async getAll(page: number = 1, limit: number = 10) {
+    const { skip, take } = { skip: (page - 1) * limit, take: limit };
+    const where = { is_deleted: false };
+    const [outlets, total] = await Promise.all([
+      this.prisma.outlet.findMany({
+        where,
+        orderBy: { created_at: "desc" },
+        skip,
+        take,
+      }),
+      this.prisma.outlet.count({ where }),
+    ]);
+    return {
+      data: outlets,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   public async createOutlet(userId: string, data: CreateOutletDto) {

@@ -10,13 +10,22 @@ import { HttpError } from "../utils/httpError";
 import { Prisma } from "@/generated/prisma/client";
 
 export default class ItemService {
-  async getAllItems() {
+  async getAllItems(page: number = 1, limit: number = 10) {
     try {
-      return await prisma.item.findMany({
-        orderBy: {
-          created_at: "desc",
-        },
-      });
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {};
+      const [items, total] = await Promise.all([
+        prisma.item.findMany({
+          orderBy: { created_at: "desc" },
+          skip,
+          take,
+        }),
+        prisma.item.count({ where }),
+      ]);
+      return {
+        data: items,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }
@@ -61,16 +70,27 @@ export default class ItemService {
     }
   };
 
-  searchItem = async (searchItem: QueryItemDto["name"]) => {
+  searchItem = async (
+    searchItem: QueryItemDto["name"],
+    page: number = 1,
+    limit: number = 10,
+  ) => {
     try {
-      return await prisma.item.findMany({
-        where: {
-          name: {
-            contains: searchItem,
-            mode: "insensitive", // case insensitive
-          },
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {
+        name: {
+          contains: searchItem,
+          mode: "insensitive" as const,
         },
-      });
+      };
+      const [items, total] = await Promise.all([
+        prisma.item.findMany({ where, skip, take }),
+        prisma.item.count({ where }),
+      ]);
+      return {
+        data: items,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }

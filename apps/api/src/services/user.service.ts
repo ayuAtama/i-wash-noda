@@ -7,8 +7,17 @@ import type {
 } from "../validations/user.validation";
 
 export class UserService {
-  async getAll() {
-    return prisma.user.findMany();
+  async getAll(page: number = 1, limit: number = 10) {
+    const { skip, take } = { skip: (page - 1) * limit, take: limit };
+    const where = {};
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({ skip, take }),
+      prisma.user.count({ where }),
+    ]);
+    return {
+      data: users,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async getById(id: string) {

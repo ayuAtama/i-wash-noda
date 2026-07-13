@@ -371,46 +371,98 @@ export class AdminOrderService {
     }
   }
 
-  async getAllOrderOnOutlet(outlet_id: OutletIdParamsSchemaDTO["outlet_id"]) {
+  async getAllOrderOnOutlet(
+    outlet_id: OutletIdParamsSchemaDTO["outlet_id"],
+    page: number = 1,
+    limit: number = 10,
+  ) {
     try {
-      const orders = await prisma.order.findMany({
-        where: {
-          outlet_id: outlet_id,
-          status: "arrived_at_outlet",
-        },
-        select: {
-          id: true,
-          customer_id: true,
-          walkin_customer_id: true,
-          pickupAddress: {
-            select: {
-              address: true,
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {
+        outlet_id: outlet_id,
+        status: "arrived_at_outlet" as const,
+      };
+
+      const [orders, total] = await Promise.all([
+        prisma.order.findMany({
+          where,
+          select: {
+            id: true,
+            customer_id: true,
+            walkin_customer_id: true,
+            pickupAddress: {
+              select: {
+                address: true,
+              },
             },
-          },
-          pickupDriver: {
-            select: {
-              name: true,
+            pickupDriver: {
+              select: {
+                name: true,
+              },
             },
-          },
-          deliveryDriver: {
-            select: {
-              name: true,
+            deliveryDriver: {
+              select: {
+                name: true,
+              },
             },
+            pickup_fee: true,
+            delivery_fee: true,
+            total_kilo: true,
+            laundry_price: true,
+            total_amount: true,
+            paid: true,
+            created_at: true,
           },
-          pickup_fee: true,
-          delivery_fee: true,
-          total_kilo: true,
-          laundry_price: true,
-          total_amount: true,
-          paid: true,
-          created_at: true,
-        },
-        orderBy: { created_at: "desc" },
+          orderBy: { created_at: "desc" },
+          skip,
+          take,
+        }),
+        prisma.order.count({ where }),
+      ]);
+
+      return {
+        data: orders,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async markDelivered(orderId: string, outletId: string, adminId: string) {
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId, outlet_id: outletId },
+        select: { id: true, status: true, source: true, paid: true },
       });
-      if (orders.length === 0 || !orders) {
-        throw new HttpError(404, "There is no order from this outlet yet");
+
+      if (!order) throw new HttpError(404, "Order not found in this outlet");
+      if (order.source !== "walk_in") {
+        throw new HttpError(
+          400,
+          "Only walk-in orders can be marked as delivered by admin",
+        );
       }
-      return orders;
+      if (!order.paid) {
+        throw new HttpError(
+          400,
+          "Order must be paid before marking as delivered",
+        );
+      }
+      if (order.status === "delivered" || order.status === "finished") {
+        throw new HttpError(400, "Order is already delivered or finished");
+      }
+
+      const updated = await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: "delivered",
+          delivered_at: new Date(),
+        },
+        select: { id: true, status: true, delivered_at: true },
+      });
+
+      return updated;
     } catch (error) {
       throw error;
     }

@@ -1,16 +1,16 @@
-// src/services/washingStation.services.ts
+// src/services/ironingStation.services.ts
 import { prisma } from "@/config/prisma";
+import { StationName } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
 
-export class WashingStationServices {
-  async getAllWashingOrders(outletId: string) {
+export class IroningStationServices {
+  async getAllIroningOrders(outletId: string) {
     try {
-      // fetch all the orders
       const availableJobs = await prisma.order.findMany({
         where: {
           outlet_id: outletId,
-          status: "arrived_at_outlet",
-          washing_worker_id: null,
+          washing_completed_at: { not: null },
+          ironing_worker_id: null,
         },
         select: { id: true, total_kilo: true, items: true, created_at: true },
         orderBy: { created_at: "asc" },
@@ -22,30 +22,27 @@ export class WashingStationServices {
     }
   }
 
-  async acceptWashingJob(orderId: string, workerId: string, outletId: string) {
+  async acceptIroningJob(orderId: string, workerId: string, outletId: string) {
     try {
-      // accept the job
-      const accecptWashingJob = await prisma.order.updateMany({
+      const acceptIroningJob = await prisma.order.updateMany({
         where: {
           id: orderId,
           outlet_id: outletId,
-          status: "arrived_at_outlet",
-          washing_worker_id: null, // important prevent race condition and use updateMany instead of update
+          washing_completed_at: { not: null },
+          ironing_worker_id: null,
         },
         data: {
-          status: "washing_in_progress",
-          washing_worker_id: workerId,
+          status: "ironing_in_progress",
+          ironing_worker_id: workerId,
         },
       });
 
-      // condition if the job is already assigned
-      if (accecptWashingJob.count === 0)
+      if (acceptIroningJob.count === 0)
         throw new HttpError(
           409,
-          "This job already assigned to another worker or unavailable."
+          "This job already assigned to another worker or unavailable.",
         );
 
-      // requery because the data won't be returned if use updateMany (only has count)
       const result = await prisma.order.findUnique({
         where: { id: orderId },
         select: { id: true, total_kilo: true, items: true },
@@ -61,167 +58,40 @@ export class WashingStationServices {
     try {
       const activeJobs = await prisma.order.findMany({
         where: {
-          washing_worker_id: workerId,
-          status: "washing_in_progress",
+          ironing_worker_id: workerId,
+          status: "ironing_in_progress",
           outlet_id: outletId,
         },
         select: { id: true, total_kilo: true, items: true, created_at: true },
         orderBy: { created_at: "desc" },
       });
+
+      return activeJobs;
     } catch (error) {
       throw error;
     }
   }
 
-  // async reInputItem(
-  //   orderId: string,
-  //   workerId: string,
-  //   outletId: string,
-  //   missMatch: boolean,
-  //   data: { itemId: string; quantity: number }[]
-  // ) {
-  //   try {
-  //     // validate the job ownerships
-  //     const order = await prisma.order.findFirst({
-  //       where: {
-  //         id: orderId,
-  //         outlet_id: outletId,
-  //         washing_worker_id: workerId,
-  //         status: "washing_in_progress",
-  //       },
-  //       include: { items: true },
-  //     });
-
-  //     if (!order) {
-  //       throw new HttpError(403, "You don't have access to this job");
-  //     }
-
-  //     // baseline item to compare to (admin input's id)
-  //     const baselineItems = new Map(
-  //       order.items.map((item) => [item.item_id, item.quantity_initial])
-  //     );
-
-  //     // process the inputted items in transactions
-  //     const result = await prisma.$transaction(async (tx) => {
-  //       // check if the item length sama
-  //       if (data.length !== baselineItems.size) {
-  //         throw new HttpError(400, "Invalid item inputted for this order");
-  //       }
-
-  //       // check duplicate guard before the loop
-  //       const duplicate = new Set<string>();
-  //       for (const input of data) {
-  //         if (duplicate.has(input.itemId)) {
-  //           throw new HttpError(400, "Duplicate item inputted for this order");
-  //         }
-  //         duplicate.add(input.itemId);
-  //       }
-
-  //       // loop through the inputted items
-  //       for (const input of data) {
-  //         // get the item id
-  //         const expected = baselineItems.get(input.itemId);
-
-  //         // check the item id
-  //         if (expected === undefined) {
-  //           throw new HttpError(400, "Invalid item inputted for this order");
-  //         }
-
-  //         // check the quantity input into the expected (from map)
-  //         // return invalid if not match and throw (checklis not checked)
-  //         const isMatch = input.quantity === expected;
-  //         if (!isMatch && !missMatch) {
-  //           throw new HttpError(400, "Invalid quantity for this item");
-  //         }
-
-  //         // prevent the double input for washing
-  //         const exists = await tx.stationSummary.findUnique({
-  //           where: {
-  //             order_id_item_id_station: {
-  //               order_id: orderId,
-  //               item_id: input.itemId,
-  //               station: "washing",
-  //             },
-  //           },
-  //         });
-
-  //         if (exists) {
-  //           throw new HttpError(
-  //             409,
-  //             "Washing data already submitted for this item"
-  //           );
-  //         }
-
-  //         // create the log first
-  //         await tx.orderStationLog.create({
-  //           data: {
-  //             order_id: orderId,
-  //             item_id: input.itemId,
-  //             station: "washing",
-  //             worker_id: workerId,
-  //             quantity_input: input.quantity,
-  //             status: isMatch ? "approved" : "pending",
-  //             ...(isMatch && {
-  //               approved_by: workerId,
-  //               approved_at: new Date(),
-  //             }),
-  //           },
-  //         });
-
-  //         // create the summary if MATCH
-  //         if (isMatch) {
-  //           await tx.stationSummary.create({
-  //             data: {
-  //               order_id: orderId,
-  //               item_id: input.itemId,
-  //               station: "washing",
-  //               latest_quantity: input.quantity,
-  //               updated_at: new Date(),
-  //             },
-  //           });
-  //         }
-  //       }
-
-  //       //requery the result for station log and summary if match
-  //       const stationLog = await tx.orderStationLog.findMany({
-  //         where: { order_id: orderId, station: "washing", worker_id: workerId },
-  //       });
-  //       const stationSummary = await tx.stationSummary.findMany({
-  //         where: { order_id: orderId, station: "washing" },
-  //       });
-
-  //       // if failed to requery
-  //       if (stationLog.length === 0) {
-  //         throw new HttpError(500, "Failed to requery");
-  //       }
-
-  //       return { stationLog, stationSummary };
-  //     });
-
-  //     return result;
-  //   } catch (error) {
-  //     throw error;
-  //   }
-  // }
-
   async reInputItems(
-    orderId: string, // params
-    workerId: string, // jwt
-    outletId: string, // req.contex
+    orderId: string,
+    workerId: string,
+    outletId: string,
+    worker_station: string,
     data: {
       items: { itemId: string; quantity: number }[];
       missMatch: boolean;
-    }
+    },
   ) {
     try {
       const { items, missMatch } = data;
-      // validate the job ownerships
+      const workerStatus = worker_station as StationName;
+
       const order = await prisma.order.findFirst({
         where: {
           id: orderId,
           outlet_id: outletId,
-          washing_worker_id: workerId,
-          status: "washing_in_progress",
+          ironing_worker_id: workerId,
+          status: "ironing_in_progress",
         },
         include: { items: true },
       });
@@ -230,19 +100,15 @@ export class WashingStationServices {
         throw new HttpError(403, "You don't have access to this job");
       }
 
-      // baseline item to compare to (admin input's id)
       const baselineItems = new Map(
-        order.items.map((item) => [item.item_id, item.quantity_initial])
+        order.items.map((item) => [item.item_id, item.quantity_initial]),
       );
 
-      // process the inputted items in transactions
       const result = await prisma.$transaction(async (tx) => {
-        // check if the item length sama
         if (items.length !== baselineItems.size) {
           throw new HttpError(400, "Invalid item inputted for this order");
         }
 
-        // check duplicate guard before the loop
         const duplicate = new Set<string>();
         for (const input of items) {
           if (duplicate.has(input.itemId)) {
@@ -251,30 +117,24 @@ export class WashingStationServices {
           duplicate.add(input.itemId);
         }
 
-        // loop through the inputted items
         for (const input of items) {
-          // get the item id
           const expected = baselineItems.get(input.itemId);
 
-          // check the item id
           if (expected === undefined) {
             throw new HttpError(400, "Invalid item inputted for this order");
           }
 
-          // check the quantity input into the expected (from map)
-          // return invalid if not match and throw (checklis not checked)
           const isMatch = input.quantity === expected;
           if (!isMatch && !missMatch) {
             throw new HttpError(400, "Invalid quantity for this item");
           }
 
-          // prevent the double input for reinput
           const exists = await tx.stationSummary.findUnique({
             where: {
               order_id_item_id_station: {
                 order_id: orderId,
                 item_id: input.itemId,
-                station: "washing",
+                station: workerStatus,
               },
             },
           });
@@ -282,16 +142,15 @@ export class WashingStationServices {
           if (exists) {
             throw new HttpError(
               409,
-              "Reinput data already submitted for this item"
+              "Reinput data already submitted for this item",
             );
           }
 
-          // create the log first
           await tx.orderStationLog.create({
             data: {
               order_id: orderId,
               item_id: input.itemId,
-              station: "washing",
+              station: workerStatus,
               worker_id: workerId,
               quantity_input: input.quantity,
               status: isMatch ? "approved" : "pending",
@@ -302,13 +161,12 @@ export class WashingStationServices {
             },
           });
 
-          // create the summary if MATCH
           if (isMatch) {
             await tx.stationSummary.create({
               data: {
                 order_id: orderId,
                 item_id: input.itemId,
-                station: "washing",
+                station: workerStatus,
                 latest_quantity: input.quantity,
                 updated_at: new Date(),
               },
@@ -316,16 +174,18 @@ export class WashingStationServices {
           }
         }
 
-        // requery the result for station log and summary if match
         const stationLog = await tx.orderStationLog.findMany({
-          where: { order_id: orderId, station: "washing", worker_id: workerId },
+          where: {
+            order_id: orderId,
+            station: workerStatus,
+            worker_id: workerId,
+          },
         });
 
         const stationSummary = await tx.stationSummary.findMany({
-          where: { order_id: orderId, station: "washing" },
+          where: { order_id: orderId, station: workerStatus },
         });
 
-        // if falled to requery
         if (!missMatch) {
           if (
             stationLog.length !== items.length ||
@@ -348,16 +208,22 @@ export class WashingStationServices {
     }
   }
 
-  async markJobAsDone(orderId: string, workerId: string, outletId: string) {
+  async markJobAsDone(
+    orderId: string,
+    workerId: string,
+    outletId: string,
+    worker_station: string,
+  ) {
     try {
-      // validate the job ownerships
+      const workerStatus = worker_station as StationName;
+
       const order = await prisma.order.findFirst({
         where: {
           id: orderId,
           outlet_id: outletId,
-          washing_worker_id: workerId,
-          status: "washing_in_progress",
-          washing_completed_at: null,
+          ironing_worker_id: workerId,
+          status: "ironing_in_progress",
+          ironing_completed_at: null,
         },
         select: { id: true },
       });
@@ -365,64 +231,60 @@ export class WashingStationServices {
       if (!order) {
         throw new HttpError(
           403,
-          "You don't have access to this job or it is already completed"
+          "You don't have access to this job or it is already completed",
         );
       }
 
-      // independent checks in parallel (Faster) || position matters array destructuring
-      const [itemCount, washingSummaryCount, blockingLogs] = await Promise.all([
+      const [itemCount, ironingSummaryCount, blockingLogs] = await Promise.all([
         prisma.orderItem.count({
           where: { order_id: order.id },
         }),
         prisma.stationSummary.count({
           where: {
             order_id: order.id,
-            station: "washing",
+            station: workerStatus,
           },
         }),
         prisma.orderStationLog.count({
           where: {
             order_id: order.id,
-            station: "washing",
+            station: workerStatus,
             status: { in: ["pending", "rejected"] },
           },
         }),
       ]);
 
-      // check if all items are approved
-      const washingDone =
-        washingSummaryCount === itemCount && blockingLogs === 0;
+      const ironingDone =
+        ironingSummaryCount === itemCount && blockingLogs === 0;
 
-      if (!washingDone) {
-        // Be specific about why it failed for better debugging
-        if (washingSummaryCount !== itemCount) {
+      if (!ironingDone) {
+        if (ironingSummaryCount !== itemCount) {
           throw new HttpError(
             400,
-            `Not all items have been processed (${washingSummaryCount}/${itemCount})`
+            `Not all items have been processed (${ironingSummaryCount}/${itemCount})`,
           );
         }
         throw new HttpError(400, "Some items are still pending or rejected.");
       }
 
-      // mark the order as done so can pass to another station
       const updateStatus = await prisma.order.updateMany({
         where: {
           id: order.id,
-          washing_worker_id: workerId,
-          washing_completed_at: null, // race condition check
+          ironing_worker_id: workerId,
+          ironing_completed_at: null,
         },
-        data: { washing_completed_at: new Date() },
+        data: { ironing_completed_at: new Date() },
       });
 
       if (updateStatus.count === 0) {
         throw new HttpError(
           409,
-          "Job was already marked as done by another process"
+          "Job was already marked as done by another process",
         );
       }
 
       const result = {
-        succes: true,
+        success: true,
         message: "Job with id " + order.id + " was marked as done",
       };
 
@@ -436,9 +298,9 @@ export class WashingStationServices {
     try {
       const completedJobs = await prisma.order.findMany({
         where: {
-          washing_worker_id: workerId,
+          ironing_worker_id: workerId,
           outlet_id: outletId,
-          status: { not: "washing_in_progress" },
+          status: { not: "ironing_in_progress" },
         },
         select: {
           id: true,

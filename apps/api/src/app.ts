@@ -23,6 +23,11 @@ import cloudinaryRoutes from "./routes/cloudinary.routes";
 import OutletRoute from "./routes/outlet.routes";
 import ItemRoute from "./routes/item.routes";
 import sseRoutes from "./routes/sse.routes";
+import workerOrderRoutes from "./routes/workerOrder.routes";
+import adminMismatchRoutes from "./routes/adminMismatch.routes";
+import deliveryOrderRoutes from "./routes/deliveryOrder.routes";
+import paymentRoutes from "./routes/payment.routes";
+import adminPaymentRoutes from "./routes/adminPayment.routes";
 
 export class App {
   public app: Application;
@@ -42,6 +47,8 @@ export class App {
     this.initializeAddressRoutes();
     this.initializePickupRoutes();
     this.initializeOrderRoutes();
+    this.initializeDeliveryRoutes();
+    this.initializeAdminPaymentAndMismatchRoutes();
     this.initializePreSignedURLRoutes();
     this.initializeRoutes();
     this.initializeSwagger();
@@ -109,10 +116,21 @@ export class App {
   private initializeRoutes() {
     //this.app.use("/api", OutletItemRoute);
     this.app.use("/api", adminOrderRoutes);
+    this.app.use("/api/worker/orders", workerOrderRoutes);
+    this.app.use("/api/orders", paymentRoutes);
+  }
+
+  private initializeDeliveryRoutes() {
+    this.app.use("/api/delivery-requests", deliveryOrderRoutes);
+  }
+
+  private initializeAdminPaymentAndMismatchRoutes() {
+    this.app.use("/api/admin/mismatch", adminMismatchRoutes);
+    this.app.use("/api/admin/orders", adminPaymentRoutes);
   }
 
   private initializeOrderRoutes() {
-    this.app.use("/api/admin/orders", adminOrderRoutes);
+    // adminOrderRoutes already mounted at /api in initializeRoutes
   }
 
   private initializeOutletRoutes() {

@@ -63,7 +63,11 @@ export class AdminService {
           };
         });
 
-      await sendVerifyEmailbyAdmin(email, userId, hashedToken, role);
+      try {
+        await sendVerifyEmailbyAdmin(email, userId, hashedToken, role);
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+      }
 
       return result;
     } catch (error) {
@@ -95,19 +99,30 @@ export class AdminService {
     }
   }
 
-  async getAllUser() {
+  async getAllUser(page: number = 1, limit: number = 10) {
     try {
-      return await prisma.user.findMany({
-        where: { is_deleted: false, emailVerified: true },
-        select: {
-          pending_email: false,
-          password: false,
-          emailVerified: false,
-          createdAt: false,
-          updatedAt: false,
-          is_deleted: false,
-        },
-      });
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = { is_deleted: false, emailVerified: true };
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          where,
+          omit: {
+            pending_email: true,
+            password: true,
+            emailVerified: true,
+            createdAt: true,
+            updatedAt: true,
+            is_deleted: true,
+          },
+          skip,
+          take,
+        }),
+        prisma.user.count({ where }),
+      ]);
+      return {
+        data: users,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }

@@ -22,6 +22,11 @@ export const ScheduleItemSchema = z.object({
       description: "End time (HH:mm)",
       example: "16:00",
     }),
+  station: z.enum(StationName).nullable().optional().meta({
+    description:
+      "Station for this shift (washing/ironing/packing). Omit or null for drivers.",
+    example: "washing",
+  }),
 });
 
 export const CreateWorkerShiftSchema = z
@@ -53,16 +58,34 @@ export const CreateWorkerShiftSchema = z
     },
   });
 
+export const UpdateWorkerShiftSchema = z
+  .object({
+    schedules: z
+      .array(ScheduleItemSchema)
+      .min(1, "You must provide schedule for at least one day")
+      .meta({
+        description: "Weekly schedule array",
+        example: [
+          { day: "mon", start: "08:00", end: "16:00" },
+          { day: "tue", start: "08:00", end: "16:00" },
+        ],
+      }),
+  })
+  .meta({
+    id: "UpdateWorkerShift",
+    description: "Payload for updating worker shift schedule",
+  });
+
 export const WorkerShiftIdParamsSechema = z
   .object({
     id: z.uuid().meta({
-      description: "Worker Shift ID (UUID)",
+      description: "Worker ID (UUID)",
       example: "123e4567-e89b-12d3-a456-426614174000",
     }),
   })
   .meta({
     id: "WorkerShiftIdParams",
-    description: "Payload for updating a worker shift",
+    description: "Path parameters for worker schedule operations",
     example: {
       id: "123e4567-e89b-12d3-a456-426614174000",
     },
@@ -103,14 +126,37 @@ export const FetchUnScheduledWorkerSchema = z
     },
   });
 
+export const FetchWorkerScheduleSchema = z
+  .object({
+    query: z.string().optional().meta({
+      description: "Search keyword for worker name",
+      example: "John",
+    }),
+    page: z.coerce.number().min(1).default(1).meta({
+      description: "Page number",
+      example: 1,
+    }),
+    limit: z.coerce.number().min(1).max(100).default(10).meta({
+      description: "Items per page",
+      example: 10,
+    }),
+  })
+  .meta({
+    id: "FetchWorkerSchedule",
+    description: "Query parameters for fetching all worker schedules",
+  });
+
 export class WorkerShiftValidation {
   static CreateWorkerShiftSchema = CreateWorkerShiftSchema;
+  static UpdateWorkerShiftSchema = UpdateWorkerShiftSchema;
   static WorkerShiftIdParamsSchema = WorkerShiftIdParamsSechema;
   static OutletIDSchema = OutletIDSchema;
   static FetchUnScheduledWorkerSchema = FetchUnScheduledWorkerSchema;
+  static FetchWorkerScheduleSchema = FetchWorkerScheduleSchema;
 }
 
 export type CreateWorkerShiftInputDTO = z.infer<typeof CreateWorkerShiftSchema>;
+export type UpdateWorkerShiftInputDTO = z.infer<typeof UpdateWorkerShiftSchema>;
 export type WorkerShiftIdParamsDTO = z.infer<typeof WorkerShiftIdParamsSechema>;
 export type OutletIDDTO = z.infer<typeof OutletIDSchema>;
 export type CreateSchedulePayloadDTO = CreateWorkerShiftInputDTO & OutletIDDTO;
@@ -118,4 +164,7 @@ export type FetchUnScheduledWorkerDTO = z.infer<
   typeof FetchUnScheduledWorkerSchema
 >;
 export type UnScheduleWorkerPayloadDTO = FetchUnScheduledWorkerDTO &
+  OutletIDDTO;
+export type FetchWorkerScheduleDTO = z.infer<typeof FetchWorkerScheduleSchema>;
+export type FetchWorkerSchedulePayloadDTO = FetchWorkerScheduleDTO &
   OutletIDDTO;

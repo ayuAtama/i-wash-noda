@@ -8,22 +8,28 @@ import {
 } from "@/validations/address.validation";
 
 export class AddressService {
-  async getAll(userId: string) {
+  async getAll(userId: string, page: number = 1, limit: number = 10) {
     try {
-      // get the addresses
-      const addresses = await prisma.userAddress.findMany({
-        where: {
-          user_id: userId,
-          is_deleted: false,
-        },
-        orderBy: {
-          created_at: "desc",
-        },
-      });
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {
+        user_id: userId,
+        is_deleted: false,
+      };
 
-      const totalAddresses = addresses.length;
+      const [addresses, total] = await Promise.all([
+        prisma.userAddress.findMany({
+          where,
+          orderBy: { created_at: "desc" },
+          skip,
+          take,
+        }),
+        prisma.userAddress.count({ where }),
+      ]);
 
-      return { totalAddresses, addresses };
+      return {
+        data: addresses,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }

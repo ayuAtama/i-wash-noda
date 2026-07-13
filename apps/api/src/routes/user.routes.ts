@@ -4,6 +4,7 @@ import { UserService } from "../services/user.service";
 import { UserController } from "../controllers/user.controller";
 import { Validator } from "../middleware/validate";
 import { UserValidation } from "../validations/user.validation";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
 export class UserRoute {
   public router = Router();
@@ -21,7 +22,11 @@ export class UserRoute {
   // }
 
   private register() {
-    this.router.get("/", this.controller.getAll);
+    this.router.get(
+      "/",
+      Validator.validate({ query: PaginationSchema }),
+      this.controller.getAll,
+    );
     this.router.get("/:id", this.controller.getById);
 
     this.router.post(
