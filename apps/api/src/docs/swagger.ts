@@ -1542,11 +1542,20 @@ export const openApiDocument = createDocument({
         },
       },
     },
-    "/api/admin/orders/walk-in-customer/orders": {
+    "/api/admin/walk-in-customer/orders/{id}": {
       post: {
         summary: "Create manual walk-in order",
         tags: ["Orders"],
         security: [{ CookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+            description: "Walk-in customer ID (UUID)",
+          },
+        ],
         requestBody: {
           required: true,
           content: {

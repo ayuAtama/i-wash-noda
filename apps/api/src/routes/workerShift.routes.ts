@@ -1,6 +1,5 @@
 // apps/api/src/routes/workerShift.services.ts
 import { Router } from "express";
-import { z } from "zod";
 import { WorkerShiftController } from "@/controllers/workerShift.controller";
 import { WorkerShiftService } from "@/services/workerShift.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
@@ -59,6 +58,7 @@ export class WorkerShiftRoute {
     this.router.get(
       "/:id",
       authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
       resolveContext,
       ensureWorkerOnShift,
       Validator.validate({
@@ -85,7 +85,7 @@ export class WorkerShiftRoute {
     this.router.get(
       "/summary-dashboard",
       authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
+      authorizationMiddleware("outlet_admin", "super_admin"),
       resolveContext,
       this.controller.scheduleSummaryDashboard,
     );

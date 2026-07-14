@@ -129,11 +129,12 @@ export class AdminWalkInOrderRoute {
 
   private manualCreateOrderWalkIn() {
     this.router.post(
-      "/orders",
+      "/orders/:id",
       authenticationMiddleware,
       authorizationMiddleware("outlet_admin"),
       resolveContext,
       Validator.validate({
+        params: ManualOrderValidation.WalkInCustomerIdParamsSchema,
         body: ManualOrderValidation.CreateManualOrderSchema,
       }),
       this.controller.manualCreateOrderWalkIn,

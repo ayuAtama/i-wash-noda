@@ -187,10 +187,6 @@ import { OrderSource, OrderStatus } from "@/generated/prisma/enums";
 export class ManualOrderValidation {
   static CreateManualOrderSchema = z
     .object({
-      walkin_customer_id: z.uuid().meta({
-        description: "Walk-in customer ID (UUID)",
-        example: "123e4567-e89b-12d3-a456-426614174000",
-      }),
       pickup_fee: z
         .literal(0, { error: "Are you a hacker or some sort?" })
         .meta({
@@ -248,7 +244,6 @@ export class ManualOrderValidation {
       description: "Payload for creating a manual order",
       example: {
         outlet_id: "123e4567-e89b-12d3-a456-426614174000",
-        walkin_customer_id: "123e4567-e89b-12d3-a456-426614174000",
         total_kilo: 5,
         status: "arrived_at_outlet",
         paid: true,
@@ -279,16 +274,36 @@ export class ManualOrderValidation {
         outlet_id: "123e4567-e89b-12d3-a456-426614174000",
       },
     });
+
+  static WalkInCustomerIdParamsSchema = z
+    .object({
+      id: z.uuid().meta({
+        description: "Walk-in customer ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "WalkInCustomerIdParams",
+      description: "Payload for verifying an outlet",
+      example: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
 }
 
 export type ManualOrderInputDTO = z.infer<
   typeof ManualOrderValidation.CreateManualOrderSchema
 >;
+
 export type OutletIdParamsSchemaDTO = z.infer<
   typeof ManualOrderValidation.OutletIdParamsSchema
 >;
+export type WalkInCustomerIdParamsSchemaDTO = z.infer<
+  typeof ManualOrderValidation.WalkInCustomerIdParamsSchema
+>;
 export type ManualOrderPayloadValidationDTO = ManualOrderInputDTO &
-  OutletIdParamsSchemaDTO;
+  OutletIdParamsSchemaDTO &
+  WalkInCustomerIdParamsSchemaDTO;
 
 ////////////////////////////////////////////////////
 // Update Order Item for Order Arrived at Outlet //
