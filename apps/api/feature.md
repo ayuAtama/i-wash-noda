@@ -108,25 +108,40 @@
 
 ---
 
+## Admin Schedule Management
+
+- [x] Also add a little info (total worker, total driver, total schedule, and on duty today) when fetching the list of worker schedule by outlet admin (outlet_id) (`/api/admin/schedule`)
+- [x] Use filter to fetch the list of worker schedule by outlet admin (`/api/admin/schedule?query=xxx`)
+- [x] New endpoint to fetch workers with no schedule and support filtering (debounce used on front end) by admin outlet. Custom query to get all workers with no schedule.
+- [x] Change the soft delete to permanently delete the shift because too much data and not really important
+- [x] Rework the payload of worker schedule update endpoint (`/api/admin/schedule/:id`)
+- [x] Edit the schema so the schedule can also be used for the driver, not only for workers (by making worker station optional)
+
+---
+
+## Utilities
+
+- [x] Make a utility to change local time (hours) to full UTC time format for saving to DB (Prisma)
+
+---
+
+## Middleware
+
+- [x] Middleware to check if the worker and driver are on shift or not
+
+---
+
 ## TODO
 
-- [] change the user id in the request body into params (/api/admin/walk-in-customer/orders/:id)
+- [x] change the user id in the request body into params (/api/admin/walk-in-customer/orders/:id)
 - [] fetched data into descending order by date
 - [] add a support for pagination on endpoint (/api/admin/schedule)
 - [] Do all to endpoint that return data to be paginated
 - [] Add a support for filtering for certain endpoints
-- [x] also add the a little info as total worker, total driver, total schedule, and on duty today when fetching the list of worker schedule by outlet admin (outlet_id) (/api/admin/schedule)
-- [x] use filter to fetch the list of worker schedule by outlet admin(/api/admin/schedule?query=xxx)
-- [x] new endpoint to fetch the worker with no schedule and support filtering (debounce used on front end) by admin outlet. custom query to get all the worker with no schedule.
-- [x] Change the soft delete to permanently delete the shift because too much data and not really important
-- [x] rework the payload of worker schedule update endpoint (/api/admin/schedule/:id)
-- [x] Edit the schema so the schedule can also used for the driver not only to worker (by making worker station to optional)
-- [x] make a utility to change local time (hours) to full utc time format for saving to db (prisma)
-- [x] middleware to check if the worker and driver are on shift or not
 
 ---
 
 ### Notes
 
-- \* Login required
+- \n required
 - \*\* Specified role required

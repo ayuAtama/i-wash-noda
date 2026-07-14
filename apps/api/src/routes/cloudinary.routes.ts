@@ -17,7 +17,7 @@ export class CloudinaryRoute {
 
   private getSignature() {
     this.router.get(
-      "/get-upload-signature",
+      "/",
       authenticationMiddleware,
       Validator.validate({
         body: CloudinaryValidation.RequestSignatureSchema,

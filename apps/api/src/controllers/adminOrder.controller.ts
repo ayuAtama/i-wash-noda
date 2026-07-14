@@ -13,6 +13,7 @@ import {
   IDParamSchemaDTO,
   WalkInCustomerPayloadDTO,
   CheckWalkInCustomerValidationDTO,
+  WalkInCustomerIdParamsSchemaDTO,
   UpdatePayloadDTO,
   DeletePayloadDTO,
 } from "@/validations/adminOrder.validation";
@@ -197,13 +198,14 @@ export class AdminOrderController {
         throw new HttpError(400, "Missing order data");
       }
       const body = req.validated.body as ManualOrderInputDTO;
+      const { id } = req.validated.params as WalkInCustomerIdParamsSchemaDTO;
       const context = req.context;
       if (!context) {
         throw new HttpError(401, "Outlet id not found");
       }
       const outletId = context.outlet_id;
 
-      const data = { ...body, outlet_id: outletId };
+      const data = { ...body, id, outlet_id: outletId };
       //console.log(outletId, worker_station);
 
       const result = await this.adminOrderService.manualCreateOrderWalkIn(data);

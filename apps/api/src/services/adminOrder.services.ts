@@ -165,8 +165,14 @@ export class AdminOrderService {
   async manualCreateOrderWalkIn(data: ManualOrderPayloadValidationDTO) {
     try {
       // destructure the data
-      const { outlet_id, total_kilo, walkin_customer_id, paid, source, items } =
-        data;
+      const {
+        outlet_id,
+        total_kilo,
+        id: walkin_customer_id,
+        paid,
+        source,
+        items,
+      } = data;
 
       // make prisma transaction
       const result = await prisma.$transaction(async (tx) => {

@@ -94,7 +94,7 @@ export class App {
   }
 
   private initializeAdminRoutes() {
-    this.app.use("/api/admin/schedule", workerShiftRoutes); // on project
+    this.app.use("/api/admin/schedule", workerShiftRoutes); // admin
   }
 
   private initializePickupRoutes() {
@@ -102,10 +102,7 @@ export class App {
     this.app.use("/api/pickup-requests", pickupOrderRoutes); // driver
   }
 
-  // private initializeRoutes() {
-  //   //this.app.use("/api", OutletItemRoute);
-  //   //this.app.use("/api", adminOrderRoutes);
-  // }
+  private initializeWorkerRoutes() {}
 
   private initializeOrderRoutes() {
     this.app.use("/api/admin/orders", adminOrderRoutes);
@@ -121,12 +118,12 @@ export class App {
     this.app.use("/api/admin/items", ItemRoute);
   }
 
-  private initializeSwagger() {
-    this.app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
+  private initializePreSignedURLRoutes() {
+    this.app.use("/api/signature", cloudinaryRoutes);
   }
 
-  private initializePreSignedURLRoutes() {
-    this.app.use("/api", cloudinaryRoutes);
+  private initializeSwagger() {
+    this.app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
   }
 
   private initializeErrorHandler() {
