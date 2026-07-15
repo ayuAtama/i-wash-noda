@@ -24,6 +24,7 @@ import adminOrderRoutes, {
 import cloudinaryRoutes from "./routes/cloudinary.routes";
 import OutletRoute, { adminOutletRoutes } from "./routes/outlet.routes";
 import ItemRoute from "./routes/item.routes";
+import workerStationRoutes from "./routes/workerStation.routes";
 
 export class App {
   public app: Application;
@@ -42,6 +43,7 @@ export class App {
     this.initializeAddressRoutes();
     this.initializePickupRoutes();
     this.initializeOrderRoutes();
+    this.initializeWorkerRoutes();
     this.initializePreSignedURLRoutes();
     //this.initializeRoutes();
     this.initializeSwagger();
@@ -102,7 +104,9 @@ export class App {
     this.app.use("/api/pickup-requests", pickupOrderRoutes); // driver
   }
 
-  private initializeWorkerRoutes() {}
+  private initializeWorkerRoutes() {
+    this.app.use("/api/workers", workerStationRoutes);
+  }
 
   private initializeOrderRoutes() {
     this.app.use("/api/admin/orders", adminOrderRoutes);
