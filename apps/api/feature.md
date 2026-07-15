@@ -95,6 +95,12 @@
 
 ## Worker
 
+- [] GET /orders/:id/stations/:station
+- [] POST /orders/:id/stations/:station/submit
+
+- [] PATCH /station-logs/:logId/review
+- [] GET /station-logs/pending
+
 - [ ] Get the list of available orders for each worker station
 - [ ] Re-input item quantities before accepting an order (either create a conflict that requires outlet admin approval or automatically accept if there is no mismatch). Workers can accept multiple orders simultaneously.
 - [ ] Mark an order as completed and pass it to the next worker station (Status Page)

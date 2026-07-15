@@ -32,7 +32,7 @@ enum OrderStatus {
   arrived_at_outlet
   washing_in_progress
   ironing_in_progress
-  packing_in_progrees
+  packing_in_progress
   waiting_for_payment
   waiting_for_driver_deliver
   out_for_delivery
@@ -352,7 +352,8 @@ model StationSummary {
   item_id         String      @db.Uuid
   station         StationName
   latest_quantity Int
-  updated_at      DateTime    @default(now())
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
 
   order Order @relation(fields: [order_id], references: [id])
   item  Item  @relation(fields: [item_id], references: [id])
@@ -466,7 +467,8 @@ model DriverJobStatus {
   pickup_request_id   String?             @db.Uuid
   delivery_request_id String?             @db.Uuid
   status              DriverJobStatusEnum
-  updated_at          DateTime            @default(now())
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
 
   driver          User             @relation(fields: [driver_id], references: [id])
   pickupRequest   PickupRequest?   @relation(fields: [pickup_request_id], references: [id])
