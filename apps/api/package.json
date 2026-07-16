@@ -14,6 +14,7 @@
     "prisma:migrate": "pnpm prisma migrate deploy",
     "prisma:deploy": "pnpm prisma:generate && pnpm prisma:migrate",
     "prisma:seed": "tsx ./prisma/seed.ts",
+    "prisma:seed:worker-station": "tsx ./prisma/seedWorkerStation.ts",
     "prisma:dev": "pnpm prisma migrate dev && pnpm prisma generate"
   },
   "keywords": [

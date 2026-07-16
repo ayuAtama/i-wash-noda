@@ -1,4 +1,5 @@
 // /src/types/workerStationStrategy.ts
+import { ReInputServiceMethodPayloadDTO } from "@/validations/workerStation.validation";
 import { ApiResponse } from "./apiResponse";
 
 export interface AvailableJobs {
@@ -14,6 +15,9 @@ interface WorkerStationStrategy {
     outletId: string;
     workerId: string;
   }): Promise<ApiResponse<unknown>>;
+  reInputItem(
+    data: ReInputServiceMethodPayloadDTO,
+  ): Promise<ApiResponse<unknown>>;
 }
 
 export default WorkerStationStrategy;

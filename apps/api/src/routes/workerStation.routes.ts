@@ -17,7 +17,7 @@ export class WorkerStationRoute {
   }
   private checkAvailableJobs() {
     this.router.get(
-      "/checkAvailableJobs",
+      "/available",
       authenticationMiddleware,
       authorizationMiddleware("worker"),
       resolveContext,
@@ -27,7 +27,7 @@ export class WorkerStationRoute {
 
   private checkActiveJobs() {
     this.router.get(
-      "/checkActiveJobs",
+      "/active",
       authenticationMiddleware,
       authorizationMiddleware("worker"),
       resolveContext,
