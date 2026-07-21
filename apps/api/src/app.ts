@@ -25,6 +25,7 @@ import cloudinaryRoutes from "./routes/cloudinary.routes";
 import OutletRoute, { adminOutletRoutes } from "./routes/outlet.routes";
 import ItemRoute from "./routes/item.routes";
 import workerStationRoutes from "./routes/workerStation.routes";
+import adminMismatchRoutes from "./routes/adminMismatch.routes";
 
 export class App {
   public app: Application;
@@ -45,7 +46,7 @@ export class App {
     this.initializeOrderRoutes();
     this.initializeWorkerRoutes();
     this.initializePreSignedURLRoutes();
-    //this.initializeRoutes();
+    this.initializeAdminMismatchRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
   }
@@ -116,6 +117,10 @@ export class App {
   private initializeOutletRoutes() {
     this.app.use("/api/outlets", OutletRoute);
     this.app.use("/api/admin/outlets", adminOutletRoutes);
+  }
+
+  private initializeAdminMismatchRoutes() {
+    this.app.use("/api/admin/mismatch", adminMismatchRoutes);
   }
 
   private initializeItemRoutes() {

@@ -1,9 +1,22 @@
 // /api/src/services/workerStation.services.ts
 import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
-import { WorkerStation } from "@/generated/prisma/client";
+import {
+  MismatchStatus,
+  OrderStatus,
+  StationName,
+  WorkerStation,
+} from "@/generated/prisma/client";
 import WorkerStationStrategy from "@/types/workerStationStrategy";
 import {
+  AssignJobServiceMethodDTO,
+  AssignJobServiceStrategyDTO,
+  CheckActiveJobsPayloadDTO,
+  checkActiveJobsStrategyDTO,
+  CheckAvailableJobsPayloadDTO,
+  MarkDoneServiceMethodDTO,
+  MarkDoneServiceStrategyDTO,
+  OutletIDPayloadDTO,
   ReInputServiceMethodPayloadDTO,
   ReInputServiceStrategyPayloadDTO,
 } from "@/validations/workerStation.validation";
@@ -15,53 +28,49 @@ export class WorkerStationService {
     packing: new PackingService(),
   };
 
-  async checkAvailableJobs(data: {
-    outlet_id: string;
-    worker_station: string;
-  }) {
+  async checkAvailableJobs(data: CheckAvailableJobsPayloadDTO) {
     try {
-      // get the worker station
       const { worker_station, outlet_id } = data;
 
-      // register the worker_station into strategies
       const strategy = this.strategies[worker_station as WorkerStation];
       if (!strategy) {
         throw new HttpError(400, "Invalid worker station");
       }
 
-      // call the service
-      const availableJobs = await strategy.checkAvailableJobs(outlet_id);
-
-      // return the available jobs
-      return availableJobs;
+      return await strategy.checkAvailableJobs(outlet_id);
     } catch (error) {
       throw error;
     }
   }
 
-  async checkActiveJobs(data: {
-    outlet_id: string;
-    worker_station: string;
-    worker_id: string;
-  }) {
+  async checkActiveJobs(data: CheckActiveJobsPayloadDTO) {
     try {
-      // get the worker station
       const { worker_station, outlet_id, worker_id } = data;
 
-      // register the worker_station into strategies
       const strategy = this.strategies[worker_station as WorkerStation];
       if (!strategy) {
         throw new HttpError(400, "Invalid worker station");
       }
 
-      // call the service
-      const activeJobs = await strategy.checkActiveJobs({
+      return await strategy.checkActiveJobs({
         outletId: outlet_id,
         workerId: worker_id,
       });
+    } catch (error) {
+      throw error;
+    }
+  }
 
-      // return the available jobs
-      return activeJobs;
+  async assignJob(data: AssignJobServiceStrategyDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.assignJob(rest);
     } catch (error) {
       throw error;
     }
@@ -72,7 +81,6 @@ export class WorkerStationService {
       // destructure the data
       const {
         workerStation: worker_station,
-        ...rest
         // userId,
         // outletId,
         // orderId,
@@ -85,21 +93,31 @@ export class WorkerStationService {
         throw new HttpError(400, "Invalid worker station");
       }
 
-      // call the service
-      const reInputItem = await strategy.reInputItem(rest);
-
-      // return to the controller
-      return reInputItem;
+      return await strategy.reInputItem(data);
     } catch (err) {
       throw err;
+    }
+  }
+
+  async markDone(data: MarkDoneServiceStrategyDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.markDone(rest);
+    } catch (error) {
+      throw error;
     }
   }
 }
 
 class WashingService implements WorkerStationStrategy {
-  async checkAvailableJobs(outletId: string) {
+  async checkAvailableJobs(outletId: OutletIDPayloadDTO["outlet_id"]) {
     try {
-      // get the available jobs
       const availableJobs = await prisma.order.findMany({
         where: {
           outlet_id: outletId,
@@ -153,12 +171,10 @@ class WashingService implements WorkerStationStrategy {
     }
   }
 
-  async checkActiveJobs(data: { outletId: string; workerId: string }) {
+  async checkActiveJobs(data: checkActiveJobsStrategyDTO) {
     try {
-      // destructure the data
       const { outletId, workerId } = data;
 
-      // get the accecpted jobs by the station
       const activeJobs = await prisma.order.findMany({
         where: {
           outlet_id: outletId,
@@ -176,16 +192,8 @@ class WashingService implements WorkerStationStrategy {
           id: true,
           status: true,
           source: true,
-          customer: {
-            select: {
-              name: true,
-            },
-          },
-          walkInCustomer: {
-            select: {
-              name: true,
-            },
-          },
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
         },
       });
 
@@ -204,7 +212,6 @@ class WashingService implements WorkerStationStrategy {
         },
       );
 
-      // return the active jobs
       return {
         success: true,
         message: "Active jobs fetched successfully",
@@ -215,12 +222,76 @@ class WashingService implements WorkerStationStrategy {
     }
   }
 
+  async assignJob(data: AssignJobServiceMethodDTO) {
+    try {
+      const { userId, outletId, orderId } = data;
+
+      const assignedJob = await prisma.order.updateMany({
+        where: {
+          id: orderId,
+          outlet_id: outletId,
+          status: "washing_in_progress" as OrderStatus,
+          washing_worker_id: null,
+        },
+        data: {
+          washing_worker_id: userId,
+        },
+      });
+
+      if (assignedJob.count === 0)
+        throw new HttpError(
+          409,
+          "This job already assigned to another worker or unavailable.",
+        );
+
+      return {
+        success: true,
+        message: "Job assigned successfully",
+        data: `Order ID: ${orderId}`,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async reInputItem(data: ReInputServiceMethodPayloadDTO) {
     try {
-      // destructure the data (order_id from params, items from body)
-      const { orderId: order_id, userId: worker_id, items } = data;
+      const {
+        orderId: order_id,
+        userId: worker_id,
+        items,
+        workerStation: worker_station,
+      } = data;
 
-      // get the actual item
+      // validation for user author
+      const valid = await prisma.order.findFirst({
+        where: {
+          id: order_id,
+          washing_worker_id: worker_id,
+        },
+      });
+      if (!valid)
+        throw new HttpError(401, "Please don't edit other worker's job");
+      // validation for already submitted items
+      const existingLogs = await prisma.orderStationLog.findFirst({
+        where: {
+          order_id,
+          station: worker_station,
+        },
+      });
+      if (existingLogs) {
+        if (existingLogs.status === "approved") {
+          throw new HttpError(400, "Items already submitted and approved.");
+        }
+
+        if (existingLogs.status === "pending") {
+          throw new HttpError(
+            400,
+            "Items already submitted. Waiting for admin approval.",
+          );
+        }
+      }
+
       const actualItem = await prisma.orderItem.findMany({
         where: {
           order_id,
@@ -231,7 +302,7 @@ class WashingService implements WorkerStationStrategy {
         },
       });
 
-      // compare the inputted item with the actual item
+      // compare the submitted item with the actual item
       // filter the correct first
       const correctItems = items.filter(
         (payload: { itemId: string; itemQuantity: number }) => {
@@ -278,6 +349,27 @@ class WashingService implements WorkerStationStrategy {
         },
       );
 
+      // filter the lost item in database
+      const lostItem = actualItem.filter(
+        (dbItem: { item_id: string; quantity_initial: number }) => {
+          const itemInPayload = items.find(
+            (payload: { itemId: string; itemQuantity: number }) => {
+              return dbItem.item_id === payload.itemId;
+            },
+          );
+
+          // if not found, it means the item lost
+          return !itemInPayload;
+        },
+      );
+
+      const lostItems = lostItem.map((item) => {
+        return {
+          itemId: item.item_id,
+          itemQuantity: item.quantity_initial,
+        };
+      });
+
       // auto send the items to station Log if the item same
       if (correctItems.length === actualItem.length) {
         // make the payload
@@ -286,7 +378,7 @@ class WashingService implements WorkerStationStrategy {
             order_id: order_id,
             item_id: item.itemId,
             latest_quantity: item.itemQuantity,
-            station: "washing" as const,
+            station: worker_station,
           };
         });
 
@@ -297,19 +389,16 @@ class WashingService implements WorkerStationStrategy {
             station: item.station,
             worker_id: worker_id,
             quantity_input: item.latest_quantity,
-            status: "approved" as const,
-            admin_note: "Auto Accepted because the item match!",
+            status: "approved" as MismatchStatus,
+            admin_note: "Auto Approved because the item match!",
           };
         });
 
-        // create the stationLog and station summary
         const result = await prisma.$transaction(async (tx) => {
-          // station log
           const stationLog = await tx.orderStationLog.createManyAndReturn({
             data: dataStationLog,
           });
 
-          // station summary
           const stationSummary = await tx.stationSummary.createManyAndReturn({
             data: dataStationSummary,
           });
@@ -329,15 +418,12 @@ class WashingService implements WorkerStationStrategy {
           },
         };
       } else {
-        // if (incorrectItems.length > 0 || notExistItems.length > 0) {
-        // log the data of the correct, incorrect, and not exist items as pending
-
-        // normalize the data
         const [
           normalizeCorrectItems,
           normalizeIncorrectItems,
           normalizeNotExistItems,
-        ] = [correctItems, incorrectItems, notExistItems].map(
+          normalizeLostItems,
+        ] = [correctItems, incorrectItems, notExistItems, lostItems].map(
           (arrays: Array<{ itemId: string; itemQuantity: number }>) => {
             return arrays.map(
               ({
@@ -349,36 +435,127 @@ class WashingService implements WorkerStationStrategy {
               }) => ({
                 order_id: order_id as string,
                 item_id: itemId,
-                station: "washing" as const,
+                station: "washing" as StationName,
                 worker_id: worker_id as string,
                 quantity_input: itemQuantity,
-                status: "pending" as const,
+                status: "pending" as MismatchStatus,
               }),
             );
           },
         );
 
-        // log to database
-        const result = await prisma.$transaction([
+        const [correct, incorrect, notExist, lost] = await prisma.$transaction([
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeCorrectItems,
+            data: normalizeCorrectItems.map((item) => ({
+              ...item,
+              admin_note: "match",
+            })),
           }),
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeIncorrectItems,
+            data: normalizeIncorrectItems.map((item) => ({
+              ...item,
+              admin_note: "mismatch",
+            })),
           }),
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeNotExistItems,
+            data: normalizeNotExistItems.map((item) => ({
+              ...item,
+              admin_note: "new",
+            })),
+          }),
+          prisma.orderStationLog.createManyAndReturn({
+            data: normalizeLostItems.map((item) => ({
+              ...item,
+              admin_note: "lost",
+            })),
           }),
         ]);
 
-        // return the data
         return {
           success: false,
           message: "Item re-input failed waiting for admin approval",
-          data: result,
+          data: { correct, incorrect, notExist, lost },
         };
-        // }
       }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async markDone(data: MarkDoneServiceMethodDTO) {
+    try {
+      const { orderId, userId: workerId, outletId } = data;
+
+      const order = await prisma.order.findFirst({
+        where: {
+          id: orderId,
+          washing_worker_id: workerId,
+          outlet_id: outletId,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      if (!order) {
+        throw new HttpError(400, "This job is not assigned to you");
+      }
+      if (order.status === "ironing_in_progress") {
+        throw new HttpError(400, "You've already completed this job");
+      }
+
+      const pending = await prisma.orderStationLog.findMany({
+        where: {
+          order_id: orderId,
+          worker_id: workerId,
+          station: "washing" as StationName,
+          status: "pending" as MismatchStatus,
+        },
+      });
+
+      if (pending.length > 0) {
+        throw new HttpError(
+          400,
+          "Failed to mark completed, there are pending item re-input waiting for admin approval",
+        );
+      }
+
+      const complete = await prisma.order.update({
+        where: {
+          id: orderId,
+          outlet_id: outletId,
+          washing_worker_id: workerId,
+        },
+        data: {
+          washing_completed_at: new Date(),
+          status: "ironing_in_progress" as OrderStatus,
+          ironing_worker_id: null,
+        },
+        select: {
+          id: true,
+          status: true,
+          source: true,
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
+        },
+      });
+
+      const { customer, walkInCustomer, ...rest } = complete;
+      const customerName = customer?.name ?? walkInCustomer?.name;
+      if (!customerName) {
+        throw new HttpError(400, "Customer name not found");
+      }
+
+      const normalized = {
+        ...rest,
+        customer_name: customerName,
+      };
+
+      return {
+        success: true,
+        message: "Washing job completed",
+        data: normalized,
+      };
     } catch (error) {
       throw error;
     }
@@ -386,9 +563,8 @@ class WashingService implements WorkerStationStrategy {
 }
 
 class IroningService implements WorkerStationStrategy {
-  async checkAvailableJobs(outletId: string) {
+  async checkAvailableJobs(outletId: OutletIDPayloadDTO["outlet_id"]) {
     try {
-      // get the available jobs
       const availableJobs = await prisma.order.findMany({
         where: {
           outlet_id: outletId,
@@ -404,16 +580,8 @@ class IroningService implements WorkerStationStrategy {
           id: true,
           status: true,
           source: true,
-          customer: {
-            select: {
-              name: true,
-            },
-          },
-          walkInCustomer: {
-            select: {
-              name: true,
-            },
-          },
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
         },
       });
 
@@ -443,12 +611,10 @@ class IroningService implements WorkerStationStrategy {
     }
   }
 
-  async checkActiveJobs(data: { outletId: string; workerId: string }) {
+  async checkActiveJobs(data: checkActiveJobsStrategyDTO) {
     try {
-      // destructure the data
       const { outletId, workerId } = data;
 
-      // get the accecpted jobs by the station
       const activeJobs = await prisma.order.findMany({
         where: {
           outlet_id: outletId,
@@ -466,16 +632,8 @@ class IroningService implements WorkerStationStrategy {
           id: true,
           status: true,
           source: true,
-          customer: {
-            select: {
-              name: true,
-            },
-          },
-          walkInCustomer: {
-            select: {
-              name: true,
-            },
-          },
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
         },
       });
 
@@ -494,7 +652,6 @@ class IroningService implements WorkerStationStrategy {
         },
       );
 
-      // return the active jobs
       return {
         success: true,
         message: "Active jobs fetched successfully",
@@ -505,43 +662,105 @@ class IroningService implements WorkerStationStrategy {
     }
   }
 
-  // place holder
-  async reInputItem(data: ReInputServiceMethodPayloadDTO) {
+  async assignJob(data: AssignJobServiceMethodDTO) {
     try {
-      // destructure the data (order_id from params, items from body)
-      const { orderId: order_id, userId: worker_id, items } = data;
+      const { userId, outletId, orderId } = data;
 
-      // get the actual item
-      const actualItem = await prisma.orderItem.findMany({
+      const assignedJob = await prisma.order.updateMany({
         where: {
-          order_id,
+          id: orderId,
+          outlet_id: outletId,
+          status: "ironing_in_progress" as OrderStatus,
+          washing_completed_at: { not: null },
+          ironing_worker_id: null,
         },
-        select: {
-          item_id: true,
-          quantity_initial: true,
+        data: {
+          ironing_worker_id: userId,
         },
       });
 
-      // compare the inputted item with the actual item
-      // filter the correct first
+      if (assignedJob.count === 0)
+        throw new HttpError(
+          409,
+          "This job already assigned to another worker or unavailable.",
+        );
+
+      return {
+        success: true,
+        message: "Job assigned successfully",
+        data: `Order ID: ${orderId}`,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async reInputItem(data: ReInputServiceMethodPayloadDTO) {
+    try {
+      const {
+        orderId: order_id,
+        userId: worker_id,
+        items,
+        workerStation: worker_station,
+      } = data;
+
+      // validation for user author
+      const valid = await prisma.order.findFirst({
+        where: {
+          id: order_id,
+          ironing_worker_id: worker_id,
+        },
+      });
+      if (!valid)
+        throw new HttpError(401, "Please don't edit other worker's job");
+      // validation for already submitted items
+      const existingLogs = await prisma.orderStationLog.findFirst({
+        where: {
+          order_id,
+          station: worker_station,
+        },
+      });
+      if (existingLogs) {
+        if (existingLogs.status === "approved") {
+          throw new HttpError(400, "Items already submitted and approved.");
+        }
+
+        if (existingLogs.status === "pending") {
+          throw new HttpError(
+            400,
+            "Items already submitted. Waiting for admin approval.",
+          );
+        }
+      }
+
+      const previousStationItems = await prisma.stationSummary.findMany({
+        where: {
+          order_id,
+          station: "washing" as StationName,
+        },
+        select: {
+          item_id: true,
+          latest_quantity: true,
+        },
+      });
+
       const correctItems = items.filter(
         (payload: { itemId: string; itemQuantity: number }) => {
-          return actualItem.some(
-            (dbItem: { item_id: string; quantity_initial: number }) => {
+          return previousStationItems.some(
+            (dbItem: { item_id: string; latest_quantity: number }) => {
               return (
                 dbItem.item_id === payload.itemId &&
-                dbItem.quantity_initial === payload.itemQuantity
+                dbItem.latest_quantity === payload.itemQuantity
               );
             },
           );
         },
       );
 
-      // filter the item with incorrect quantity
       const incorrectItems = items.filter(
         (payload: { itemId: string; itemQuantity: number }) => {
-          const databaseItem = actualItem.find(
-            (dbItems: { item_id: string; quantity_initial: number }) => {
+          const databaseItem = previousStationItems.find(
+            (dbItems: { item_id: string; latest_quantity: number }) => {
               return dbItems.item_id === payload.itemId;
             },
           );
@@ -550,34 +769,48 @@ class IroningService implements WorkerStationStrategy {
             return false;
           }
 
-          return databaseItem.quantity_initial !== payload.itemQuantity;
+          return databaseItem.latest_quantity !== payload.itemQuantity;
         },
       );
 
-      // filter item not exist on database
       const notExistItems = items.filter(
         (payload: { itemId: string; itemQuantity: number }) => {
-          // look for the same id
-          const databaseItem = actualItem.find(
-            (dbItems: { item_id: string; quantity_initial: number }) => {
+          const databaseItem = previousStationItems.find(
+            (dbItems: { item_id: string; latest_quantity: number }) => {
               return dbItems.item_id === payload.itemId;
             },
           );
 
-          // if not found, it means not exist (undefined)
           return !databaseItem;
         },
       );
 
-      // auto send the items to station Log if the item same
-      if (correctItems.length === actualItem.length) {
-        // make the payload
+      const lostItem = previousStationItems.filter(
+        (dbItem: { item_id: string; latest_quantity: number }) => {
+          const itemInPayload = items.find(
+            (payload: { itemId: string; itemQuantity: number }) => {
+              return dbItem.item_id === payload.itemId;
+            },
+          );
+
+          return !itemInPayload;
+        },
+      );
+
+      const lostItems = lostItem.map((item) => {
+        return {
+          itemId: item.item_id,
+          itemQuantity: item.latest_quantity,
+        };
+      });
+
+      if (correctItems.length === previousStationItems.length) {
         const dataStationSummary = correctItems.map((item) => {
           return {
             order_id: order_id,
             item_id: item.itemId,
             latest_quantity: item.itemQuantity,
-            station: "washing" as const,
+            station: "ironing" as StationName,
           };
         });
 
@@ -588,19 +821,16 @@ class IroningService implements WorkerStationStrategy {
             station: item.station,
             worker_id: worker_id,
             quantity_input: item.latest_quantity,
-            status: "approved" as const,
-            admin_note: "Auto Accepted because the item match!",
+            status: "approved" as MismatchStatus,
+            admin_note: "Auto Approved because the item match!",
           };
         });
 
-        // create the stationLog and station summary
         const result = await prisma.$transaction(async (tx) => {
-          // station log
           const stationLog = await tx.orderStationLog.createManyAndReturn({
             data: dataStationLog,
           });
 
-          // station summary
           const stationSummary = await tx.stationSummary.createManyAndReturn({
             data: dataStationSummary,
           });
@@ -620,15 +850,12 @@ class IroningService implements WorkerStationStrategy {
           },
         };
       } else {
-        // if (incorrectItems.length > 0 || notExistItems.length > 0) {
-        // log the data of the correct, incorrect, and not exist items as pending
-
-        // normalize the data
         const [
           normalizeCorrectItems,
           normalizeIncorrectItems,
           normalizeNotExistItems,
-        ] = [correctItems, incorrectItems, notExistItems].map(
+          normalizeLostItems,
+        ] = [correctItems, incorrectItems, notExistItems, lostItems].map(
           (arrays: Array<{ itemId: string; itemQuantity: number }>) => {
             return arrays.map(
               ({
@@ -640,36 +867,127 @@ class IroningService implements WorkerStationStrategy {
               }) => ({
                 order_id: order_id as string,
                 item_id: itemId,
-                station: "washing" as const,
+                station: worker_station as StationName,
                 worker_id: worker_id as string,
                 quantity_input: itemQuantity,
-                status: "pending" as const,
+                status: "pending" as MismatchStatus,
               }),
             );
           },
         );
 
-        // log to database
-        const result = await prisma.$transaction([
+        const [correct, incorrect, notExist, lost] = await prisma.$transaction([
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeCorrectItems,
+            data: normalizeCorrectItems.map((item) => ({
+              ...item,
+              admin_note: "match",
+            })),
           }),
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeIncorrectItems,
+            data: normalizeIncorrectItems.map((item) => ({
+              ...item,
+              admin_note: "mismatch",
+            })),
           }),
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeNotExistItems,
+            data: normalizeNotExistItems.map((item) => ({
+              ...item,
+              admin_note: "new",
+            })),
+          }),
+          prisma.orderStationLog.createManyAndReturn({
+            data: normalizeLostItems.map((item) => ({
+              ...item,
+              admin_note: "lost",
+            })),
           }),
         ]);
 
-        // return the data
         return {
           success: false,
           message: "Item re-input failed waiting for admin approval",
-          data: result,
+          data: { correct, incorrect, notExist, lost },
         };
-        // }
       }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async markDone(data: MarkDoneServiceMethodDTO) {
+    try {
+      const { orderId, userId: workerId, outletId } = data;
+
+      const order = await prisma.order.findFirst({
+        where: {
+          id: orderId,
+          ironing_worker_id: workerId,
+          outlet_id: outletId,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      if (!order) {
+        throw new HttpError(400, "This job is not assigned to you");
+      }
+      if (order.status === "packing_in_progress") {
+        throw new HttpError(400, "You've already completed this job");
+      }
+
+      const pending = await prisma.orderStationLog.findMany({
+        where: {
+          order_id: orderId,
+          worker_id: workerId,
+          station: "ironing" as StationName,
+          status: "pending" as MismatchStatus,
+        },
+      });
+
+      if (pending.length > 0) {
+        throw new HttpError(
+          400,
+          "Failed to mark completed, there are pending item re-input waiting for admin approval",
+        );
+      }
+
+      const complete = await prisma.order.update({
+        where: {
+          id: orderId,
+          outlet_id: outletId,
+          ironing_worker_id: workerId,
+        },
+        data: {
+          ironing_completed_at: new Date(),
+          status: "packing_in_progress" as OrderStatus,
+          packing_worker_id: null,
+        },
+        select: {
+          id: true,
+          status: true,
+          source: true,
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
+        },
+      });
+
+      const { customer, walkInCustomer, ...rest } = complete;
+      const customerName = customer?.name ?? walkInCustomer?.name;
+      if (!customerName) {
+        throw new HttpError(400, "Customer name not found");
+      }
+
+      const normalized = {
+        ...rest,
+        customer_name: customerName,
+      };
+
+      return {
+        success: true,
+        message: "Ironing job completed",
+        data: normalized,
+      };
     } catch (error) {
       throw error;
     }
@@ -677,9 +995,8 @@ class IroningService implements WorkerStationStrategy {
 }
 
 class PackingService implements WorkerStationStrategy {
-  async checkAvailableJobs(outletId: string) {
+  async checkAvailableJobs(outletId: OutletIDPayloadDTO["outlet_id"]) {
     try {
-      // get the available jobs
       const availableJobs = await prisma.order.findMany({
         where: {
           outlet_id: outletId,
@@ -696,16 +1013,8 @@ class PackingService implements WorkerStationStrategy {
           id: true,
           status: true,
           source: true,
-          customer: {
-            select: {
-              name: true,
-            },
-          },
-          walkInCustomer: {
-            select: {
-              name: true,
-            },
-          },
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
         },
       });
 
@@ -724,7 +1033,6 @@ class PackingService implements WorkerStationStrategy {
         },
       );
 
-      // return the available jobs
       return {
         success: true,
         message: "Available jobs fetched successfully",
@@ -735,12 +1043,10 @@ class PackingService implements WorkerStationStrategy {
     }
   }
 
-  async checkActiveJobs(data: { outletId: string; workerId: string }) {
+  async checkActiveJobs(data: checkActiveJobsStrategyDTO) {
     try {
-      // destructure the data
       const { outletId, workerId } = data;
 
-      // get the accecpted jobs by the station
       const activeJobs = await prisma.order.findMany({
         where: {
           outlet_id: outletId,
@@ -758,16 +1064,8 @@ class PackingService implements WorkerStationStrategy {
           id: true,
           status: true,
           source: true,
-          customer: {
-            select: {
-              name: true,
-            },
-          },
-          walkInCustomer: {
-            select: {
-              name: true,
-            },
-          },
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
         },
       });
 
@@ -786,7 +1084,6 @@ class PackingService implements WorkerStationStrategy {
         },
       );
 
-      // return the active jobs
       return {
         success: true,
         message: "Active jobs fetched successfully",
@@ -797,43 +1094,109 @@ class PackingService implements WorkerStationStrategy {
     }
   }
 
-  // place holder
-  async reInputItem(data: ReInputServiceMethodPayloadDTO) {
+  async assignJob(data: AssignJobServiceMethodDTO) {
     try {
-      // destructure the data (order_id from params, items from body)
-      const { orderId: order_id, userId: worker_id, items } = data;
+      const { userId, outletId, orderId } = data;
 
-      // get the actual item
-      const actualItem = await prisma.orderItem.findMany({
+      const assignedJob = await prisma.order.updateMany({
         where: {
-          order_id,
+          id: orderId,
+          outlet_id: outletId,
+          status: "packing_in_progress" as OrderStatus,
+          washing_completed_at: { not: null },
+          ironing_completed_at: { not: null },
+          packing_worker_id: null,
         },
-        select: {
-          item_id: true,
-          quantity_initial: true,
+        data: {
+          packing_worker_id: userId,
         },
       });
 
-      // compare the inputted item with the actual item
-      // filter the correct first
+      if (assignedJob.count === 0)
+        throw new HttpError(
+          409,
+          "This job already assigned to another worker or unavailable.",
+        );
+
+      return {
+        success: true,
+        message: "Job assigned successfully",
+        data: `Order ID: ${orderId}`,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async reInputItem(data: ReInputServiceMethodPayloadDTO) {
+    try {
+      const {
+        orderId: order_id,
+        userId: worker_id,
+        items,
+        workerStation: worker_station,
+      } = data;
+
+      // validation for user author
+      const valid = await prisma.order.findFirst({
+        where: {
+          id: order_id,
+          packing_worker_id: worker_id,
+        },
+      });
+      if (!valid)
+        throw new HttpError(401, "Please don't edit other worker's job");
+
+      // validation for already submitted items
+      const existingLogs = await prisma.orderStationLog.findFirst({
+        where: {
+          order_id,
+          station: "packing" as StationName,
+        },
+        select: {
+          status: true,
+        },
+      });
+      if (existingLogs) {
+        if (existingLogs.status === "approved") {
+          throw new HttpError(400, "Items already submitted and approved.");
+        }
+        if (existingLogs.status === "pending") {
+          throw new HttpError(
+            400,
+            "Items already submitted. Waiting for admin approval",
+          );
+        }
+      }
+
+      const previousStationItems = await prisma.stationSummary.findMany({
+        where: {
+          order_id,
+          station: "ironing" as StationName,
+        },
+        select: {
+          item_id: true,
+          latest_quantity: true,
+        },
+      });
+
       const correctItems = items.filter(
         (payload: { itemId: string; itemQuantity: number }) => {
-          return actualItem.some(
-            (dbItem: { item_id: string; quantity_initial: number }) => {
+          return previousStationItems.some(
+            (dbItem: { item_id: string; latest_quantity: number }) => {
               return (
                 dbItem.item_id === payload.itemId &&
-                dbItem.quantity_initial === payload.itemQuantity
+                dbItem.latest_quantity === payload.itemQuantity
               );
             },
           );
         },
       );
 
-      // filter the item with incorrect quantity
       const incorrectItems = items.filter(
         (payload: { itemId: string; itemQuantity: number }) => {
-          const databaseItem = actualItem.find(
-            (dbItems: { item_id: string; quantity_initial: number }) => {
+          const databaseItem = previousStationItems.find(
+            (dbItems: { item_id: string; latest_quantity: number }) => {
               return dbItems.item_id === payload.itemId;
             },
           );
@@ -842,34 +1205,48 @@ class PackingService implements WorkerStationStrategy {
             return false;
           }
 
-          return databaseItem.quantity_initial !== payload.itemQuantity;
+          return databaseItem.latest_quantity !== payload.itemQuantity;
         },
       );
 
-      // filter item not exist on database
       const notExistItems = items.filter(
         (payload: { itemId: string; itemQuantity: number }) => {
-          // look for the same id
-          const databaseItem = actualItem.find(
-            (dbItems: { item_id: string; quantity_initial: number }) => {
+          const databaseItem = previousStationItems.find(
+            (dbItems: { item_id: string; latest_quantity: number }) => {
               return dbItems.item_id === payload.itemId;
             },
           );
 
-          // if not found, it means not exist (undefined)
           return !databaseItem;
         },
       );
 
-      // auto send the items to station Log if the item same
-      if (correctItems.length === actualItem.length) {
-        // make the payload
+      const lostItem = previousStationItems.filter(
+        (dbItem: { item_id: string; latest_quantity: number }) => {
+          const itemInPayload = items.find(
+            (payload: { itemId: string; itemQuantity: number }) => {
+              return dbItem.item_id === payload.itemId;
+            },
+          );
+
+          return !itemInPayload;
+        },
+      );
+
+      const lostItems = lostItem.map((item) => {
+        return {
+          itemId: item.item_id,
+          itemQuantity: item.latest_quantity,
+        };
+      });
+
+      if (correctItems.length === previousStationItems.length) {
         const dataStationSummary = correctItems.map((item) => {
           return {
             order_id: order_id,
             item_id: item.itemId,
             latest_quantity: item.itemQuantity,
-            station: "washing" as const,
+            station: "packing" as StationName,
           };
         });
 
@@ -880,19 +1257,16 @@ class PackingService implements WorkerStationStrategy {
             station: item.station,
             worker_id: worker_id,
             quantity_input: item.latest_quantity,
-            status: "approved" as const,
-            admin_note: "Auto Accepted because the item match!",
+            status: "approved" as MismatchStatus,
+            admin_note: "Auto Approved because the item match!",
           };
         });
 
-        // create the stationLog and station summary
         const result = await prisma.$transaction(async (tx) => {
-          // station log
           const stationLog = await tx.orderStationLog.createManyAndReturn({
             data: dataStationLog,
           });
 
-          // station summary
           const stationSummary = await tx.stationSummary.createManyAndReturn({
             data: dataStationSummary,
           });
@@ -912,15 +1286,12 @@ class PackingService implements WorkerStationStrategy {
           },
         };
       } else {
-        // if (incorrectItems.length > 0 || notExistItems.length > 0) {
-        // log the data of the correct, incorrect, and not exist items as pending
-
-        // normalize the data
         const [
           normalizeCorrectItems,
           normalizeIncorrectItems,
           normalizeNotExistItems,
-        ] = [correctItems, incorrectItems, notExistItems].map(
+          normalizeLostItems,
+        ] = [correctItems, incorrectItems, notExistItems, lostItems].map(
           (arrays: Array<{ itemId: string; itemQuantity: number }>) => {
             return arrays.map(
               ({
@@ -932,36 +1303,129 @@ class PackingService implements WorkerStationStrategy {
               }) => ({
                 order_id: order_id as string,
                 item_id: itemId,
-                station: "washing" as const,
+                station: worker_station as StationName,
                 worker_id: worker_id as string,
                 quantity_input: itemQuantity,
-                status: "pending" as const,
+                status: "pending" as MismatchStatus,
               }),
             );
           },
         );
 
-        // log to database
-        const result = await prisma.$transaction([
+        const [correct, incorrect, notExist, lost] = await prisma.$transaction([
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeCorrectItems,
+            data: normalizeCorrectItems.map((item) => ({
+              ...item,
+              admin_note: "match",
+            })),
           }),
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeIncorrectItems,
+            data: normalizeIncorrectItems.map((item) => ({
+              ...item,
+              admin_note: "mismatch",
+            })),
           }),
           prisma.orderStationLog.createManyAndReturn({
-            data: normalizeNotExistItems,
+            data: normalizeNotExistItems.map((item) => ({
+              ...item,
+              admin_note: "new",
+            })),
+          }),
+          prisma.orderStationLog.createManyAndReturn({
+            data: normalizeLostItems.map((item) => ({
+              ...item,
+              admin_note: "lost",
+            })),
           }),
         ]);
 
-        // return the data
         return {
           success: false,
           message: "Item re-input failed waiting for admin approval",
-          data: result,
+          data: { correct, incorrect, notExist, lost },
         };
-        // }
       }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async markDone(data: MarkDoneServiceMethodDTO) {
+    try {
+      const { orderId, userId: workerId, outletId } = data;
+
+      const order = await prisma.order.findFirst({
+        where: {
+          id: orderId,
+          packing_worker_id: workerId,
+          outlet_id: outletId,
+        },
+        select: {
+          status: true,
+          source: true,
+        },
+      });
+
+      if (!order) {
+        throw new HttpError(400, "This job is not assigned to you");
+      }
+      if (order.status === "waiting_for_payment") {
+        throw new HttpError(400, "You've already completed this job");
+      }
+
+      const pending = await prisma.orderStationLog.findMany({
+        where: {
+          order_id: orderId,
+          worker_id: workerId,
+          station: "packing" as StationName,
+          status: "pending" as MismatchStatus,
+        },
+      });
+
+      if (pending.length > 0) {
+        throw new HttpError(
+          400,
+          "Failed to mark completed, there are pending item re-input waiting for admin approval",
+        );
+      }
+
+      const complete = await prisma.order.update({
+        where: {
+          id: orderId,
+          outlet_id: outletId,
+          packing_worker_id: workerId,
+        },
+        data: {
+          packing_completed_at: new Date(),
+          status:
+            order.source === "walk_in" ? "delivered" : "waiting_for_payment",
+          // so the walkin customer can be marked as finished when picked up (query with delivered status)
+        },
+        select: {
+          id: true,
+          status: true,
+          source: true,
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
+        },
+      });
+
+      const { customer, walkInCustomer, ...rest } = complete;
+      const customerName = customer?.name ?? walkInCustomer?.name;
+      if (!customerName) {
+        throw new HttpError(400, "Customer name not found");
+      }
+
+      const normalized = {
+        ...rest,
+        customer_name: customerName,
+      };
+
+      return {
+        success: true,
+        message: "Packing job completed",
+        data: normalized,
+      };
     } catch (error) {
       throw error;
     }

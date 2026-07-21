@@ -1,5 +1,6 @@
 import "express";
 import { AuthUser } from "@/types/auth";
+import { WorkerStation } from "@/generated/prisma/client";
 
 declare module "express" {
   interface Request {
@@ -27,7 +28,7 @@ declare module "express" {
     };
     context?: {
       outlet_id: string;
-      worker_station?: string;
+      worker_station?: WorkerStation;
     };
     pagination?: {
       page: number;
