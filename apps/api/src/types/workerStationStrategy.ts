@@ -1,5 +1,16 @@
 // /src/types/workerStationStrategy.ts
-import { ReInputServiceMethodPayloadDTO } from "@/validations/workerStation.validation";
+import {
+  AssignJobServiceMethodDTO,
+  checkActiveJobsStrategyDTO,
+  MarkDoneServiceMethodDTO,
+  OutletIDPayloadDTO,
+  ReInputServiceMethodPayloadDTO,
+} from "@/validations/workerStation.validation";
+import {
+  OrderStationLog,
+  StationSummary,
+  WorkerStation,
+} from "@/generated/prisma/client";
 import { ApiResponse } from "./apiResponse";
 
 export interface AvailableJobs {
@@ -9,15 +20,40 @@ export interface AvailableJobs {
   customer_name: string;
 }
 
+export type AssignJobData = string;
+
+export interface ReInputSuccessData {
+  stationLog: OrderStationLog[];
+  stationSummary: StationSummary[];
+}
+
+export type ReInputFailureData = {
+  correct: OrderStationLog[];
+  incorrect: OrderStationLog[];
+  notExist: OrderStationLog[];
+  lost: OrderStationLog[];
+};
+
+export type ReInputItemData = ReInputSuccessData | ReInputFailureData;
+
 interface WorkerStationStrategy {
-  checkAvailableJobs(outletId: string): Promise<ApiResponse<AvailableJobs[]>>;
-  checkActiveJobs(data: {
-    outletId: string;
-    workerId: string;
-  }): Promise<ApiResponse<unknown>>;
+  checkAvailableJobs(
+    outletId: OutletIDPayloadDTO["outlet_id"],
+  ): Promise<ApiResponse<AvailableJobs[]>>;
+
+  checkActiveJobs(
+    data: checkActiveJobsStrategyDTO,
+  ): Promise<ApiResponse<AvailableJobs[]>>;
+
+  assignJob(
+    data: AssignJobServiceMethodDTO,
+  ): Promise<ApiResponse<AssignJobData>>;
+
   reInputItem(
     data: ReInputServiceMethodPayloadDTO,
-  ): Promise<ApiResponse<unknown>>;
+  ): Promise<ApiResponse<ReInputItemData>>;
+
+  markDone(data: MarkDoneServiceMethodDTO): Promise<ApiResponse<AvailableJobs>>;
 }
 
 export default WorkerStationStrategy;
