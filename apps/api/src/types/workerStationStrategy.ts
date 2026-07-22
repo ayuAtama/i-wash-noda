@@ -2,6 +2,7 @@
 import {
   AssignJobServiceMethodDTO,
   checkActiveJobsStrategyDTO,
+  GetCompleteJobsMethodDTO,
   MarkDoneServiceMethodDTO,
   OutletIDPayloadDTO,
   ReInputServiceMethodPayloadDTO,
@@ -35,7 +36,16 @@ export interface ReInputFailureData {
 
 export type ReInputItemData = ReInputSuccessData | ReInputFailureData;
 
+export interface CompletedJob {
+  id: string;
+  customerName: string;
+  completedAt: Date | null;
+}
+
 interface WorkerStationStrategy {
+  getCompleteJobs(
+    data: GetCompleteJobsMethodDTO,
+  ): Promise<ApiResponse<CompletedJob[]>>;
   checkAvailableJobs(
     outletId: OutletIDPayloadDTO["outlet_id"],
   ): Promise<ApiResponse<AvailableJobs[]>>;

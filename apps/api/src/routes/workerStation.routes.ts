@@ -19,6 +19,7 @@ export class WorkerStationRoute {
     this.assignJob();
     this.reinputData();
     this.markDone();
+    this.getCompleteJobs();
   }
   private checkAvailableJobs() {
     this.router.get(
@@ -77,6 +78,16 @@ export class WorkerStationRoute {
         params: WorkerStationValidation.markDoneParamsSchema,
       }),
       this.controller.markDone,
+    );
+  }
+
+  private getCompleteJobs() {
+    this.router.get(
+      "/complete",
+      authenticationMiddleware,
+      authorizationMiddleware("worker"),
+      resolveContext,
+      this.controller.getCompleteJobs,
     );
   }
 }

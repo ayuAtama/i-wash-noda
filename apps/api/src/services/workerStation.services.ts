@@ -14,6 +14,8 @@ import {
   CheckActiveJobsPayloadDTO,
   checkActiveJobsStrategyDTO,
   CheckAvailableJobsPayloadDTO,
+  GetCompleteJobsMethodDTO,
+  GetCompleteJobsStrategyDTO,
   MarkDoneServiceMethodDTO,
   MarkDoneServiceStrategyDTO,
   OutletIDPayloadDTO,
@@ -109,6 +111,21 @@ export class WorkerStationService {
       }
 
       return await strategy.markDone(rest);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getCompleteJobs(data: GetCompleteJobsStrategyDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.getCompleteJobs(rest);
     } catch (error) {
       throw error;
     }
@@ -579,6 +596,60 @@ class WashingService implements WorkerStationStrategy {
       throw error;
     }
   }
+
+  async getCompleteJobs(data: GetCompleteJobsMethodDTO) {
+    try {
+      const { outletId, workerId } = data;
+
+      const completeJobs = await prisma.order.findMany({
+        where: {
+          washing_worker_id: workerId,
+          outlet_id: outletId,
+          status: {
+            not: "washing_in_progress",
+          },
+          washing_completed_at: {
+            not: null,
+          },
+        },
+        select: {
+          id: true,
+          customer: {
+            select: {
+              name: true,
+            },
+          },
+          walkInCustomer: {
+            select: {
+              name: true,
+            },
+          },
+          washing_completed_at: true,
+        },
+        orderBy: {
+          washing_completed_at: "desc",
+        },
+      });
+
+      const normalized = completeJobs.map((job) => {
+        const customerName =
+          job.customer?.name ?? job.walkInCustomer?.name ?? "";
+        return {
+          id: job.id,
+          customerName,
+          completedAt: job.washing_completed_at,
+        };
+      });
+
+      return {
+        success: true,
+        message: "Get complete jobs successfully",
+        data: normalized,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 class IroningService implements WorkerStationStrategy {
@@ -1024,6 +1095,60 @@ class IroningService implements WorkerStationStrategy {
       return {
         success: true,
         message: "Ironing job completed",
+        data: normalized,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getCompleteJobs(data: GetCompleteJobsMethodDTO) {
+    try {
+      const { outletId, workerId } = data;
+
+      const completeJobs = await prisma.order.findMany({
+        where: {
+          ironing_worker_id: workerId,
+          outlet_id: outletId,
+          status: {
+            not: "ironing_in_progress",
+          },
+          ironing_completed_at: {
+            not: null,
+          },
+        },
+        select: {
+          id: true,
+          customer: {
+            select: {
+              name: true,
+            },
+          },
+          walkInCustomer: {
+            select: {
+              name: true,
+            },
+          },
+          ironing_completed_at: true,
+        },
+        orderBy: {
+          ironing_completed_at: "desc",
+        },
+      });
+
+      const normalized = completeJobs.map((job) => {
+        const customerName =
+          job.customer?.name ?? job.walkInCustomer?.name ?? "";
+        return {
+          id: job.id,
+          customerName,
+          completedAt: job.ironing_completed_at,
+        };
+      });
+
+      return {
+        success: true,
+        message: "Get complete jobs successfully",
         data: normalized,
       };
     } catch (error) {
@@ -1481,6 +1606,60 @@ class PackingService implements WorkerStationStrategy {
       return {
         success: true,
         message: "Packing job completed",
+        data: normalized,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getCompleteJobs(data: GetCompleteJobsMethodDTO) {
+    try {
+      const { outletId, workerId } = data;
+
+      const completeJobs = await prisma.order.findMany({
+        where: {
+          packing_worker_id: workerId,
+          outlet_id: outletId,
+          status: {
+            not: "packing_in_progress",
+          },
+          packing_completed_at: {
+            not: null,
+          },
+        },
+        select: {
+          id: true,
+          customer: {
+            select: {
+              name: true,
+            },
+          },
+          walkInCustomer: {
+            select: {
+              name: true,
+            },
+          },
+          packing_completed_at: true,
+        },
+        orderBy: {
+          packing_completed_at: "desc",
+        },
+      });
+
+      const normalized = completeJobs.map((job) => {
+        const customerName =
+          job.customer?.name ?? job.walkInCustomer?.name ?? "";
+        return {
+          id: job.id,
+          customerName,
+          completedAt: job.packing_completed_at,
+        };
+      });
+
+      return {
+        success: true,
+        message: "Get complete jobs successfully",
         data: normalized,
       };
     } catch (error) {
