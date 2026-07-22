@@ -5,6 +5,7 @@ import { WorkerStationService } from "@/services/workerStation.services";
 import {
   AssigJobParamsDTO,
   AssignJobServiceStrategyDTO,
+  GetCompleteJobsStrategyDTO,
   MarkDoneParamsPayloadDTO,
   MarkDoneServiceStrategyDTO,
   ReInputItemBodyPayloadDTO,
@@ -170,6 +171,32 @@ export class WorkerStationController {
       const markDone = await this.workerServices.markDone(payload);
 
       res.status(200).json(markDone);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getCompleteJobs = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.access_token) throw new HttpError(401, "Please login first");
+      const userId = req.access_token.sub;
+      if (!userId) throw new HttpError(401, "User not found");
+
+      if (!req.context)
+        throw new HttpError(500, "You forgot to use resolveContext middleware");
+      const { outlet_id, worker_station } = req.context;
+      if (!outlet_id) throw new HttpError(401, "Outlet id not found");
+      if (!worker_station) throw new HttpError(401, "Worker station not found");
+
+      const payload: GetCompleteJobsStrategyDTO = {
+        outletId: outlet_id,
+        workerId: userId,
+        workerStation: worker_station,
+      };
+
+      const completeJobs = await this.workerServices.getCompleteJobs(payload);
+
+      res.status(200).json(completeJobs);
     } catch (error) {
       next(error);
     }

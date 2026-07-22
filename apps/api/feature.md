@@ -139,17 +139,19 @@
 
 ## TODO
 
-- [] crucial total kilos missing on endpoint to update the order
-- [] endpoint to check order status for customers
-- [] endpoint "/api/pickup-request/already-picked-up" it fetch other driver's already picked up jobs (pls fix)
-- [] customer name on endpoint "{{baseURL}}/api/admin/orders/"
-- [] inconsistent path on endpoint and driver endpoint "{{baseURL}}/api/workers/accept/:orderId"
-- [] too much data "{{baseURL}}/api/workers/reinput/b9834647-c0b4-466a-b05f-5152373b959e" or send comment based on category, so on frontend pretier
-- [] naming body payload on "{{baseURL}}/api/admin/mismatch/48b5d7a6-9dfa-4c4e-a427-a368a94981a0/washing"
-- [] guard the endpoint "{{baseURL}}/api/admin/orders/" (only allow outlet admin once submit)
-- [] sort the "{{baseURL}}/api/admin/mismatch" into descending order by date
-- [] api response for endpoint "{{baseURL}}/api/admin/mismatch/79ec41f2-d22e-49a0-b76e-3328d0fe07f7/washing"
-- [] api response fpr endpoint "{{baseURL}}/api/workers/reinput/79ec41f2-d22e-49a0-b76e-3328d0fe07f7"
+- [x] endpoint to check order status for customers
+- [x] endpoint to check completed order status for customers
+- [x] history of completed jobs for each worker
+- [x] crucial total kilos missing on endpoint to update the order
+- [x] endpoint "/api/pickup-request/already-picked-up" it fetch other driver's already picked up jobs (pls fix)
+- [x] customer name on endpoint "{{baseURL}}/api/admin/orders/"
+- [x] inconsistent path on endpoint and driver endpoint "{{baseURL}}/api/workers/accept/:orderId"
+- [x] too much data "{{baseURL}}/api/workers/reinput/b9834647-c0b4-466a-b05f-5152373b959e" or send comment based on category, so on frontend pretier
+- [x] naming body payload on "{{baseURL}}/api/admin/mismatch/48b5d7a6-9dfa-4c4e-a427-a368a94981a0/washing"
+- [x] guard the endpoint "{{baseURL}}/api/admin/orders/" (only allow outlet admin once submit)
+- [x] sort the "{{baseURL}}/api/admin/mismatch" into descending order by date
+- [x] api response for endpoint "{{baseURL}}/api/admin/mismatch/79ec41f2-d22e-49a0-b76e-3328d0fe07f7/washing"
+- [x] api response fpr endpoint "{{baseURL}}/api/workers/reinput/79ec41f2-d22e-49a0-b76e-3328d0fe07f7"
 
 - [x] ownership of the job for each worker station
 - [x] change the user id in the request body into params (/api/admin/walk-in-customer/orders/:id)

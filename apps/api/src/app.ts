@@ -26,6 +26,7 @@ import OutletRoute, { adminOutletRoutes } from "./routes/outlet.routes";
 import ItemRoute from "./routes/item.routes";
 import workerStationRoutes from "./routes/workerStation.routes";
 import adminMismatchRoutes from "./routes/adminMismatch.routes";
+import customerOrderRoutes from "./routes/customerOrder.routes";
 
 export class App {
   public app: Application;
@@ -38,6 +39,7 @@ export class App {
     this.initializeMiddlewares();
     this.initializeAdminRoutes();
     this.initializeUserAndAuth();
+    this.initializeUserOrderRoutes();
     this.initializeAdminManageUserRoutes();
     this.initializeOutletRoutes();
     this.initializeItemRoutes();
@@ -90,6 +92,10 @@ export class App {
   }
   private initializeAddressRoutes() {
     this.app.use("/api/addresses", AddressRoute); // customer address
+  }
+
+  private initializeUserOrderRoutes() {
+    this.app.use("/api/orders", customerOrderRoutes);
   }
 
   private initializeAdminManageUserRoutes() {

@@ -315,8 +315,8 @@ export class PickupRequestService {
     }
   }
 
-  // check status of the order (not only pickup request for customer)
-  async checkOrderStatus(userId: PickupRequestIdParamsDto["id"]) {
+  // check status of the pickup request order (not only pickup request for customer)
+  async checkPickupOrderStatus(userId: PickupRequestIdParamsDto["id"]) {
     try {
       // check if the user is valid
       const user = await prisma.user.findUnique({

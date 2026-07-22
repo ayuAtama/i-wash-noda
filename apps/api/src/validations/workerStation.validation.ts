@@ -229,6 +229,32 @@ export const MarkDoneServiceMethodSchema = z.object({
   }),
 });
 
+export const GetCompleteJobsStrategySchema = z.object({
+  outletId: z.uuid().meta({
+    description: "Outlet ID from middleware",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+  workerId: z.uuid().meta({
+    description: "Worker ID from access token",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+  workerStation: z.enum(["washing", "ironing", "packing"]).meta({
+    description: "Worker Station from middleware",
+    example: "washing",
+  }),
+});
+
+export const GetCompleteJobsMethodSchema = z.object({
+  outletId: z.uuid().meta({
+    description: "Outlet ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+  workerId: z.uuid().meta({
+    description: "Worker ID from access token",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+});
+
 export class WorkerStationValidation {
   static reInputItemSchema = ReInputItemSchema;
   static reInputItemBodySchema = ReInputItemBodySchema;
@@ -240,6 +266,8 @@ export class WorkerStationValidation {
   static markDoneServiceMethodSchema = MarkDoneServiceMethodSchema;
   static assignJobParamsSchema = ReInputItemParamsSchema;
   static markDoneParamsSchema = ReInputItemParamsSchema;
+  static getCompleteJobsStrategySchema = GetCompleteJobsStrategySchema;
+  static getCompleteJobsMethodSchema = GetCompleteJobsMethodSchema;
 }
 
 export type ReInputItemBodyPayloadDTO = z.infer<typeof ReInputItemBodySchema>;
@@ -274,3 +302,9 @@ export type MarkDoneServiceMethodDTO = z.infer<
   typeof MarkDoneServiceMethodSchema
 >;
 export type MarkDoneParamsPayloadDTO = z.infer<typeof ReInputItemParamsSchema>;
+export type GetCompleteJobsStrategyDTO = z.infer<
+  typeof GetCompleteJobsStrategySchema
+>;
+export type GetCompleteJobsMethodDTO = z.infer<
+  typeof GetCompleteJobsMethodSchema
+>;

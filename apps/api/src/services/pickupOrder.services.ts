@@ -399,6 +399,9 @@ export class PickupOrderService {
             },
           },
         },
+        orderBy: {
+          created_at: "desc",
+        },
       });
 
       const result = jobs.map((job) => ({
