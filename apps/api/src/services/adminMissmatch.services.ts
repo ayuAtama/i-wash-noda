@@ -94,8 +94,8 @@ export class AdminMissmatchServices {
         });
 
         formattedActualItems = actualItem.map((item) => ({
-          item_id: item.item_id,
-          quantity: item.quantity_initial,
+          itemId: item.item_id,
+          expectedQuantity: item.quantity_initial,
         }));
       } else {
         let stationBefore: StationName;
@@ -124,14 +124,26 @@ export class AdminMissmatchServices {
         });
 
         formattedActualItems = actualItem.map((item) => ({
-          item_id: item.item_id,
-          quantity: item.latest_quantity,
+          itemId: item.item_id,
+          expectedQuantity: item.latest_quantity,
         }));
       }
+
+      const formattedMismatch = mismatch.map((item) => ({
+        itemId: item.item_id,
+        itemName: item.item.name,
+        quantityInput: item.quantity_input,
+        adminNote: item.admin_note,
+        station: item.station,
+      }));
+
       return {
         success: true,
-        message: "Missmatch data fetched successfully",
-        data: { mismatch, formattedActualItems },
+        message: "Mismatch data fetched successfully",
+        data: {
+          mismatch: formattedMismatch,
+          expectedItems: formattedActualItems,
+        },
       };
     } catch (error) {
       throw error;
@@ -140,8 +152,14 @@ export class AdminMissmatchServices {
 
   manageMismatch = async (payload: ManageMismatchPayload) => {
     try {
-      const { orderId, stationName, adminId, outletId, summary, mismatch } =
-        payload;
+      const {
+        orderId,
+        stationName,
+        adminId,
+        outletId,
+        finalQuantities,
+        itemDecisions,
+      } = payload;
 
       //guard rail
       const isExist = await prisma.stationSummary.findFirst({
@@ -162,7 +180,7 @@ export class AdminMissmatchServices {
 
       const result = await prisma.$transaction(async (tx) => {
         const mismatchData = await Promise.all(
-          mismatch.map(async (item) => {
+          itemDecisions.map(async (item) => {
             const mismatchUpdate = await tx.orderStationLog.updateManyAndReturn(
               {
                 where: {
@@ -176,6 +194,12 @@ export class AdminMissmatchServices {
                   approved_by: adminId,
                   approved_at: new Date(),
                 },
+                select: {
+                  item_id: true,
+                  quantity_input: true,
+                  admin_note: true,
+                  station: true,
+                },
               },
             );
             return mismatchUpdate;
@@ -183,7 +207,7 @@ export class AdminMissmatchServices {
         );
 
         const summaryData = await Promise.all(
-          summary.map(async (item) => {
+          finalQuantities.map(async (item) => {
             const summaryUpdate = await tx.stationSummary.createManyAndReturn({
               data: {
                 order_id: orderId,
@@ -191,17 +215,22 @@ export class AdminMissmatchServices {
                 latest_quantity: item.latestQuantity,
                 station: stationName,
               },
+              select: {
+                item_id: true,
+                latest_quantity: true,
+                station: true,
+              },
             });
             return summaryUpdate;
           }),
         );
 
-        return { mismatchData, summaryData };
+        return { itemDecisions: mismatchData, finalQuantities: summaryData };
       });
 
       return {
         success: true,
-        message: "Missmatch data updated successfully",
+        message: "Missmatch data has been managed successfully",
         data: result,
       };
     } catch (error) {
