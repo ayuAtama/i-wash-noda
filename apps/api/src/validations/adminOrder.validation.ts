@@ -312,6 +312,11 @@ export type ManualOrderPayloadValidationDTO = ManualOrderInputDTO &
 export class UpdateOrderItemValidation {
   static UpdateOrderItemSchema = z
     .object({
+      totalWeights: z.number().min(1, "Total kilos must be at least 1").meta({
+        description:
+          "Total kilos of laundry (recalculates laundry_price and total_amount)",
+        example: 5,
+      }),
       items: z
         .array(ItemOrderSchema)
         .min(1, "At least one item must be inputted")
@@ -328,6 +333,7 @@ export class UpdateOrderItemValidation {
       id: "UpdateOrderItem",
       description: "Payload for updating an order item",
       example: {
+        totalWeights: 5,
         items: [
           { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
           { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },

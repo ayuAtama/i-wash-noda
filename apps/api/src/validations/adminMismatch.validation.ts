@@ -155,14 +155,10 @@ export const SummarySchema = z
           itemId: "123e4567-e89b-12d3-a456-426614174000",
         },
       }),
-    latestQuantity: z
-      .number()
-      .min(1)
-      .max(100)
-      .meta({
-        description: "Latest quantity of the item",
-        example: 10,
-      })
+    latestQuantity: z.number().min(1).max(100).meta({
+      description: "Latest quantity of the item",
+      example: 10,
+    }),
   })
   .meta({
     description: "Payload for checking summary data",
@@ -174,19 +170,19 @@ export const SummarySchema = z
 
 export const ManageMismatchSchema = z
   .object({
-    summary: z.array(SummarySchema),
-    mismatch: z.array(MismatchSchema),
+    finalQuantities: z.array(SummarySchema),
+    itemDecisions: z.array(MismatchSchema),
   })
   .meta({
     description: "Payload for manage mismatch data (body)",
     example: {
-      summary: [
+      finalQuantities: [
         {
           itemId: "123e4567-e89b-12d3-a456-426614174000",
           latestQuantity: 10,
         },
       ],
-      mismatch: [
+      itemDecisions: [
         {
           itemId: "123e4567-e89b-12d3-a456-426614174000",
           status: "approved",

@@ -6,11 +6,6 @@ import {
   OutletIDPayloadDTO,
   ReInputServiceMethodPayloadDTO,
 } from "@/validations/workerStation.validation";
-import {
-  OrderStationLog,
-  StationSummary,
-  WorkerStation,
-} from "@/generated/prisma/client";
 import { ApiResponse } from "./apiResponse";
 
 export interface AvailableJobs {
@@ -22,17 +17,21 @@ export interface AvailableJobs {
 
 export type AssignJobData = string;
 
-export interface ReInputSuccessData {
-  stationLog: OrderStationLog[];
-  stationSummary: StationSummary[];
+export interface ReInputItem {
+  itemId: string;
+  quantity: number;
 }
 
-export type ReInputFailureData = {
-  correct: OrderStationLog[];
-  incorrect: OrderStationLog[];
-  notExist: OrderStationLog[];
-  lost: OrderStationLog[];
-};
+export interface ReInputSuccessData {
+  match: ReInputItem[];
+}
+
+export interface ReInputFailureData {
+  match: ReInputItem[];
+  mismatch: ReInputItem[];
+  new: ReInputItem[];
+  lost: ReInputItem[];
+}
 
 export type ReInputItemData = ReInputSuccessData | ReInputFailureData;
 

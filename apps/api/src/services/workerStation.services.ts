@@ -413,8 +413,10 @@ class WashingService implements WorkerStationStrategy {
           success: true,
           message: "Item re-input successfully",
           data: {
-            stationLog: result.stationLog,
-            stationSummary: result.stationSummary,
+            match: result.stationLog.map((log) => ({
+              itemId: log.item_id,
+              quantity: log.quantity_input,
+            })),
           },
         };
       } else {
@@ -474,7 +476,24 @@ class WashingService implements WorkerStationStrategy {
         return {
           success: false,
           message: "Item re-input failed waiting for admin approval",
-          data: { correct, incorrect, notExist, lost },
+          data: {
+            match: correct.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            mismatch: incorrect.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            new: notExist.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            lost: lost.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+          },
         };
       }
     } catch (error) {
@@ -845,8 +864,10 @@ class IroningService implements WorkerStationStrategy {
           success: true,
           message: "Item re-input successfully",
           data: {
-            stationLog: result.stationLog,
-            stationSummary: result.stationSummary,
+            match: result.stationLog.map((log) => ({
+              itemId: log.item_id,
+              quantity: log.quantity_input,
+            })),
           },
         };
       } else {
@@ -906,7 +927,24 @@ class IroningService implements WorkerStationStrategy {
         return {
           success: false,
           message: "Item re-input failed waiting for admin approval",
-          data: { correct, incorrect, notExist, lost },
+          data: {
+            match: correct.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            mismatch: incorrect.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            new: notExist.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            lost: lost.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+          },
         };
       }
     } catch (error) {
@@ -1281,8 +1319,10 @@ class PackingService implements WorkerStationStrategy {
           success: true,
           message: "Item re-input successfully",
           data: {
-            stationLog: result.stationLog,
-            stationSummary: result.stationSummary,
+            match: result.stationLog.map((log) => ({
+              itemId: log.item_id,
+              quantity: log.quantity_input,
+            })),
           },
         };
       } else {
@@ -1342,7 +1382,24 @@ class PackingService implements WorkerStationStrategy {
         return {
           success: false,
           message: "Item re-input failed waiting for admin approval",
-          data: { correct, incorrect, notExist, lost },
+          data: {
+            match: correct.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            mismatch: incorrect.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            new: notExist.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+            lost: lost.map((i) => ({
+              itemId: i.item_id,
+              quantity: i.quantity_input,
+            })),
+          },
         };
       }
     } catch (error) {

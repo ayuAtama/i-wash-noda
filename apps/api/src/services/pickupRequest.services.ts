@@ -324,7 +324,7 @@ export class PickupRequestService {
       });
       if (!user) throw new HttpError(404, "User not found");
 
-      // check the status of the order
+      // find the most recent active order for this customer
       const order = await prisma.order.findFirst({
         where: {
           customer_id: userId,
@@ -341,6 +341,9 @@ export class PickupRequestService {
           laundry_price: true,
           total_amount: true,
           created_at: true,
+        },
+        orderBy: {
+          created_at: "desc",
         },
       });
 

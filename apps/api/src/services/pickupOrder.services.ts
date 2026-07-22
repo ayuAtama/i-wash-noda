@@ -340,19 +340,8 @@ export class PickupOrderService {
     }
   }
 
-  async getAllAlreadyPickedUpJob(userId: UserIdDto, outletId: string) {
+  async getAllAlreadyPickedUpJob(userId: UserIdDto, outletId: OutletIdDto) {
     try {
-      // get list all the accepted job
-      // const listPickedUpJob = await prisma.driverJobStatus.findMany({
-      //   where: {
-      //     driver_id: userId,
-      //     pickup_request_id: { not: null },
-      //     status: "done",
-      //   },
-      // });
-
-      // return listPickedUpJob;
-
       const jobs = await prisma.driverJobStatus.findMany({
         where: {
           driver_id: userId,
@@ -360,6 +349,11 @@ export class PickupOrderService {
             not: null,
           },
           status: "done",
+          pickupRequest: {
+            order: {
+              outlet_id: outletId,
+            },
+          },
         },
         select: {
           id: true,
@@ -407,7 +401,18 @@ export class PickupOrderService {
         },
       });
 
-      return jobs;
+      const result = jobs.map((job) => ({
+        id: job.pickupRequest?.id,
+        status: job.status,
+        order_id: job.pickupRequest?.order.id,
+        customer_name: job.pickupRequest?.order.customer?.name,
+        pickup_address: job.pickupRequest?.order.pickupAddress?.address,
+        pickup_coordinates: `${job.pickupRequest?.order.pickupAddress?.lat}, ${job.pickupRequest?.order.pickupAddress?.lng}`,
+        created_at: job.pickupRequest?.created_at,
+        updated_at: job.updated_at,
+      }));
+
+      return result;
     } catch (error) {
       throw error;
     }

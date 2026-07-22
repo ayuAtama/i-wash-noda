@@ -1,5 +1,6 @@
 // src/services/adminOrder.services.ts
 import { prisma } from "@/config/prisma";
+import { OrderStatus } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
 import {
   AdminOrderInputDTO,
@@ -391,6 +392,16 @@ export class AdminOrderService {
           id: true,
           customer_id: true,
           walkin_customer_id: true,
+          customer: {
+            select: {
+              name: true,
+            },
+          },
+          walkInCustomer: {
+            select: {
+              name: true,
+            },
+          },
           pickupAddress: {
             select: {
               address: true,
@@ -419,7 +430,13 @@ export class AdminOrderService {
       if (orders.length === 0 || !orders) {
         throw new HttpError(404, "There is no order from this outlet yet");
       }
-      return orders;
+
+      const result = orders.map(({ customer, walkInCustomer, ...rest }) => ({
+        ...rest,
+        customer_name: customer?.name ?? walkInCustomer?.name ?? null,
+      }));
+
+      return result;
     } catch (error) {
       throw error;
     }
@@ -428,7 +445,12 @@ export class AdminOrderService {
   async updateItemOfOrder(data: UpdateOrderItemPayloadValidationDTO) {
     try {
       // destructure the data
-      const { outlet_id, orderId: order_id, items } = data;
+      const {
+        outlet_id,
+        orderId: order_id,
+        items,
+        totalWeights: total_kilo,
+      } = data;
 
       // not allowed the order that doesn't match with the order_outlet's outlet_admin
       const order = await prisma.order.findUnique({
@@ -438,6 +460,9 @@ export class AdminOrderService {
         },
         select: {
           id: true,
+          status: true,
+          pickup_fee: true,
+          delivery_fee: true,
           customer: {
             select: {
               name: true,
@@ -451,6 +476,11 @@ export class AdminOrderService {
           404,
           "Please don't manage order that belong to your outlet",
         );
+      }
+
+      // guard: only allow submission once
+      if (order.status !== "arrived_at_outlet") {
+        throw new HttpError(400, "Order already submitted, cannot modify");
       }
 
       // make a transaction for safety
@@ -615,26 +645,61 @@ export class AdminOrderService {
           },
         });
 
+        // build order update data
+        const orderUpdateData: {
+          status: OrderStatus;
+          total_kilo?: number;
+          laundry_price?: number;
+          total_amount?: number;
+        } = {
+          status: "washing_in_progress",
+        };
+
+        // if total_kilo provided, recalculate prices
+        if (total_kilo !== undefined) {
+          const { price_per_kg } = await tx.outlet.findFirstOrThrow({
+            where: { id: outlet_id },
+            select: { price_per_kg: true },
+          });
+          const laundryPrice = Math.ceil(total_kilo * price_per_kg);
+          const totalAmount =
+            laundryPrice + order.pickup_fee + order.delivery_fee;
+          orderUpdateData.total_kilo = total_kilo;
+          orderUpdateData.laundry_price = laundryPrice;
+          orderUpdateData.total_amount = totalAmount;
+        }
+
         // update the order's status to the next step
         const updateOrderStatus = await tx.order.update({
           where: {
             id: order_id,
           },
-          data: {
-            status: "washing_in_progress",
-          },
+          data: orderUpdateData,
           select: {
             status: true,
+            total_kilo: true,
+            laundry_price: true,
+            total_amount: true,
           },
         });
 
         // return the result
+        const { customer, ...rest } = order;
         return {
           order: {
-            ...order,
+            ...rest,
+            customer_name: customer?.name,
             status: updateOrderStatus.status,
+            total_kilo: updateOrderStatus.total_kilo,
+            laundry_price: updateOrderStatus.laundry_price,
+            total_amount: updateOrderStatus.total_amount,
           },
-          finalOrderItems,
+          finalOrderItems: finalOrderItems.map((item) => {
+            return {
+              name: item.item.name,
+              quantity: item.quantity_initial,
+            };
+          }),
         };
       });
 

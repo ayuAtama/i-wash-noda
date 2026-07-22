@@ -42,7 +42,7 @@ export class WorkerStationRoute {
 
   private assignJob() {
     this.router.post(
-      "/accept/:orderId",
+      "/:orderId/accept",
       authenticationMiddleware,
       authorizationMiddleware("worker"),
       resolveContext,
