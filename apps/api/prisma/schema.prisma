@@ -53,6 +53,12 @@ enum MismatchStatus {
   rejected
 }
 
+enum PaymentProofStatus {
+  pending
+  approved
+  rejected
+}
+
 enum PaymentGatewayStatus {
   pending
   paid
@@ -428,10 +434,13 @@ model DeliveryRequest {
 // -----------------------
 
 model PaymentProof {
-  id         String   @id @default(uuid()) @db.Uuid
-  order_id   String   @unique @db.Uuid
+  id         String             @id @default(uuid()) @db.Uuid
+  order_id   String             @unique @db.Uuid
   image_url  String
-  created_at DateTime @default(now())
+  status     PaymentProofStatus @default(pending)
+  updated_at DateTime           @updatedAt
+  created_at DateTime           @default(now())
+  is_deleted Boolean            @default(false)
 
   order Order @relation(fields: [order_id], references: [id])
 

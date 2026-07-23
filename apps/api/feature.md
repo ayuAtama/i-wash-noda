@@ -139,6 +139,18 @@
 
 ## TODO
 
+- [] detailed history using the order id
+- [x] endpoint to upload payment proofs (customer)
+- [x] endpoint to check the payment proofs (outlet_admin)
+- [x] endpoint to approve the payment proofs (outlet_admin) and automatically make a delivery request to the driver (only for customer_app)
+- [] endpoint to fetch all delivery requests (driver)
+- [] endpoint to accept the delivery request jobs (driver)
+- [] endpoint to check all active delivery requests (driver) (accepted jobs)
+- [] endpoint to check all completed delivery requests (driver) (completed jobs)
+- [] endpoint to mark done for delivery request (driver) and change the order status into `delivered`
+- [] make a cronjob to mark the status label `delivered` to `completed` after 24 hours (every 12 hours)
+- [] endpoint to mark finished for walk-in customers order (outlet_admin) when the customer take the order and paid
+
 - [x] endpoint to check order status for customers
 - [x] endpoint to check completed order status for customers
 - [x] history of completed jobs for each worker

@@ -16,6 +16,7 @@ import {
   WalkInCustomerIdParamsSchemaDTO,
   UpdatePayloadDTO,
   DeletePayloadDTO,
+  PaymentParamsDTO,
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderController {
@@ -270,6 +271,57 @@ export class AdminOrderController {
         message: result.message,
         data: result.data,
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  checkCustomerPaymentProof = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (!req.context)
+        throw new HttpError(
+          500,
+          "The Developer forget to use the resolveContext middleware",
+        );
+      const outlet_id = req.context.outlet_id;
+
+      const result = await this.adminOrderService.checkCustomerPaymentProof({
+        outlet_id,
+      });
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  actionOfPaymentProof = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (!req.validated)
+        throw new HttpError(
+          500,
+          "The developer made a mistake, and forgot to use the validate middleware",
+        );
+      if (!req.context)
+        throw new HttpError(
+          500,
+          "The Devs secretly likes you (resolveContext )",
+        );
+      const { outlet_id } = req.context;
+      const { id, action } = req.validated.params as PaymentParamsDTO;
+      const result = await this.adminOrderService.actionOfPaymentProof({
+        outlet_id,
+        id,
+        action,
+      });
+      return res.status(200).json(result);
     } catch (error) {
       next(error);
     }
