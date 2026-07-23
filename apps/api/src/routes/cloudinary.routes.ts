@@ -17,10 +17,10 @@ export class CloudinaryRoute {
 
   private getSignature() {
     this.router.get(
-      "/",
+      "/:folder{/:params}",
       authenticationMiddleware,
       Validator.validate({
-        body: CloudinaryValidation.RequestSignatureSchema,
+        params: CloudinaryValidation.RequestSignatureSchema,
       }),
       rateLimiter(5),
       this.controller.getUploadSignature,

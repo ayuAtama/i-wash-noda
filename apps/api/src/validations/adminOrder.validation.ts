@@ -368,3 +368,63 @@ export type UpdateOrderItemPayloadValidationDTO = UpdateOrderItemInputDTO &
 export type OrderIdParamsSchemaDTO = z.infer<
   typeof UpdateOrderItemValidation.OrderIdParamsSchema
 >;
+
+///////////////////////////////////////////////
+// ACC/REJ Payment Order by outlet_admin     //
+//////////////////////////////////////////////
+
+import { PaymentProofStatus } from "@/generated/prisma/enums";
+
+export class PaymentOrderValidation {
+  static ActionOfPaymentProofSchema = z
+    .object({
+      outlet_id: z.uuid().meta({
+        description: "Outlet ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      id: z.uuid().meta({
+        description: "Payment proof ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      action: z.enum(PaymentProofStatus).meta({
+        description: "Payment proof status",
+        example: "approved",
+      }),
+    })
+    .meta({
+      id: "ActionOfPaymentProof",
+      description: "Payload for verifying an outlet",
+      example: {
+        outlet_id: "123e4567-e89b-12d3-a456-426614174000",
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        action: "approved",
+      },
+    });
+
+  static PaymentActionParamsSchema = z
+    .object({
+      id: z.uuid().meta({
+        description: "Payment proof ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      action: z.enum(PaymentProofStatus).meta({
+        description: "Payment proof status",
+        example: "approved",
+      }),
+    })
+    .meta({
+      id: "PaymentActionParams",
+      description: "Payload for verifying an outlet",
+      example: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        action: "approved",
+      },
+    });
+}
+
+export type ActionOfPaymentProofValidationDTO = z.infer<
+  typeof PaymentOrderValidation.ActionOfPaymentProofSchema
+>;
+export type PaymentParamsDTO = z.infer<
+  typeof PaymentOrderValidation.PaymentActionParamsSchema
+>;
