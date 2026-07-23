@@ -3,6 +3,7 @@ import { prisma } from "@/config/prisma";
 import { OrderStatus } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
 import {
+  ActionOfPaymentProofValidationDTO,
   AdminOrderInputDTO,
   CheckWalkInCustomerValidationDTO,
   DeletePayloadDTO,
@@ -10,6 +11,7 @@ import {
   ManualOrderInputDTO,
   ManualOrderPayloadValidationDTO,
   OutletIdParamsSchemaDTO,
+  outletIDSchemaDTO,
   UpdateOrderItemInputDTO,
   UpdateOrderItemPayloadValidationDTO,
   UpdatePayloadDTO,
@@ -711,5 +713,190 @@ export class AdminOrderService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async checkCustomerPaymentProof(data: outletIDSchemaDTO) {
+    const { outlet_id: outletId } = data;
+
+    const listPaymentProof = await prisma.paymentProof.findMany({
+      where: {
+        order: {
+          outlet_id: outletId,
+        },
+        is_deleted: false,
+      },
+      select: {
+        id: true,
+        image_url: true,
+        created_at: true,
+        updated_at: true,
+        is_deleted: true,
+        order: {
+          select: {
+            id: true,
+            customer: {
+              select: {
+                name: true,
+                image: true,
+              },
+            },
+            total_amount: true,
+          },
+        },
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+    });
+
+    const normalizedData = listPaymentProof.map((item) => {
+      const customer_name = item.order.customer?.name
+        ? item.order.customer.name
+        : null;
+      const customer_image = item.order.customer?.image
+        ? item.order.customer.image
+        : null;
+
+      return {
+        id: item.id,
+        orderId: item.order.id,
+        customerName: customer_name,
+        customerImage: customer_image,
+        approved: item.is_deleted,
+        imageProofUrl: item.image_url,
+        totalAmount: item.order.total_amount,
+        updatedAt: item.updated_at,
+        createdAt: item.created_at,
+      };
+    });
+
+    return {
+      success: true,
+      message: "Payment proof fetched successfully",
+      data: normalizedData,
+    };
+  }
+
+  async actionOfPaymentProof(data: ActionOfPaymentProofValidationDTO) {
+    const { outlet_id: outletId, id: paymentProofID, action } = data;
+
+    const isPaymentProofExist = await prisma.paymentProof.findFirst({
+      where: {
+        id: paymentProofID,
+        order: {
+          outlet_id: outletId,
+        },
+      },
+      select: {
+        id: true,
+        order_id: true,
+        status: true,
+      },
+    });
+
+    if (!isPaymentProofExist)
+      throw new HttpError(404, "Payment proof not found");
+
+    if (isPaymentProofExist.status !== "pending")
+      throw new HttpError(409, "Payment proof already reviewed");
+
+    // reject
+    if (action === "rejected") {
+      const reject = await prisma.paymentProof.update({
+        where: {
+          id: paymentProofID,
+          order: {
+            outlet_id: outletId,
+          },
+        },
+        data: {
+          status: "rejected",
+          is_deleted: true,
+        },
+        select: {
+          id: true,
+          image_url: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
+      return {
+        success: true,
+        message: "Payment proof rejected successfully",
+        data: reject,
+      };
+    }
+
+    // approve
+    const transactionResult = await prisma.$transaction(async (tx) => {
+      const approve = await tx.paymentProof.update({
+        where: { id: paymentProofID },
+        data: { status: "approved" },
+        select: { order_id: true, status: true },
+      });
+
+      let currentOrder = await tx.order.update({
+        where: {
+          id: approve.order_id,
+          outlet_id: outletId,
+        },
+        data: {
+          paid: true,
+        },
+        select: {
+          id: true,
+          status: true,
+          paid: true,
+          deliveryRequests: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      //happened if change from database (easter egg)
+      if (currentOrder.deliveryRequests.length > 0) {
+        throw new HttpError(409, "Hehe, the dev like a yuris");
+      }
+
+      const deliveryRequest = await tx.deliveryRequest.create({
+        data: {
+          order_id: currentOrder.id,
+          accepted: false,
+        },
+      });
+
+      if (currentOrder.status === "waiting_for_payment") {
+        currentOrder = await tx.order.update({
+          where: {
+            id: currentOrder.id,
+          },
+          data: { status: "waiting_for_driver_deliver" },
+          select: {
+            id: true,
+            status: true,
+            paid: true,
+            deliveryRequests: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        });
+      }
+
+      return {
+        order: currentOrder,
+        paymentProof: approve,
+        deliveryRequest: deliveryRequest,
+      };
+    });
+
+    return {
+      success: true,
+      message: "Payment proof approved successfully",
+      data: transactionResult,
+    };
   }
 }

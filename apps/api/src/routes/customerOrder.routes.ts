@@ -3,6 +3,8 @@ import { CustomerOrderController } from "@/controllers/customerOrder.controller"
 import { CustomerOrderService } from "@/services/customerOrder.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
+import { Validator } from "@/middleware/validate";
+import { CustomerOrderValidation } from "@/validations/customerOrder.validation";
 
 class CustomerOrderRoute {
   public router = Router();
@@ -11,6 +13,7 @@ class CustomerOrderRoute {
   constructor() {
     this.controller = new CustomerOrderController(new CustomerOrderService());
     this.customerOrder();
+    this.uploadPaymentProof();
   }
 
   private customerOrder() {
@@ -26,6 +29,19 @@ class CustomerOrderRoute {
       authenticationMiddleware,
       authorizationMiddleware("customer"),
       this.controller.checkCompletedOrderStatus,
+    );
+  }
+
+  private uploadPaymentProof() {
+    this.router.post(
+      "/:orderId/payment",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      Validator.validate({
+        params: CustomerOrderValidation.OrderIdParamsSchema,
+        body: CustomerOrderValidation.PaymentProofSchema,
+      }),
+      this.controller.uploadPaymentProof,
     );
   }
 }

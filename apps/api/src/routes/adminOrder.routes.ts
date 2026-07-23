@@ -6,6 +6,7 @@ import { AdminOrderService } from "@/services/adminOrder.services";
 import {
   AdminOrderValidation,
   ManualOrderValidation,
+  PaymentOrderValidation,
   UpdateOrderItemValidation,
   UpdateWalkInCustomerValidation,
   WalkInCustomerValidation,
@@ -20,21 +21,10 @@ export class AdminOrderRoute {
 
   constructor() {
     this.controller = new AdminOrderController(new AdminOrderService());
-    //this.createOrder();
     this.getAllOrderOnTheOutlet();
     this.updateItemOfOrder();
+    this.PaymentProof();
   }
-
-  // private createOrder() {
-  //   this.router.put(
-  //     "/orders/:id",
-  //     Validator.validate({
-  //       body: AdminOrderValidation.AdminOrderSchema,
-  //       params: AdminOrderValidation.AdminOrderParamsSchema,
-  //     }),
-  //     this.controller.createOrder,
-  //   );
-  // }
 
   private getAllOrderOnTheOutlet() {
     this.router.get(
@@ -57,6 +47,27 @@ export class AdminOrderRoute {
         params: UpdateOrderItemValidation.OrderIdParamsSchema,
       }),
       this.controller.updateItemOfOrder,
+    );
+  }
+
+  private PaymentProof() {
+    this.router.get(
+      "/payment-proof/",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      this.controller.checkCustomerPaymentProof,
+    );
+
+    this.router.post(
+      "/payment-proof/:id/:action",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        params: PaymentOrderValidation.PaymentActionParamsSchema,
+      }),
+      this.controller.actionOfPaymentProof,
     );
   }
 }

@@ -1,9 +1,12 @@
 import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
-import { UserIdDto } from "@/validations/customerOrder.validation";
+import {
+  uploadPaymentDTO,
+  UserIdDTO,
+} from "@/validations/customerOrder.validation";
 
 export class CustomerOrderService {
-  async checkActiveOrderStatus(userId: UserIdDto) {
+  async checkActiveOrderStatus(userId: UserIdDTO) {
     try {
       // check if the user is valid
       const user = await prisma.user.findUnique({
@@ -51,7 +54,7 @@ export class CustomerOrderService {
   }
 
   //check all completed orders
-  async checkCompletedOrderStatus(userId: UserIdDto) {
+  async checkCompletedOrderStatus(userId: UserIdDTO) {
     try {
       // check if the user is valid
       const user = await prisma.user.findUnique({
@@ -93,6 +96,58 @@ export class CustomerOrderService {
       };
     } catch (err) {
       throw err;
+    }
+  }
+
+  async uploadPaymentProof(data: uploadPaymentDTO) {
+    try {
+      const { orderId, userId, urlProof } = data;
+
+      const orderData = await prisma.order.findFirst({
+        where: {
+          id: orderId,
+          customer_id: userId,
+        },
+        select: {
+          id: true,
+          paymentProof: {
+            where: { is_deleted: false },
+            select: { id: true },
+          },
+        },
+      });
+
+      if (!orderData)
+        throw new HttpError(
+          404,
+          "Order not found, and don't be a little hacker",
+        );
+      if (orderData.paymentProof)
+        throw new HttpError(
+          409,
+          "Proof already uploaded, waiting for admin approval",
+        );
+
+      const uploadProof = await prisma.paymentProof.create({
+        data: {
+          order_id: orderData.id,
+          image_url: urlProof,
+        },
+        select: {
+          id: true,
+          order_id: true,
+          image_url: true,
+          created_at: true,
+        },
+      });
+
+      return {
+        success: true,
+        message: "Payment proof uploaded successfully",
+        data: uploadProof,
+      };
+    } catch (error) {
+      throw error;
     }
   }
 }

@@ -1545,13 +1545,14 @@ class PackingService implements WorkerStationStrategy {
         select: {
           status: true,
           source: true,
+          paid: true,
         },
       });
 
       if (!order) {
         throw new HttpError(400, "This job is not assigned to you");
       }
-      if (order.status === "waiting_for_payment") {
+      if (order.status !== "packing_in_progress") {
         throw new HttpError(400, "You've already completed this job");
       }
 
@@ -1580,7 +1581,11 @@ class PackingService implements WorkerStationStrategy {
         data: {
           packing_completed_at: new Date(),
           status:
-            order.source === "walk_in" ? "delivered" : "waiting_for_payment",
+            order.source === "walk_in"
+              ? "delivered"
+              : order.paid
+                ? "waiting_for_driver_deliver"
+                : "waiting_for_payment",
           // so the walkin customer can be marked as finished when picked up (query with delivered status)
         },
         select: {

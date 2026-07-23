@@ -22,6 +22,8 @@ async function findUserRoles(userId: string) {
 }
 
 export const auth = betterAuth({
+  baseURL: "http://localhost:3000",
+
   // connect to database orm
   database: prismaAdapter(prisma, {
     provider: "postgresql",
