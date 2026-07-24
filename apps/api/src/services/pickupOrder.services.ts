@@ -128,7 +128,7 @@ export class PickupOrderService {
             },
             data: {
               driver_pickup_id: updatePickupRequest.driver_id,
-              status: "in_transit_to_outlet",
+              status: "out_for_pickup",
             },
             select: {
               id: true,
@@ -197,6 +197,7 @@ export class PickupOrderService {
             pickup_request_id: pickupOrderId,
             driver_id: userId,
           },
+          select: { status: true },
         });
 
         // throw not found
@@ -214,7 +215,29 @@ export class PickupOrderService {
               status: "on_delivery",
               updated_at: new Date(),
             },
+            select: {
+              id: true,
+              status: true,
+              pickup_request_id: true,
+              driver_id: true,
+              updated_at: true,
+              created_at: true,
+              pickupRequest: {
+                select: {
+                  order_id: true,
+                },
+              },
+            },
           });
+
+          // update the order status into in_transit to outlet
+          await tx.order.update({
+            where: {
+              id: updateStatus.pickupRequest?.order_id,
+            },
+            data: { status: "in_transit_to_outlet" },
+          });
+
           return updateStatus;
         }
 
@@ -229,21 +252,29 @@ export class PickupOrderService {
               status: "done",
               updated_at: new Date(),
             },
-          });
-
-          // fetch the order id
-          const order = await tx.pickupRequest.findUnique({
-            where: {
-              id: pickupOrderId,
-              driver_id: userId,
+            select: {
+              id: true,
+              status: true,
+              pickup_request_id: true,
+              driver_id: true,
+              updated_at: true,
+              created_at: true,
+              pickupRequest: {
+                select: {
+                  order_id: true,
+                },
+              },
             },
           });
 
           // update the order status into arrived at outlet
-          if (order?.order_id && updateStatus.status === "done") {
+          if (
+            updateStatus?.pickupRequest?.order_id &&
+            updateStatus.status === "done"
+          ) {
             await tx.order.update({
               where: {
-                id: order.order_id,
+                id: updateStatus.pickupRequest.order_id,
               },
               data: {
                 status: "arrived_at_outlet",
