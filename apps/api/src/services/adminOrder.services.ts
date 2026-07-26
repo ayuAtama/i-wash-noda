@@ -6,12 +6,14 @@ import {
   ActionOfPaymentProofValidationDTO,
   AdminOrderInputDTO,
   CheckWalkInCustomerValidationDTO,
+  CustomerComplaintPayloadDTO,
   DeletePayloadDTO,
   IDParamSchemaDTO,
   ManualOrderInputDTO,
   ManualOrderPayloadValidationDTO,
   OutletIdParamsSchemaDTO,
   outletIDSchemaDTO,
+  OutletIDValidationDTO,
   UpdateOrderItemInputDTO,
   UpdateOrderItemPayloadValidationDTO,
   UpdatePayloadDTO,
@@ -731,6 +733,7 @@ export class AdminOrderService {
         created_at: true,
         updated_at: true,
         is_deleted: true,
+        status: true,
         order: {
           select: {
             id: true,
@@ -762,7 +765,8 @@ export class AdminOrderService {
         orderId: item.order.id,
         customerName: customer_name,
         customerImage: customer_image,
-        approved: item.is_deleted,
+        approved: item.status,
+        isDeleted: item.is_deleted,
         imageProofUrl: item.image_url,
         totalAmount: item.order.total_amount,
         updatedAt: item.updated_at,
@@ -898,5 +902,140 @@ export class AdminOrderService {
       message: "Payment proof approved successfully",
       data: transactionResult,
     };
+  }
+
+  async getAllPendingComplaints(data: OutletIDValidationDTO) {
+    try {
+      const outlet_id = data;
+
+      const complaintLists = await prisma.complaint.findMany({
+        where: {
+          order: {
+            outlet_id: outlet_id,
+          },
+          status: "pending",
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!complaintLists) throw new HttpError(404, "Complaint not found");
+
+      const normalized = complaintLists.map((complaint) => {
+        return {
+          id: complaint.id,
+          orderId: complaint.order_id,
+          customerName: complaint.user.name,
+          message: complaint.message,
+          imageUrl: complaint.image_url,
+          status: complaint.status,
+          createdAt: complaint.created_at,
+        };
+      });
+
+      return {
+        success: true,
+        message: "Complaints fetched successfully",
+        data: normalized,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async actionOfCustomerComplaint(data: CustomerComplaintPayloadDTO) {
+    try {
+      const {
+        complaintId,
+        status,
+        adminResponse: admin_response,
+        adminId,
+      } = data;
+
+      const guard = await prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: { id: true, status: true },
+      });
+      if (!guard) throw new HttpError(404, "Complaint not found");
+      if (guard.status === "resolved")
+        throw new HttpError(409, "Complaint already resolved");
+      if (guard.status !== "pending")
+        throw new HttpError(409, "Complaint already responded");
+
+      const { update, orderUpdate } = await prisma.$transaction(async (tx) => {
+        const update = await tx.complaint.update({
+          where: { id: guard.id },
+          data: {
+            admin_response: admin_response,
+            admin_id: adminId,
+            status: status,
+            resolved_at: status === "resolved" ? new Date() : null,
+          },
+          select: {
+            id: true,
+            order_id: true,
+            user: {
+              select: {
+                name: true,
+              },
+            },
+            order: {
+              select: {
+                pickupAddress: {
+                  select: {
+                    address: true,
+                    lat: true,
+                    lng: true,
+                  },
+                },
+              },
+            },
+            message: true,
+            image_url: true,
+            admin_response: true,
+            status: true,
+            resolved_at: true,
+            updated_at: true,
+            created_at: true,
+          },
+        });
+
+        const orderUpdate = await tx.order.update({
+          where: { id: update.order_id },
+          data: { status: "finished", confirmed_at: new Date() },
+          select: { id: true, status: true },
+        });
+
+        return { update, orderUpdate };
+      });
+
+      const normalized = {
+        id: update.id,
+        userName: update.user.name,
+        orderStatus: orderUpdate.status,
+        orderAddress: update.order.pickupAddress?.address,
+        orderCoordinates: `${update.order.pickupAddress?.lat},${update.order.pickupAddress?.lng}`,
+        message: update.message,
+        imageUrl: update.image_url,
+        adminResponse: update.admin_response,
+        status: update.status,
+        resolvedAt: update.resolved_at,
+        updatedAt: update.updated_at,
+        createdAt: update.created_at,
+      };
+
+      return {
+        success: true,
+        message: "Complaint updated successfully",
+        data: normalized,
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }

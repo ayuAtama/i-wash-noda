@@ -27,6 +27,7 @@ import ItemRoute from "./routes/item.routes";
 import workerStationRoutes from "./routes/workerStation.routes";
 import adminMismatchRoutes from "./routes/adminMismatch.routes";
 import customerOrderRoutes from "./routes/customerOrder.routes";
+import deliveryOrderRoutes from "./routes/deliveryOrder.routes";
 
 export class App {
   public app: Application;
@@ -49,6 +50,7 @@ export class App {
     this.initializeWorkerRoutes();
     this.initializePreSignedURLRoutes();
     this.initializeAdminMismatchRoutes();
+    this.initializeDeliveryRoutes();
     this.initializeSwagger();
     this.initializeErrorHandler();
   }
@@ -116,7 +118,7 @@ export class App {
   }
 
   private initializeOrderRoutes() {
-    this.app.use("/api/admin/orders", adminOrderRoutes);
+    this.app.use("/api/admin/orders", adminOrderRoutes); //order, payment, complaint
     this.app.use("/api/admin/walk-in-customer", adminWalkInOrderRoutes);
   }
 
@@ -135,6 +137,10 @@ export class App {
 
   private initializePreSignedURLRoutes() {
     this.app.use("/api/signature", cloudinaryRoutes);
+  }
+
+  private initializeDeliveryRoutes() {
+    this.app.use("/api/driver/delivery-requests", deliveryOrderRoutes);
   }
 
   private initializeSwagger() {

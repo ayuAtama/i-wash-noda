@@ -14,6 +14,8 @@ class CustomerOrderRoute {
     this.controller = new CustomerOrderController(new CustomerOrderService());
     this.customerOrder();
     this.uploadPaymentProof();
+    this.markDone();
+    this.complaint();
   }
 
   private customerOrder() {
@@ -42,6 +44,31 @@ class CustomerOrderRoute {
         body: CustomerOrderValidation.PaymentProofSchema,
       }),
       this.controller.uploadPaymentProof,
+    );
+  }
+
+  private markDone() {
+    this.router.post(
+      "/:orderId/complete",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      Validator.validate({
+        params: CustomerOrderValidation.OrderIdParamsSchema,
+      }),
+      this.controller.markDone,
+    );
+  }
+
+  private complaint() {
+    this.router.post(
+      "/:orderId/complaint",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      Validator.validate({
+        params: CustomerOrderValidation.OrderIdParamsSchema,
+        body: CustomerOrderValidation.ComplainSchema,
+      }),
+      this.controller.complaint,
     );
   }
 }

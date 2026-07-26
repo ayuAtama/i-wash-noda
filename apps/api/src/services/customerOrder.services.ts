@@ -1,6 +1,7 @@
 import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
+  complainPayloadDTO,
   uploadPaymentDTO,
   UserIdDTO,
 } from "@/validations/customerOrder.validation";
@@ -19,7 +20,7 @@ export class CustomerOrderService {
         where: {
           customer_id: userId,
           status: {
-            notIn: ["cancelled", "finished", "delivered"],
+            notIn: ["cancelled", "finished"],
           },
         },
         select: {
@@ -79,6 +80,7 @@ export class CustomerOrderService {
           total_amount: true,
           updated_at: true,
           created_at: true,
+          confirmed_at: true,
         },
         orderBy: {
           created_at: "desc",
@@ -150,4 +152,114 @@ export class CustomerOrderService {
       throw error;
     }
   }
+
+  markDone = async (data: { orderId: string; userId: string }) => {
+    try {
+      const { orderId, userId } = data;
+
+      // guard
+      const order = await prisma.order.findUnique({
+        where: { id: orderId, customer_id: userId },
+        select: { id: true, status: true, paid: true },
+      });
+
+      if (!order) throw new HttpError(404, "Order not found");
+      if (order.status === "finished" && order.paid === true)
+        throw new HttpError(
+          409,
+          "You've already marked this order as finished",
+        );
+      if (order.status === "complaint_received")
+        throw new HttpError(409, "Please wait for admin response");
+
+      if (order.status !== "delivered")
+        throw new HttpError(409, "Please dont be a little hacker");
+
+      const markDone = await prisma.order.update({
+        where: { id: order.id },
+        data: { status: "finished", confirmed_at: new Date() },
+        select: {
+          id: true,
+          status: true,
+          outlet: {
+            select: {
+              name: true,
+            },
+          },
+          total_amount: true,
+          confirmed_at: true,
+        },
+      });
+
+      const normalized = {
+        id: markDone.id,
+        outlet: markDone.outlet.name,
+        total_amount: markDone.total_amount,
+        confirmed_at: markDone.confirmed_at,
+      };
+
+      return {
+        success: true,
+        message: "Order marked as finished successfully",
+        data: normalized,
+      };
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  complaint = async (data: complainPayloadDTO) => {
+    try {
+      const { orderId, userId, complaintMessage, complaintImage } = data;
+
+      // guard
+      const guard = await prisma.complaint.findFirst({
+        where: { order_id: orderId, user_id: userId, status: "pending" },
+        select: { id: true, status: true },
+      });
+      if (!guard) {
+        const result = await prisma.$transaction(async (tx) => {
+          const complain = await tx.complaint.create({
+            data: {
+              order_id: orderId,
+              user_id: userId,
+              message: complaintMessage,
+              image_url: complaintImage,
+              status: "pending",
+            },
+            select: {
+              id: true,
+              order_id: true,
+              message: true,
+              image_url: true,
+              status: true,
+              created_at: true,
+            },
+          });
+
+          const updateOrderStatus = await tx.order.update({
+            where: { id: complain.order_id },
+            data: { status: "complaint_received" },
+            select: { id: true, status: true },
+          });
+
+          return { complain, updateOrderStatus };
+        });
+
+        return {
+          success: true,
+          message: "Complaint created successfully",
+          data: result,
+        };
+      }
+
+      if (guard.status !== "pending")
+        throw new HttpError(409, "Admin already responded to your complain");
+      if (guard) {
+        throw new HttpError(409, "You've already complained about this order");
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
 }

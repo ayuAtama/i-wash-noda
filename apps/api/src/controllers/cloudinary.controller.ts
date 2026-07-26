@@ -22,13 +22,15 @@ export class CloudinaryController {
       if (!userId) throw new HttpError(401, "Unauthorized, login first");
 
       // get the payload from the request
-      const { folder, params } = req.validated!.params as RequestSignatureDto;
+      const { folder, params, unique } = req.validated!
+        .params as RequestSignatureDto;
 
       // call the service to get the signature
       const signatureData = await this.cloudinaryService.getSignature(
         userId,
         folder,
         params,
+        unique,
       );
 
       // response

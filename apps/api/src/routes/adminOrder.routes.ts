@@ -5,6 +5,7 @@ import { Validator } from "@/middleware/validate";
 import { AdminOrderService } from "@/services/adminOrder.services";
 import {
   AdminOrderValidation,
+  ComplaintOrderValidation,
   ManualOrderValidation,
   PaymentOrderValidation,
   UpdateOrderItemValidation,
@@ -24,6 +25,7 @@ export class AdminOrderRoute {
     this.getAllOrderOnTheOutlet();
     this.updateItemOfOrder();
     this.PaymentProof();
+    this.CustomerComplaints();
   }
 
   private getAllOrderOnTheOutlet() {
@@ -68,6 +70,28 @@ export class AdminOrderRoute {
         params: PaymentOrderValidation.PaymentActionParamsSchema,
       }),
       this.controller.actionOfPaymentProof,
+    );
+  }
+
+  private CustomerComplaints() {
+    this.router.get(
+      "/complaints",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      this.controller.getAllPendingComplaints,
+    );
+
+    this.router.post(
+      "/complaints/:complaintId/:status",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        params: ComplaintOrderValidation.ComplaintParamsSchema,
+        body: ComplaintOrderValidation.ComplaintBodySchema,
+      }),
+      this.controller.actionOfCustomerComplaint,
     );
   }
 }

@@ -48,6 +48,28 @@ export class CustomerOrderValidation {
       example: "123e4567-e89b-12d3-a456-426614174000",
     }),
   });
+
+  static ComplainSchema = z
+    .object({
+      complaintMessage: z.string().meta({
+        description: "Complain",
+        example:
+          "Why the order is late? I want you to deliver it asap next time.",
+      }),
+      complaintImage: z.string().meta({
+        description: "Complain Image URL",
+        example: "https://example.com/complain.jpg",
+      }),
+    })
+    .meta({
+      id: "Complain",
+      description: "Payload for complain",
+      example: {
+        complaintMessage:
+          "Why the order is late? I want you to deliver it asap next time.",
+        complaintImage: "https://example.com/complain.jpg",
+      },
+    });
 }
 
 export type UserIdDTO = z.infer<typeof CustomerOrderValidation.UserIdSchema>;
@@ -58,5 +80,9 @@ export type PaymentProofDTO = z.infer<
   typeof CustomerOrderValidation.PaymentProofSchema
 >;
 export type UserIDDTO = z.infer<typeof CustomerOrderValidation.UserID>;
+export type complainDTO = z.infer<
+  typeof CustomerOrderValidation.ComplainSchema
+>;
 
 export type uploadPaymentDTO = UserIDDTO & OrderIdParamsDTO & PaymentProofDTO;
+export type complainPayloadDTO = UserIDDTO & complainDTO & OrderIdParamsDTO;
