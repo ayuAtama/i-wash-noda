@@ -2,7 +2,11 @@ import { z } from "zod";
 import "zod-openapi";
 
 // check if only the folder allowed
-export const CLOUDINARY_FOLDER = ["avatars", "payment-proofs"] as const;
+export const CLOUDINARY_FOLDER = [
+  "avatars",
+  "payment-proofs",
+  "complaints",
+] as const;
 export class CloudinaryValidation {
   static RequestSignatureSchema = z
     .object({
@@ -13,6 +17,10 @@ export class CloudinaryValidation {
       params: z.string().optional().meta({
         description: "Additional parameters (UUID or somthing)",
         example: "1234-39991-299400-2939",
+      }),
+      unique: z.boolean().optional().meta({
+        description: "Unique file name signature (not overwrite)",
+        example: true,
       }),
     })
     .meta({

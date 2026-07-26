@@ -17,6 +17,8 @@ import {
   UpdatePayloadDTO,
   DeletePayloadDTO,
   PaymentParamsDTO,
+  ComplaintParamsValidationDTO,
+  ComplaintBodyValidationDTO,
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderController {
@@ -322,6 +324,53 @@ export class AdminOrderController {
         action,
       });
       return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getAllPendingComplaints = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (!req.context)
+        throw new HttpError(
+          500,
+          "The developer forget to use the resolveContext middleware",
+        );
+      const outletId = req.context.outlet_id;
+
+      const result =
+        await this.adminOrderService.getAllPendingComplaints(outletId);
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  actionOfCustomerComplaint = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { complaintId, status } = req.validated!
+        .params as ComplaintParamsValidationDTO;
+      const { adminResponse } = req.validated!
+        .body as ComplaintBodyValidationDTO;
+      if (!req.access_token) throw new HttpError(401, "Invalid token");
+      const { sub: adminId } = req.access_token;
+      if (!adminId) throw new HttpError(401, "Invalid admin id");
+
+      const result = await this.adminOrderService.actionOfCustomerComplaint({
+        complaintId,
+        status,
+        adminId,
+        adminResponse,
+      });
+      res.status(200).json(result);
     } catch (error) {
       next(error);
     }

@@ -17,7 +17,7 @@ export class CloudinaryRoute {
 
   private getSignature() {
     this.router.get(
-      "/:folder{/:params}",
+      "/:folder{/:params}{/:unique}",
       authenticationMiddleware,
       Validator.validate({
         params: CloudinaryValidation.RequestSignatureSchema,

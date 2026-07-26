@@ -37,6 +37,7 @@ enum OrderStatus {
   waiting_for_driver_deliver
   out_for_delivery
   delivered
+  complaint_received
   cancelled
   finished
 }
@@ -88,6 +89,12 @@ enum OrderSource {
   walk_in
 }
 
+enum ComplaintStatus {
+  pending
+  resolved
+  rejected
+}
+
 // -----------------------
 //  USERS
 // -----------------------
@@ -119,7 +126,8 @@ model User {
   workerShifts   WorkerShift[]
   approvedLogs   OrderStationLog[]    @relation("ApprovedByRelation")
   driverJobs     DriverJobStatus[]
-  complaints     Complaint[]
+  complaints     Complaint[]          @relation("CustomerComplaints")
+  adminMessages  Complaint[]          @relation("AdminMessages")
   pickupOrders   Order[]              @relation("PickupDriver")
   deliveryOrders Order[]              @relation("DeliveryDriver")
   washingOrders  Order[]              @relation("WashingWorker")
@@ -493,15 +501,21 @@ model DriverJobStatus {
 // -----------------------
 
 model Complaint {
-  id         String   @id @default(uuid()) @db.Uuid
-  order_id   String   @db.Uuid
-  user_id    String   @db.Uuid
-  message    String
-  image_url  String?
-  created_at DateTime @default(now())
+  id             String          @id @default(uuid()) @db.Uuid
+  order_id       String          @db.Uuid
+  user_id        String          @db.Uuid
+  admin_id       String?         @db.Uuid
+  status         ComplaintStatus
+  message        String
+  image_url      String?
+  admin_response String?
+  resolved_at    DateTime?
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
 
   order Order @relation(fields: [order_id], references: [id])
-  user  User  @relation(fields: [user_id], references: [id])
+  user  User  @relation("CustomerComplaints", fields: [user_id], references: [id])
+  admin User? @relation("AdminMessages", fields: [admin_id], references: [id])
 
   @@map("complaints")
 }

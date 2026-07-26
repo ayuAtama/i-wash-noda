@@ -428,3 +428,56 @@ export type ActionOfPaymentProofValidationDTO = z.infer<
 export type PaymentParamsDTO = z.infer<
   typeof PaymentOrderValidation.PaymentActionParamsSchema
 >;
+
+///////////////////////////////////////////////
+// ACC/REJ Complaint Order for outlet_admin  //
+//////////////////////////////////////////////
+
+export class ComplaintOrderValidation {
+  static OutletIDSchema = z.uuid().meta({
+    description: "Outlet ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  });
+
+  static ComplaintBodySchema = z.object({
+    adminResponse: z.string().min(1, "Admin response is required").meta({
+      description: "Admin response to the complaint",
+      example: "Your order has been delivered",
+    }),
+  });
+
+  static ComplaintParamsSchema = z.object({
+    complaintId: z.uuid().meta({
+      description: "Complaint ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    status: z.enum(["resolved", "rejected"]).meta({
+      description: "Complaint status",
+      example: "resolved",
+    }),
+  });
+
+  static AdminIDSchema = z.object({
+    adminId: z.uuid().meta({
+      description: "Admin ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  });
+}
+
+export type ComplaintBodyValidationDTO = z.infer<
+  typeof ComplaintOrderValidation.ComplaintBodySchema
+>;
+export type ComplaintParamsValidationDTO = z.infer<
+  typeof ComplaintOrderValidation.ComplaintParamsSchema
+>;
+export type AdminIDValidationDTO = z.infer<
+  typeof ComplaintOrderValidation.AdminIDSchema
+>;
+export type OutletIDValidationDTO = z.infer<
+  typeof ComplaintOrderValidation.OutletIDSchema
+>;
+
+export type CustomerComplaintPayloadDTO = ComplaintBodyValidationDTO &
+  ComplaintParamsValidationDTO &
+  AdminIDValidationDTO;

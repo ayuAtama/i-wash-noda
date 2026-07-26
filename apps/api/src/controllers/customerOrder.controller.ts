@@ -2,6 +2,7 @@ import { CustomerOrderService } from "@/services/customerOrder.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
 import {
+  complainDTO,
   OrderIdParamsDTO,
   PaymentProofDTO,
   UserIdDTO,
@@ -64,6 +65,42 @@ export class CustomerOrderController {
         orderId,
         userId,
         urlProof,
+      });
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  markDone = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const { orderId } = req.validated!.params as OrderIdParamsDTO;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+      if (!orderId) throw new HttpError(400, "Invalid orderId");
+      const result = await this.CustomerOrderService.markDone({
+        orderId,
+        userId,
+      });
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  complaint = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const { orderId } = req.validated!.params as OrderIdParamsDTO;
+      const { complaintMessage, complaintImage } = req.validated!
+        .body as complainDTO;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+      if (!orderId) throw new HttpError(400, "Invalid orderId");
+      const result = await this.CustomerOrderService.complaint({
+        orderId,
+        userId,
+        complaintMessage,
+        complaintImage,
       });
       res.status(200).json(result);
     } catch (error) {

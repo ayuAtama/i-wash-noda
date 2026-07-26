@@ -2,13 +2,18 @@ import cloudinary from "@/utils/cloudinary";
 import { getUnixTime } from "date-fns/getUnixTime";
 
 export class CloudinaryService {
-  async getSignature(userId: string, folder: string, params?: string) {
+  async getSignature(
+    userId: string,
+    folder: string,
+    params?: string,
+    unique?: boolean,
+  ) {
     try {
       const timestamp = getUnixTime(new Date());
 
       const paramsToSign = {
         timestamp: timestamp,
-        public_id: `${folder}_${userId}${params ? `_${params}` : ""}`,
+        public_id: `${folder}_${userId}${params ? `_${params}` : ""}${unique ? `_${timestamp}` : ""}`,
         overwrite: true,
         folder: `/${folder}`,
         allowed_formats: ["jpg", "png", "jpeg", "pdf"],
@@ -21,7 +26,7 @@ export class CloudinaryService {
 
       return {
         success: true,
-        message: `Signature for ${folder}${params ? `_${params}` : ""} generated successfully`,
+        message: `Signature for ${folder}_${userId}${params ? `_${params}` : ""}${unique ? `_${timestamp}` : ""} generated successfully`,
         data: {
           public_id: paramsToSign.public_id,
           timestamp,

@@ -160,6 +160,9 @@ class WashingService implements WorkerStationStrategy {
             },
           },
         },
+        orderBy: {
+          updated_at: "asc",
+        },
       });
 
       // normalize the name
@@ -673,6 +676,9 @@ class IroningService implements WorkerStationStrategy {
           customer: { select: { name: true } },
           walkInCustomer: { select: { name: true } },
         },
+        orderBy: {
+          updated_at: "asc",
+        },
       });
 
       // normalize the name
@@ -1178,6 +1184,9 @@ class PackingService implements WorkerStationStrategy {
           source: true,
           customer: { select: { name: true } },
           walkInCustomer: { select: { name: true } },
+        },
+        orderBy: {
+          updated_at: "asc",
         },
       });
 
