@@ -10,8 +10,8 @@ class ItemRoute {
   public router = Router();
   private controller: ItemController;
 
-  constructor() {
-    this.controller = new ItemController(new ItemService());
+  constructor(controller: ItemController) {
+    this.controller = controller;
     this.searchItem();
     this.getAllItems();
     this.getItemById();
@@ -113,4 +113,4 @@ class ItemRoute {
   }
 }
 
-export default new ItemRoute().router;
+export default new ItemRoute(new ItemController(new ItemService())).router;

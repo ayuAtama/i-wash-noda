@@ -12,8 +12,8 @@ import { Validator } from "@/middleware/validate";
 export class WorkerStationRoute {
   public router = Router();
   private controller: WorkerStationController;
-  constructor() {
-    this.controller = new WorkerStationController(new WorkerStationService());
+  constructor(controller: WorkerStationController) {
+    this.controller = controller;
     this.checkAvailableJobs();
     this.checkActiveJobs();
     this.assignJob();
@@ -92,4 +92,6 @@ export class WorkerStationRoute {
   }
 }
 
-export default new WorkerStationRoute().router;
+export default new WorkerStationRoute(
+  new WorkerStationController(new WorkerStationService()),
+).router;

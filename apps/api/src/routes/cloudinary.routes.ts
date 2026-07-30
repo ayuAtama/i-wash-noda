@@ -1,17 +1,17 @@
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { Router } from "express";
 import { CloudinaryController } from "@/controllers/cloudinary.controller";
-import { CloudinaryService } from "@/services/cloudinary.services";
 import rateLimiter from "@/middleware/rateLimitter";
 import { Validator } from "@/middleware/validate";
 import { CloudinaryValidation } from "@/validations/cloudinary.validation";
+import { CloudinaryService } from "@/services/cloudinary.services";
 
 export class CloudinaryRoute {
   public router = Router();
   private controller: CloudinaryController;
 
-  constructor() {
-    this.controller = new CloudinaryController(new CloudinaryService());
+  constructor(controller: CloudinaryController) {
+    this.controller = controller;
     this.getSignature();
   }
 
@@ -28,4 +28,6 @@ export class CloudinaryRoute {
   }
 }
 
-export default new CloudinaryRoute().router;
+export default new CloudinaryRoute(
+  new CloudinaryController(new CloudinaryService()),
+).router;

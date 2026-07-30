@@ -18,8 +18,8 @@ export class WorkerShiftRoute {
   public router = Router();
   private controller: WorkerShiftController;
 
-  constructor() {
-    this.controller = new WorkerShiftController(new WorkerShiftService());
+  constructor(controller: WorkerShiftController) {
+    this.controller = controller;
     this.getSchedule();
     this.scheduleSummaryDashboard();
     this.fetchUnScheduledWorker();
@@ -92,4 +92,6 @@ export class WorkerShiftRoute {
   }
 }
 
-export default new WorkerShiftRoute().router;
+export default new WorkerShiftRoute(
+  new WorkerShiftController(new WorkerShiftService()),
+).router;

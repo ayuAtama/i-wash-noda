@@ -42,12 +42,20 @@ export class CustomerOrderValidation {
       },
     });
 
-  static UserID = z.object({
-    userId: z.uuid().meta({
-      description: "User ID (UUID)",
-      example: "123e4567-e89b-12d3-a456-426614174000",
-    }),
-  });
+  static UserID = z
+    .object({
+      userId: z.uuid().meta({
+        description: "User ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "CustomerUserIdParam",
+      description: "User ID path param",
+      example: {
+        userId: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
 
   static ComplainSchema = z
     .object({
@@ -86,3 +94,5 @@ export type complainDTO = z.infer<
 
 export type uploadPaymentDTO = UserIDDTO & OrderIdParamsDTO & PaymentProofDTO;
 export type complainPayloadDTO = UserIDDTO & complainDTO & OrderIdParamsDTO;
+export type markDoneDTO = UserIDDTO & OrderIdParamsDTO;
+

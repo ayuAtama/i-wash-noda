@@ -2,51 +2,50 @@ import { StationName } from "@/generated/prisma/enums";
 import { z } from "zod";
 import "zod-openapi";
 
-export const OutletIdValidation = z.object({
-  outletId: z
-    .uuid()
-    .meta({
+export const OutletIdValidation = z
+  .object({
+    outletId: z.uuid().meta({
       description: "Outlet ID (UUID)",
       example: "123e4567-e89b-12d3-a456-426614174000",
-    })
-    .meta({
-      description: "Payload for checking outlet id",
-      example: {
-        outletId: "123e4567-e89b-12d3-a456-426614174000",
-      },
     }),
-});
+  })
+  .meta({
+    id: "MismatchOutletId",
+    description: "Outlet ID for mismatch context",
+    example: {
+      outletId: "123e4567-e89b-12d3-a456-426614174000",
+    },
+  });
 
-export const StationNameValidation = z.object({
-  stationName: z
-    .enum(StationName)
-    .meta({
+export const StationNameValidation = z
+  .object({
+    stationName: z.enum(StationName).meta({
       description: "Station Name",
-      example: "Washing",
-    })
-    .meta({
-      description: "Payload for checking station name",
-      example: {
-        stationName: "Washing",
-      },
+      example: "washing",
     }),
-});
+  })
+  .meta({
+    id: "MismatchStationName",
+    description: "Station name for mismatch context",
+    example: {
+      stationName: "washing",
+    },
+  });
 
-export const QueryValidation = z.object({
-  stationName: z
-    .enum(StationName)
-    .optional()
-    .meta({
-      description: "Station Name",
-      example: "Washing",
-    })
-    .meta({
-      description: "Payload for checking station name",
-      example: {
-        stationName: "Washing",
-      },
+export const QueryValidation = z
+  .object({
+    stationName: z.enum(StationName).optional().meta({
+      description: "Filter by station name",
+      example: "washing",
     }),
-});
+  })
+  .meta({
+    id: "MismatchQuery",
+    description: "Query params for filtering mismatches",
+    example: {
+      stationName: "washing",
+    },
+  });
 
 export const ParamsValidation = z.object({
   id: z
@@ -64,33 +63,25 @@ export const ParamsValidation = z.object({
     }),
 });
 
-export const DetailMismatchDataParams = z.object({
-  orderId: z
-    .uuid()
-    .meta({
+export const DetailMismatchDataParams = z
+  .object({
+    orderId: z.uuid().meta({
       description: "Order ID (UUID)",
       example: "123e4567-e89b-12d3-a456-426614174000",
-    })
-    .meta({
-      description: "Payload for checking order id",
-      example: {
-        id: "123e4567-e89b-12d3-a456-426614174000",
-      },
     }),
-  stationName: z
-    .enum(StationName)
-    .meta({
+    stationName: z.enum(StationName).meta({
       description: "Station Name",
-      example: "Washing",
-    })
-    .meta({
-      id: "StationName",
-      description: "Payload for checking station name",
-      example: {
-        stationName: "Washing",
-      },
+      example: "washing",
     }),
-});
+  })
+  .meta({
+    id: "DetailMismatchDataParams",
+    description: "Path params for fetching detail mismatch data",
+    example: {
+      orderId: "123e4567-e89b-12d3-a456-426614174000",
+      stationName: "washing",
+    },
+  });
 
 export const MismatchSchema = z
   .object({

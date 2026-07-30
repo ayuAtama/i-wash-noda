@@ -1,5 +1,5 @@
 // src/services/pickupOrder.services.ts
-import { prisma } from "@/config/prisma";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
   OutletIdDto,
@@ -9,11 +9,11 @@ import {
 import { format } from "date-fns";
 
 export class PickupOrderService {
-  // get all the pickup requests based on outlet id
+  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+
   async getAllPickupRequests(outletId: OutletIdDto) {
     try {
-      // get the data based on outlet id
-      const pickupRequests = await prisma.pickupRequest.findMany({
+      const pickupRequests = await this.prisma.pickupRequest.findMany({
         where: {
           accepted: false,
           order: {
@@ -22,16 +22,13 @@ export class PickupOrderService {
           },
         },
         select: {
-          // pickup request
           id: true,
           order_id: true,
           created_at: true,
           order: {
-            // order
             select: {
               id: true,
               pickupAddress: {
-                // pickup address
                 select: {
                   id: true,
                   address: true,
@@ -40,7 +37,6 @@ export class PickupOrderService {
                 },
               },
               customer: {
-                // customer
                 select: {
                   id: true,
                   name: true,
@@ -51,7 +47,6 @@ export class PickupOrderService {
         },
       });
 
-      // restructure the data into human readable
       const result = pickupRequests.map((pickupRequest) => {
         const readableDate = format(
           pickupRequest.created_at,
@@ -68,7 +63,6 @@ export class PickupOrderService {
         };
       });
 
-      //return pickupRequests;
       return result;
     } catch (error) {
       throw error;
@@ -81,10 +75,8 @@ export class PickupOrderService {
     userId: UserIdDto,
   ) {
     try {
-      //accept the pickup request
-      const { success, message, data } = await prisma.$transaction(
+      const { success, message, data } = await this.prisma.$transaction(
         async (tx) => {
-          // check if the pickup request match with the outlet's driver
           const pickupRequest = await tx.pickupRequest.findUnique({
             where: {
               id: pickupOrderId,
@@ -107,7 +99,6 @@ export class PickupOrderService {
             throw new HttpError(400, "Pickup request already accepted");
           }
 
-          // update the pickup request
           const updatePickupRequest = await tx.pickupRequest.update({
             where: {
               id: pickupOrderId,
@@ -119,7 +110,6 @@ export class PickupOrderService {
             },
           });
 
-          // update the order status
           const updateOrderStatus = await tx.order.update({
             where: {
               id: updatePickupRequest.order_id,
@@ -153,7 +143,6 @@ export class PickupOrderService {
             },
           });
 
-          // create driver status
           const driverStatus = await tx.driverJobStatus.create({
             data: {
               driver_id: userId,
@@ -182,14 +171,9 @@ export class PickupOrderService {
   async upateStatusDriver(
     userId: UserIdDto,
     pickupOrderId: PickupIdParamsDto["id"],
-    // status: DriverJobStatusEnum,
   ) {
     try {
-      // run all db operations in a single transaction
-      const result = await prisma.$transaction(async (tx) => {
-        // update status
-
-        // find the driver status first
+      const result = await this.prisma.$transaction(async (tx) => {
         const driverStatus = await tx.driverJobStatus.findUnique({
           where: {
             pickup_request_id: pickupOrderId,
@@ -198,10 +182,7 @@ export class PickupOrderService {
           select: { status: true },
         });
 
-        // throw not found
         if (!driverStatus) throw new HttpError(404, "This job not found");
-
-        // update the status into on_delivery if the status is in_transit
 
         if (driverStatus.status === "in_transit") {
           const updateStatus = await tx.driverJobStatus.update({
@@ -228,7 +209,6 @@ export class PickupOrderService {
             },
           });
 
-          // update the order status into in_transit to outlet
           await tx.order.update({
             where: {
               id: updateStatus.pickupRequest?.order_id,
@@ -239,7 +219,6 @@ export class PickupOrderService {
           return updateStatus;
         }
 
-        // if on_delivery update to done
         if (driverStatus.status === "on_delivery") {
           const updateStatus = await tx.driverJobStatus.update({
             where: {
@@ -265,7 +244,6 @@ export class PickupOrderService {
             },
           });
 
-          // update the order status into arrived at outlet
           if (
             updateStatus?.pickupRequest?.order_id &&
             updateStatus.status === "done"
@@ -282,7 +260,6 @@ export class PickupOrderService {
           return updateStatus;
         }
 
-        // throw it already done
         if (driverStatus.status === "done")
           throw new HttpError(400, "This Job already done");
       });
@@ -295,8 +272,7 @@ export class PickupOrderService {
 
   async getAcceptedPickupRequests(userId: UserIdDto, outletId: OutletIdDto) {
     try {
-      // get list all the accepted job
-      const listPickedUpJob = await prisma.driverJobStatus.findMany({
+      const listPickedUpJob = await this.prisma.driverJobStatus.findMany({
         where: {
           driver_id: userId,
           pickup_request_id: { not: null },
@@ -350,7 +326,6 @@ export class PickupOrderService {
         pickupAddress: listPickedUpJob.pickupRequest?.order.pickupAddress,
       }));
 
-      //return listPickedUpJob;
       return flattenResponse;
     } catch (error) {
       throw error;
@@ -359,7 +334,7 @@ export class PickupOrderService {
 
   async getAllAlreadyPickedUpJob(userId: UserIdDto, outletId: OutletIdDto) {
     try {
-      const jobs = await prisma.driverJobStatus.findMany({
+      const jobs = await this.prisma.driverJobStatus.findMany({
         where: {
           driver_id: userId,
           pickup_request_id: {

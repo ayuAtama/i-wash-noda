@@ -1,17 +1,17 @@
 import { Router } from "express";
 import { CustomerOrderController } from "@/controllers/customerOrder.controller";
-import { CustomerOrderService } from "@/services/customerOrder.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { CustomerOrderValidation } from "@/validations/customerOrder.validation";
+import { CustomerOrderService } from "@/services/customerOrder.services";
 
 class CustomerOrderRoute {
   public router = Router();
   private controller: CustomerOrderController;
 
-  constructor() {
-    this.controller = new CustomerOrderController(new CustomerOrderService());
+  constructor(controller: CustomerOrderController) {
+    this.controller = controller;
     this.customerOrder();
     this.uploadPaymentProof();
     this.markDone();
@@ -73,4 +73,6 @@ class CustomerOrderRoute {
   }
 }
 
-export default new CustomerOrderRoute().router;
+export default new CustomerOrderRoute(
+  new CustomerOrderController(new CustomerOrderService()),
+).router;

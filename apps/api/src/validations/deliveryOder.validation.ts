@@ -10,9 +10,10 @@ export class DeliveryOrderValidation {
       }),
     })
     .meta({
+      id: "DeliveryIdParams",
       description: "Payload for updating or accepting a delivery request",
       example: {
-        id: "123e4567-e89b-12d3-a456-426614174000",
+        deliveryId: "123e4567-e89b-12d3-a456-426614174000",
       },
     });
 

@@ -1,20 +1,18 @@
 import { Router } from "express";
 import AdminMissmatchController from "@/controllers/adminMismatch.controller";
-import { AdminMissmatchServices } from "@/services/adminMissmatch.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { resolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { AdminMismatchValidation } from "@/validations/adminMismatch.validation";
+import { AdminMissmatchServices } from "@/services/adminMissmatch.services";
 
 export class AdminMissmatchRoute {
   public router = Router();
   private controller: AdminMissmatchController;
 
-  constructor() {
-    this.controller = new AdminMissmatchController(
-      new AdminMissmatchServices(),
-    );
+  constructor(controller: AdminMissmatchController) {
+    this.controller = controller;
     this.getMissmatchID();
     this.getDetailMismatchData();
     this.manageMismatch();
@@ -61,4 +59,6 @@ export class AdminMissmatchRoute {
   }
 }
 
-export default new AdminMissmatchRoute().router;
+export default new AdminMissmatchRoute(
+  new AdminMissmatchController(new AdminMissmatchServices()),
+).router;

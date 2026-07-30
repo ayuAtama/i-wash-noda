@@ -126,12 +126,18 @@ export const FilterQueryScheduleSchema = z
     },
   });
 
+export const workerId = z.uuid().meta({
+  description: "Worker ID (UUID)",
+  example: "123e4567-e89b-12d3-a456-426614174000",
+});
+
 export class WorkerShiftValidation {
   static CreateWorkerShiftSchema = CreateWorkerShiftSchema;
   static WorkerShiftIdParamsSchema = WorkerShiftIdParamsSechema;
   static OutletIDSchema = OutletIDSchema;
   static FetchUnScheduledWorkerSchema = FetchUnScheduledWorkerSchema;
   static FilterQueryScheduleSchema = FilterQueryScheduleSchema;
+  static workerId = workerId;
 }
 
 export type CreateWorkerShiftInputDTO = z.infer<typeof CreateWorkerShiftSchema>;
@@ -147,3 +153,4 @@ export type UnScheduleWorkerPayloadDTO = FetchUnScheduledWorkerDTO &
   OutletIDDTO;
 export type FilterQueryScheduleDTO = z.infer<typeof FilterQueryScheduleSchema>;
 export type GetScheduleDTO = FilterQueryScheduleDTO & OutletIDDTO;
+export type WorkerIdDTO = z.infer<typeof WorkerShiftValidation.workerId>;

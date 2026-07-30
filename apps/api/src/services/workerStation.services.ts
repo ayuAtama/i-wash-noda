@@ -1,5 +1,5 @@
 // /api/src/services/workerStation.services.ts
-import { prisma } from "@/config/prisma";
+import { prisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
   MismatchStatus,
@@ -24,11 +24,17 @@ import {
 } from "@/validations/workerStation.validation";
 
 export class WorkerStationService {
-  private strategies: Record<WorkerStation, WorkerStationStrategy> = {
-    washing: new WashingService(),
-    ironing: new IroningService(),
-    packing: new PackingService(),
-  };
+  private readonly prisma: PrismaWrapper;
+  private strategies: Record<WorkerStation, WorkerStationStrategy>;
+
+  constructor(prismaClient: PrismaWrapper = prisma) {
+    this.prisma = prismaClient;
+    this.strategies = {
+      washing: new WashingService(this.prisma),
+      ironing: new IroningService(this.prisma),
+      packing: new PackingService(this.prisma),
+    };
+  }
 
   async checkAvailableJobs(data: CheckAvailableJobsPayloadDTO) {
     try {
@@ -133,9 +139,11 @@ export class WorkerStationService {
 }
 
 class WashingService implements WorkerStationStrategy {
+  constructor(private readonly prisma: PrismaWrapper = prisma) {}
+
   async checkAvailableJobs(outletId: OutletIDPayloadDTO["outlet_id"]) {
     try {
-      const availableJobs = await prisma.order.findMany({
+      const availableJobs = await this.prisma.order.findMany({
         where: {
           outlet_id: outletId,
           status: "washing_in_progress",
@@ -195,7 +203,7 @@ class WashingService implements WorkerStationStrategy {
     try {
       const { outletId, workerId } = data;
 
-      const activeJobs = await prisma.order.findMany({
+      const activeJobs = await this.prisma.order.findMany({
         where: {
           outlet_id: outletId,
           status: "washing_in_progress",
@@ -246,7 +254,7 @@ class WashingService implements WorkerStationStrategy {
     try {
       const { userId, outletId, orderId } = data;
 
-      const assignedJob = await prisma.order.updateMany({
+      const assignedJob = await this.prisma.order.updateMany({
         where: {
           id: orderId,
           outlet_id: outletId,
@@ -284,7 +292,7 @@ class WashingService implements WorkerStationStrategy {
       } = data;
 
       // validation for user author
-      const valid = await prisma.order.findFirst({
+      const valid = await this.prisma.order.findFirst({
         where: {
           id: order_id,
           washing_worker_id: worker_id,
@@ -293,7 +301,7 @@ class WashingService implements WorkerStationStrategy {
       if (!valid)
         throw new HttpError(401, "Please don't edit other worker's job");
       // validation for already submitted items
-      const existingLogs = await prisma.orderStationLog.findFirst({
+      const existingLogs = await this.prisma.orderStationLog.findFirst({
         where: {
           order_id,
           station: worker_station,
@@ -312,7 +320,7 @@ class WashingService implements WorkerStationStrategy {
         }
       }
 
-      const actualItem = await prisma.orderItem.findMany({
+      const actualItem = await this.prisma.orderItem.findMany({
         where: {
           order_id,
         },
@@ -414,7 +422,7 @@ class WashingService implements WorkerStationStrategy {
           };
         });
 
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
           const stationLog = await tx.orderStationLog.createManyAndReturn({
             data: dataStationLog,
           });
@@ -466,32 +474,33 @@ class WashingService implements WorkerStationStrategy {
           },
         );
 
-        const [correct, incorrect, notExist, lost] = await prisma.$transaction([
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeCorrectItems.map((item) => ({
-              ...item,
-              admin_note: "match",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeIncorrectItems.map((item) => ({
-              ...item,
-              admin_note: "mismatch",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeNotExistItems.map((item) => ({
-              ...item,
-              admin_note: "new",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeLostItems.map((item) => ({
-              ...item,
-              admin_note: "lost",
-            })),
-          }),
-        ]);
+        const [correct, incorrect, notExist, lost] =
+          await this.prisma.$transaction([
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeCorrectItems.map((item) => ({
+                ...item,
+                admin_note: "match",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeIncorrectItems.map((item) => ({
+                ...item,
+                admin_note: "mismatch",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeNotExistItems.map((item) => ({
+                ...item,
+                admin_note: "new",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeLostItems.map((item) => ({
+                ...item,
+                admin_note: "lost",
+              })),
+            }),
+          ]);
 
         return {
           success: false,
@@ -525,7 +534,7 @@ class WashingService implements WorkerStationStrategy {
     try {
       const { orderId, userId: workerId, outletId } = data;
 
-      const order = await prisma.order.findFirst({
+      const order = await this.prisma.order.findFirst({
         where: {
           id: orderId,
           washing_worker_id: workerId,
@@ -543,7 +552,7 @@ class WashingService implements WorkerStationStrategy {
         throw new HttpError(400, "You've already completed this job");
       }
 
-      const pending = await prisma.orderStationLog.findMany({
+      const pending = await this.prisma.orderStationLog.findMany({
         where: {
           order_id: orderId,
           worker_id: workerId,
@@ -559,7 +568,7 @@ class WashingService implements WorkerStationStrategy {
         );
       }
 
-      const complete = await prisma.order.update({
+      const complete = await this.prisma.order.update({
         where: {
           id: orderId,
           outlet_id: outletId,
@@ -604,7 +613,7 @@ class WashingService implements WorkerStationStrategy {
     try {
       const { outletId, workerId } = data;
 
-      const completeJobs = await prisma.order.findMany({
+      const completeJobs = await this.prisma.order.findMany({
         where: {
           washing_worker_id: workerId,
           outlet_id: outletId,
@@ -656,9 +665,11 @@ class WashingService implements WorkerStationStrategy {
 }
 
 class IroningService implements WorkerStationStrategy {
+  constructor(private readonly prisma: PrismaWrapper = prisma) {}
+
   async checkAvailableJobs(outletId: OutletIDPayloadDTO["outlet_id"]) {
     try {
-      const availableJobs = await prisma.order.findMany({
+      const availableJobs = await this.prisma.order.findMany({
         where: {
           outlet_id: outletId,
           status: "ironing_in_progress",
@@ -711,7 +722,7 @@ class IroningService implements WorkerStationStrategy {
     try {
       const { outletId, workerId } = data;
 
-      const activeJobs = await prisma.order.findMany({
+      const activeJobs = await this.prisma.order.findMany({
         where: {
           outlet_id: outletId,
           status: "ironing_in_progress",
@@ -762,7 +773,7 @@ class IroningService implements WorkerStationStrategy {
     try {
       const { userId, outletId, orderId } = data;
 
-      const assignedJob = await prisma.order.updateMany({
+      const assignedJob = await this.prisma.order.updateMany({
         where: {
           id: orderId,
           outlet_id: outletId,
@@ -801,7 +812,7 @@ class IroningService implements WorkerStationStrategy {
       } = data;
 
       // validation for user author
-      const valid = await prisma.order.findFirst({
+      const valid = await this.prisma.order.findFirst({
         where: {
           id: order_id,
           ironing_worker_id: worker_id,
@@ -810,7 +821,7 @@ class IroningService implements WorkerStationStrategy {
       if (!valid)
         throw new HttpError(401, "Please don't edit other worker's job");
       // validation for already submitted items
-      const existingLogs = await prisma.orderStationLog.findFirst({
+      const existingLogs = await this.prisma.orderStationLog.findFirst({
         where: {
           order_id,
           station: worker_station,
@@ -829,7 +840,7 @@ class IroningService implements WorkerStationStrategy {
         }
       }
 
-      const previousStationItems = await prisma.stationSummary.findMany({
+      const previousStationItems = await this.prisma.stationSummary.findMany({
         where: {
           order_id,
           station: "washing" as StationName,
@@ -922,7 +933,7 @@ class IroningService implements WorkerStationStrategy {
           };
         });
 
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
           const stationLog = await tx.orderStationLog.createManyAndReturn({
             data: dataStationLog,
           });
@@ -974,32 +985,33 @@ class IroningService implements WorkerStationStrategy {
           },
         );
 
-        const [correct, incorrect, notExist, lost] = await prisma.$transaction([
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeCorrectItems.map((item) => ({
-              ...item,
-              admin_note: "match",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeIncorrectItems.map((item) => ({
-              ...item,
-              admin_note: "mismatch",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeNotExistItems.map((item) => ({
-              ...item,
-              admin_note: "new",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeLostItems.map((item) => ({
-              ...item,
-              admin_note: "lost",
-            })),
-          }),
-        ]);
+        const [correct, incorrect, notExist, lost] =
+          await this.prisma.$transaction([
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeCorrectItems.map((item) => ({
+                ...item,
+                admin_note: "match",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeIncorrectItems.map((item) => ({
+                ...item,
+                admin_note: "mismatch",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeNotExistItems.map((item) => ({
+                ...item,
+                admin_note: "new",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeLostItems.map((item) => ({
+                ...item,
+                admin_note: "lost",
+              })),
+            }),
+          ]);
 
         return {
           success: false,
@@ -1033,7 +1045,7 @@ class IroningService implements WorkerStationStrategy {
     try {
       const { orderId, userId: workerId, outletId } = data;
 
-      const order = await prisma.order.findFirst({
+      const order = await this.prisma.order.findFirst({
         where: {
           id: orderId,
           ironing_worker_id: workerId,
@@ -1051,7 +1063,7 @@ class IroningService implements WorkerStationStrategy {
         throw new HttpError(400, "You've already completed this job");
       }
 
-      const pending = await prisma.orderStationLog.findMany({
+      const pending = await this.prisma.orderStationLog.findMany({
         where: {
           order_id: orderId,
           worker_id: workerId,
@@ -1067,7 +1079,7 @@ class IroningService implements WorkerStationStrategy {
         );
       }
 
-      const complete = await prisma.order.update({
+      const complete = await this.prisma.order.update({
         where: {
           id: orderId,
           outlet_id: outletId,
@@ -1112,7 +1124,7 @@ class IroningService implements WorkerStationStrategy {
     try {
       const { outletId, workerId } = data;
 
-      const completeJobs = await prisma.order.findMany({
+      const completeJobs = await this.prisma.order.findMany({
         where: {
           ironing_worker_id: workerId,
           outlet_id: outletId,
@@ -1164,9 +1176,11 @@ class IroningService implements WorkerStationStrategy {
 }
 
 class PackingService implements WorkerStationStrategy {
+  constructor(private readonly prisma: PrismaWrapper = prisma) {}
+
   async checkAvailableJobs(outletId: OutletIDPayloadDTO["outlet_id"]) {
     try {
-      const availableJobs = await prisma.order.findMany({
+      const availableJobs = await this.prisma.order.findMany({
         where: {
           outlet_id: outletId,
           status: "packing_in_progress",
@@ -1219,7 +1233,7 @@ class PackingService implements WorkerStationStrategy {
     try {
       const { outletId, workerId } = data;
 
-      const activeJobs = await prisma.order.findMany({
+      const activeJobs = await this.prisma.order.findMany({
         where: {
           outlet_id: outletId,
           status: "packing_in_progress",
@@ -1270,7 +1284,7 @@ class PackingService implements WorkerStationStrategy {
     try {
       const { userId, outletId, orderId } = data;
 
-      const assignedJob = await prisma.order.updateMany({
+      const assignedJob = await this.prisma.order.updateMany({
         where: {
           id: orderId,
           outlet_id: outletId,
@@ -1310,7 +1324,7 @@ class PackingService implements WorkerStationStrategy {
       } = data;
 
       // validation for user author
-      const valid = await prisma.order.findFirst({
+      const valid = await this.prisma.order.findFirst({
         where: {
           id: order_id,
           packing_worker_id: worker_id,
@@ -1320,7 +1334,7 @@ class PackingService implements WorkerStationStrategy {
         throw new HttpError(401, "Please don't edit other worker's job");
 
       // validation for already submitted items
-      const existingLogs = await prisma.orderStationLog.findFirst({
+      const existingLogs = await this.prisma.orderStationLog.findFirst({
         where: {
           order_id,
           station: "packing" as StationName,
@@ -1341,7 +1355,7 @@ class PackingService implements WorkerStationStrategy {
         }
       }
 
-      const previousStationItems = await prisma.stationSummary.findMany({
+      const previousStationItems = await this.prisma.stationSummary.findMany({
         where: {
           order_id,
           station: "ironing" as StationName,
@@ -1434,7 +1448,7 @@ class PackingService implements WorkerStationStrategy {
           };
         });
 
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
           const stationLog = await tx.orderStationLog.createManyAndReturn({
             data: dataStationLog,
           });
@@ -1486,32 +1500,33 @@ class PackingService implements WorkerStationStrategy {
           },
         );
 
-        const [correct, incorrect, notExist, lost] = await prisma.$transaction([
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeCorrectItems.map((item) => ({
-              ...item,
-              admin_note: "match",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeIncorrectItems.map((item) => ({
-              ...item,
-              admin_note: "mismatch",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeNotExistItems.map((item) => ({
-              ...item,
-              admin_note: "new",
-            })),
-          }),
-          prisma.orderStationLog.createManyAndReturn({
-            data: normalizeLostItems.map((item) => ({
-              ...item,
-              admin_note: "lost",
-            })),
-          }),
-        ]);
+        const [correct, incorrect, notExist, lost] =
+          await this.prisma.$transaction([
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeCorrectItems.map((item) => ({
+                ...item,
+                admin_note: "match",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeIncorrectItems.map((item) => ({
+                ...item,
+                admin_note: "mismatch",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeNotExistItems.map((item) => ({
+                ...item,
+                admin_note: "new",
+              })),
+            }),
+            this.prisma.orderStationLog.createManyAndReturn({
+              data: normalizeLostItems.map((item) => ({
+                ...item,
+                admin_note: "lost",
+              })),
+            }),
+          ]);
 
         return {
           success: false,
@@ -1545,7 +1560,7 @@ class PackingService implements WorkerStationStrategy {
     try {
       const { orderId, userId: workerId, outletId } = data;
 
-      const order = await prisma.order.findFirst({
+      const order = await this.prisma.order.findFirst({
         where: {
           id: orderId,
           packing_worker_id: workerId,
@@ -1565,7 +1580,7 @@ class PackingService implements WorkerStationStrategy {
         throw new HttpError(400, "You've already completed this job");
       }
 
-      const pending = await prisma.orderStationLog.findMany({
+      const pending = await this.prisma.orderStationLog.findMany({
         where: {
           order_id: orderId,
           worker_id: workerId,
@@ -1581,7 +1596,7 @@ class PackingService implements WorkerStationStrategy {
         );
       }
 
-      const complete = await prisma.order.update({
+      const complete = await this.prisma.order.update({
         where: {
           id: orderId,
           outlet_id: outletId,
@@ -1589,6 +1604,7 @@ class PackingService implements WorkerStationStrategy {
         },
         data: {
           packing_completed_at: new Date(),
+          delivered_at: order.source === "walk_in" ? new Date() : undefined,
           status:
             order.source === "walk_in"
               ? "delivered"
@@ -1631,7 +1647,7 @@ class PackingService implements WorkerStationStrategy {
     try {
       const { outletId, workerId } = data;
 
-      const completeJobs = await prisma.order.findMany({
+      const completeJobs = await this.prisma.order.findMany({
         where: {
           packing_worker_id: workerId,
           outlet_id: outletId,

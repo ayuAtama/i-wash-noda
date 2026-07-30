@@ -306,6 +306,7 @@ model Order {
   washing_completed_at DateTime?
   ironing_completed_at DateTime?
   packing_completed_at DateTime?
+  delivered_at         DateTime?
   pickup_fee           Int
   delivery_fee         Int
   laundry_price        Int

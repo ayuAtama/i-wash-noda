@@ -1,18 +1,18 @@
 import { Router } from "express";
 import { DeliveryOrderController } from "@/controllers/deliveryOrder.controller";
-import { DeliveryOrderService } from "@/services/deliverOrder.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { DeliveryOrderValidation } from "@/validations/deliveryOder.validation";
 import { resolveContext } from "@/middleware/resolveContext";
+import { DeliveryOrderService } from "@/services/deliverOrder.services";
 
 export class DeliveryOrderRoute {
   public router = Router();
   private controller: DeliveryOrderController;
 
-  constructor() {
-    this.controller = new DeliveryOrderController(new DeliveryOrderService());
+  constructor(controller: DeliveryOrderController) {
+    this.controller = controller;
     this.activeJobs();
     this.checkAvailableJobs();
     this.takeTheJob();
@@ -76,4 +76,6 @@ export class DeliveryOrderRoute {
     );
   }
 }
-export default new DeliveryOrderRoute().router;
+export default new DeliveryOrderRoute(
+  new DeliveryOrderController(new DeliveryOrderService()),
+).router;

@@ -1,6 +1,5 @@
 // src/app.ts
-import express, { Application } from "express";
-//middleware
+import express, { Application, Router } from "express";
 import "dotenv/config";
 import swaggerUi from "swagger-ui-express";
 import { openApiDocument } from "@/docs/swagger";
@@ -9,48 +8,17 @@ import listEndpoints from "express-list-endpoints";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { errorHandler } from "@/middleware/error-handler";
-//route
-import authRoutes from "@/routes/auth.routes";
-import userRoutes from "@/routes/user.routes";
-import authUserRoutes from "@/routes/authUser.routes";
-import adminRoutes from "@/routes/admin.routes";
-import AddressRoute from "@/routes/address.routes";
-import workerShiftRoutes from "@/routes/workerShift.routes";
-import pickupRequestRoutes from "./routes/pickupRequest.routes";
-import pickupOrderRoutes from "./routes/pickupOrder.routes";
-import adminOrderRoutes, {
-  adminWalkInOrderRoutes,
-} from "./routes/adminOrder.routes";
-import cloudinaryRoutes from "./routes/cloudinary.routes";
-import OutletRoute, { adminOutletRoutes } from "./routes/outlet.routes";
-import ItemRoute from "./routes/item.routes";
-import workerStationRoutes from "./routes/workerStation.routes";
-import adminMismatchRoutes from "./routes/adminMismatch.routes";
-import customerOrderRoutes from "./routes/customerOrder.routes";
-import deliveryOrderRoutes from "./routes/deliveryOrder.routes";
+import { RouteRegistry } from "@/routes";
 
 export class App {
   public app: Application;
 
-  constructor() {
+  constructor(registry: RouteRegistry) {
     this.app = express();
     this.initializeHealthCheck();
     this.initializeCors();
-    this.initializeBetterAuth();
     this.initializeMiddlewares();
-    this.initializeAdminRoutes();
-    this.initializeUserAndAuth();
-    this.initializeUserOrderRoutes();
-    this.initializeAdminManageUserRoutes();
-    this.initializeOutletRoutes();
-    this.initializeItemRoutes();
-    this.initializeAddressRoutes();
-    this.initializePickupRoutes();
-    this.initializeOrderRoutes();
-    this.initializeWorkerRoutes();
-    this.initializePreSignedURLRoutes();
-    this.initializeAdminMismatchRoutes();
-    this.initializeDeliveryRoutes();
+    this.initializeRoutes(registry.getAll());
     this.initializeSwagger();
     this.initializeErrorHandler();
   }
@@ -83,64 +51,10 @@ export class App {
     this.app.use(cookieParser());
   }
 
-  private initializeBetterAuth() {
-    //this.app.use("/api/auth", authRoutes);
-  }
-
-  private initializeUserAndAuth() {
-    //this.app.use("/api/users", userRoutes); //  deprecated and testing only
-    this.app.use("/api/auth", authRoutes); // user for better auth
-    this.app.use("/api", authUserRoutes); // user for jwt (login/register/etc)
-  }
-  private initializeAddressRoutes() {
-    this.app.use("/api/addresses", AddressRoute); // customer address
-  }
-
-  private initializeUserOrderRoutes() {
-    this.app.use("/api/orders", customerOrderRoutes);
-  }
-
-  private initializeAdminManageUserRoutes() {
-    this.app.use("/api/admin", adminRoutes); // register worker & driver and etc
-  }
-
-  private initializeAdminRoutes() {
-    this.app.use("/api/admin/schedule", workerShiftRoutes); // admin
-  }
-
-  private initializePickupRoutes() {
-    this.app.use("/api/pickup-requests", pickupRequestRoutes); // customer
-    this.app.use("/api/pickup-requests", pickupOrderRoutes); // driver
-  }
-
-  private initializeWorkerRoutes() {
-    this.app.use("/api/workers", workerStationRoutes);
-  }
-
-  private initializeOrderRoutes() {
-    this.app.use("/api/admin/orders", adminOrderRoutes); //order, payment, complaint
-    this.app.use("/api/admin/walk-in-customer", adminWalkInOrderRoutes);
-  }
-
-  private initializeOutletRoutes() {
-    this.app.use("/api/outlets", OutletRoute);
-    this.app.use("/api/admin/outlets", adminOutletRoutes);
-  }
-
-  private initializeAdminMismatchRoutes() {
-    this.app.use("/api/admin/mismatch", adminMismatchRoutes);
-  }
-
-  private initializeItemRoutes() {
-    this.app.use("/api/admin/items", ItemRoute);
-  }
-
-  private initializePreSignedURLRoutes() {
-    this.app.use("/api/signature", cloudinaryRoutes);
-  }
-
-  private initializeDeliveryRoutes() {
-    this.app.use("/api/driver/delivery-requests", deliveryOrderRoutes);
+  private initializeRoutes(routes: { path: string; router: Router }[]) {
+    routes.forEach(({ path, router }) => {
+      this.app.use(path, router);
+    });
   }
 
   private initializeSwagger() {
@@ -148,11 +62,9 @@ export class App {
   }
 
   private initializeErrorHandler() {
-    // GLOBAL ERROR HANDLER MUST BE LAST
     this.app.use(errorHandler);
   }
 
-  // for server start (optional)
   public listen(port: number) {
     this.app.listen(port, () => {
       console.log(`🚀 Server running on http://localhost:${port}`);
