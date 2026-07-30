@@ -1,0 +1,621 @@
+// /api/src/services/workerStation.services.ts
+import { prisma } from "@/config/prisma";
+import { HttpError } from "@/utils/httpError";
+import {
+  MismatchStatus,
+  OrderStatus,
+  StationName,
+  WorkerStation,
+} from "@/generated/prisma/client";
+import WorkerStationStrategy from "@/types/workerStationStrategy";
+import {
+  AssignJobServiceMethodDTO,
+  AssignJobServiceStrategyDTO,
+  CheckActiveJobsPayloadDTO,
+  checkActiveJobsStrategyDTO,
+  CheckAvailableJobsPayloadDTO,
+  MarkDoneServiceMethodDTO,
+  MarkDoneServiceStrategyDTO,
+  OutletIDPayloadDTO,
+  ReInputServiceMethodPayloadDTO,
+  ReInputServiceStrategyPayloadDTO,
+} from "@/validations/workerStation.validation";
+import isEqual from "lodash/isEqual";
+
+// ---------------------------------------------------------------------------
+//  Shared types
+// ---------------------------------------------------------------------------
+
+type BaselineItem = { item_id: string; quantity: number };
+
+const ORDER_SELECT = {
+  id: true,
+  status: true,
+  source: true,
+  customer: { select: { name: true } },
+  walkInCustomer: { select: { name: true } },
+};
+
+// ---------------------------------------------------------------------------
+//  Shared helpers
+// ---------------------------------------------------------------------------
+
+function normalizeCustomerName(
+  customer: { name: string | null } | null | undefined,
+  walkInCustomer: { name: string | null } | null | undefined,
+): string {
+  const name = customer?.name ?? walkInCustomer?.name;
+  if (!name) {
+    throw new HttpError(400, "Customer name not found");
+  }
+  return name;
+}
+
+function normalizeOrderResult(
+  orders: Array<{
+    id: string;
+    status: string;
+    source: "walk_in" | "customer_app";
+    customer: { name: string | null } | null;
+    walkInCustomer: { name: string | null } | null;
+  }>,
+) {
+  return orders.map(({ customer, walkInCustomer, ...rest }) => ({
+    ...rest,
+    customer_name: normalizeCustomerName(customer, walkInCustomer),
+  }));
+}
+
+function classifyItems(
+  inputs: Array<{ itemId: string; itemQuantity: number }>,
+  baseline: BaselineItem[],
+) {
+  const correctItems = inputs.filter((payload) =>
+    baseline.some(
+      (db) =>
+        db.item_id === payload.itemId && db.quantity === payload.itemQuantity,
+    ),
+  );
+
+  const incorrectItems = inputs.filter((payload) => {
+    const db = baseline.find((b) => b.item_id === payload.itemId);
+    return db !== undefined && db.quantity !== payload.itemQuantity;
+  });
+
+  const notExistItems = inputs.filter(
+    (payload) => !baseline.some((db) => db.item_id === payload.itemId),
+  );
+
+  return { correctItems, incorrectItems, notExistItems };
+}
+
+function toPendingLogPayloads(
+  items: Array<{ itemId: string; itemQuantity: number }>,
+  orderId: string,
+  workerId: string,
+  station: StationName,
+) {
+  return items.map(({ itemId, itemQuantity }) => ({
+    order_id: orderId,
+    item_id: itemId,
+    station,
+    worker_id: workerId,
+    quantity_input: itemQuantity,
+    status: "pending" as MismatchStatus,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+//  ABSTRACT BASE STATION SERVICE
+// ---------------------------------------------------------------------------
+
+abstract class BaseStationService implements WorkerStationStrategy {
+  // --- config (each subclass provides) ---
+  protected abstract readonly stationName: StationName;
+  protected abstract readonly orderStatus: OrderStatus;
+  protected abstract readonly workerField: string;
+  protected abstract readonly completedField: string;
+  protected abstract readonly nextOrderStatus: OrderStatus | null;
+  protected abstract readonly nextWorkerField: string | null;
+  protected abstract readonly previousStation: StationName | null;
+  protected abstract readonly completionMessage: string;
+  protected abstract readonly requiredPreviousCompletions: string[];
+  protected abstract readonly allCurrentAndFutureCompletions: string[];
+
+  // --- data-varying logic (each subclass provides) ---
+  protected abstract getBaselineItems(orderId: string): Promise<BaselineItem[]>;
+  protected abstract getMarkDoneComparison(orderId: string): Promise<
+    [
+      Array<{
+        item_id: string;
+        quantity_initial?: number;
+        latest_quantity?: number;
+      }>,
+      Array<{
+        item_id: string;
+        quantity_initial?: number;
+        latest_quantity?: number;
+      }>,
+    ]
+  >;
+
+  // =========================================================================
+  //  checkAvailableJobs
+  // =========================================================================
+  async checkAvailableJobs(outletId: OutletIDPayloadDTO["outlet_id"]) {
+    const where: Record<string, unknown> = {
+      outlet_id: outletId,
+      status: this.orderStatus,
+      OR: [
+        { customer_id: { not: null } },
+        { walkin_customer_id: { not: null } },
+      ],
+    };
+    where[this.workerField] = null;
+
+    for (const field of this.requiredPreviousCompletions) {
+      where[field] = { not: null };
+    }
+
+    const orders = await prisma.order.findMany({
+      where,
+      select: ORDER_SELECT,
+    });
+
+    return {
+      success: true,
+      message: "Available jobs fetched successfully",
+      data: normalizeOrderResult(orders),
+    };
+  }
+
+  // =========================================================================
+  //  checkActiveJobs
+  // =========================================================================
+  async checkActiveJobs(data: checkActiveJobsStrategyDTO) {
+    const { outletId, workerId } = data;
+
+    const where: Record<string, unknown> = {
+      outlet_id: outletId,
+      status: this.orderStatus,
+      OR: [
+        { customer_id: { not: null } },
+        { walkin_customer_id: { not: null } },
+      ],
+    };
+    where[this.workerField] = workerId;
+
+    for (const field of this.requiredPreviousCompletions) {
+      where[field] = { not: null };
+    }
+    for (const field of this.allCurrentAndFutureCompletions) {
+      where[field] = null;
+    }
+
+    const orders = await prisma.order.findMany({
+      where,
+      select: ORDER_SELECT,
+    });
+
+    return {
+      success: true,
+      message: "Active jobs fetched successfully",
+      data: normalizeOrderResult(orders),
+    };
+  }
+
+  // =========================================================================
+  //  assignJob
+  // =========================================================================
+  async assignJob(data: AssignJobServiceMethodDTO) {
+    const { userId, outletId, orderId } = data;
+
+    const where: Record<string, unknown> = {
+      id: orderId,
+      outlet_id: outletId,
+      status: this.orderStatus,
+    };
+    where[this.workerField] = null;
+
+    for (const field of this.requiredPreviousCompletions) {
+      where[field] = { not: null };
+    }
+
+    const updateData: Record<string, unknown> = {};
+    updateData[this.workerField] = userId;
+
+    const assignedJob = await prisma.order.updateMany({
+      where,
+      data: updateData,
+    });
+
+    if (assignedJob.count === 0)
+      throw new HttpError(
+        409,
+        "This job already assigned to another worker or unavailable.",
+      );
+
+    return {
+      success: true,
+      message: "Job assigned successfully",
+      data: `Order ID: ${orderId}`,
+    };
+  }
+
+  // =========================================================================
+  //  reInputItem
+  // =========================================================================
+  async reInputItem(data: ReInputServiceMethodPayloadDTO) {
+    const { orderId, userId: workerId, items } = data;
+
+    const baseline = await this.getBaselineItems(orderId);
+    const { correctItems, incorrectItems, notExistItems } = classifyItems(
+      items,
+      baseline,
+    );
+
+    if (correctItems.length === baseline.length) {
+      // All items match — auto-approve
+      const summaryData = correctItems.map((item) => ({
+        order_id: orderId,
+        item_id: item.itemId,
+        latest_quantity: item.itemQuantity,
+        station: this.stationName,
+      }));
+
+      const logData = summaryData.map((s) => ({
+        order_id: s.order_id,
+        item_id: s.item_id,
+        station: s.station,
+        worker_id: workerId,
+        quantity_input: s.latest_quantity,
+        status: "approved" as MismatchStatus,
+        admin_note: "Auto Approved because the item match!",
+      }));
+
+      const result = await prisma.$transaction(async (tx) => {
+        const stationLog = await tx.orderStationLog.createManyAndReturn({
+          data: logData,
+        });
+        const stationSummary = await tx.stationSummary.createManyAndReturn({
+          data: summaryData,
+        });
+        return { stationLog, stationSummary };
+      });
+
+      return {
+        success: true,
+        message: "Item re-input successfully",
+        data: {
+          stationLog: result.stationLog,
+          stationSummary: result.stationSummary,
+        },
+      };
+    } else {
+      // Mismatch — log everything as pending for admin review
+      const correctLogs = toPendingLogPayloads(
+        correctItems,
+        orderId,
+        workerId,
+        this.stationName,
+      );
+      const incorrectLogs = toPendingLogPayloads(
+        incorrectItems,
+        orderId,
+        workerId,
+        this.stationName,
+      );
+      const notExistLogs = toPendingLogPayloads(
+        notExistItems,
+        orderId,
+        workerId,
+        this.stationName,
+      );
+
+      const result = await prisma.$transaction([
+        prisma.orderStationLog.createManyAndReturn({ data: correctLogs }),
+        prisma.orderStationLog.createManyAndReturn({ data: incorrectLogs }),
+        prisma.orderStationLog.createManyAndReturn({ data: notExistLogs }),
+      ]);
+
+      return {
+        success: false,
+        message: "Item re-input failed waiting for admin approval",
+        data: result,
+      };
+    }
+  }
+
+  // =========================================================================
+  //  markDone
+  // =========================================================================
+  async markDone(data: MarkDoneServiceMethodDTO) {
+    const { orderId, userId: workerId, outletId } = data;
+
+    // 1. Block if there are pending logs
+    const pending = await prisma.orderStationLog.findMany({
+      where: {
+        order_id: orderId,
+        worker_id: workerId,
+        station: this.stationName,
+        status: "pending" as MismatchStatus,
+      },
+    });
+
+    if (pending.length > 0) {
+      throw new HttpError(
+        400,
+        "Failed to mark completed, there are pending item re-input waiting for admin approval",
+      );
+    }
+
+    // 2. Compare previous baseline vs current station summary
+    const [previousItems, currentItems] =
+      await this.getMarkDoneComparison(orderId);
+
+    if (!isEqual(previousItems, currentItems)) {
+      throw new HttpError(
+        400,
+        `Failed to mark completed, ${this.stationName} summary does not match ${this.previousStation ?? "order items"} summary`,
+      );
+    }
+
+    // 3. Update the order
+    const where: Record<string, unknown> = {
+      id: orderId,
+      outlet_id: outletId,
+    };
+    where[this.workerField] = workerId;
+
+    const updateData: Record<string, unknown> = {
+      [this.completedField]: new Date(),
+    };
+    if (this.nextOrderStatus) {
+      updateData.status = this.nextOrderStatus;
+    }
+    if (this.nextWorkerField) {
+      updateData[this.nextWorkerField] = null;
+    }
+
+    const complete = await prisma.order.update({
+      where: where as { id: string; [key: string]: unknown },
+      data: updateData as Record<string, unknown>,
+      select: ORDER_SELECT,
+    });
+
+    return {
+      success: true,
+      message: this.completionMessage,
+      data: {
+        ...complete,
+        customer_name: normalizeCustomerName(
+          complete.customer,
+          complete.walkInCustomer,
+        ),
+      },
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  WASHING SERVICE
+// ---------------------------------------------------------------------------
+
+class WashingService extends BaseStationService {
+  protected readonly stationName = "washing" as StationName;
+  protected readonly orderStatus = "washing_in_progress" as OrderStatus;
+  protected readonly workerField = "washing_worker_id";
+  protected readonly completedField = "washing_completed_at";
+  protected readonly nextOrderStatus = "ironing_in_progress" as OrderStatus;
+  protected readonly nextWorkerField = "ironing_worker_id";
+  protected readonly previousStation = null;
+  protected readonly completionMessage = "Washing job completed";
+  protected readonly requiredPreviousCompletions: string[] = [];
+  protected readonly allCurrentAndFutureCompletions = [
+    "washing_completed_at",
+    "ironing_completed_at",
+    "packing_completed_at",
+  ];
+
+  protected async getBaselineItems(orderId: string): Promise<BaselineItem[]> {
+    const items = await prisma.orderItem.findMany({
+      where: { order_id: orderId },
+      select: { item_id: true, quantity_initial: true },
+    });
+    return items.map((i) => ({
+      item_id: i.item_id,
+      quantity: i.quantity_initial,
+    }));
+  }
+
+  protected async getMarkDoneComparison(orderId: string) {
+    return prisma.$transaction([
+      prisma.orderItem.findMany({
+        where: { order_id: orderId },
+        select: { item_id: true, quantity_initial: true },
+      }),
+      prisma.stationSummary.findMany({
+        where: { order_id: orderId, station: this.stationName },
+        select: { item_id: true, latest_quantity: true },
+      }),
+    ]);
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  IRONING SERVICE
+// ---------------------------------------------------------------------------
+
+class IroningService extends BaseStationService {
+  protected readonly stationName = "ironing" as StationName;
+  protected readonly orderStatus = "ironing_in_progress" as OrderStatus;
+  protected readonly workerField = "ironing_worker_id";
+  protected readonly completedField = "ironing_completed_at";
+  protected readonly nextOrderStatus = "packing_in_progress" as OrderStatus;
+  protected readonly nextWorkerField = "packing_worker_id";
+  protected readonly previousStation = "washing" as StationName;
+  protected readonly completionMessage = "Ironing job completed";
+  protected readonly requiredPreviousCompletions = ["washing_completed_at"];
+  protected readonly allCurrentAndFutureCompletions = [
+    "ironing_completed_at",
+    "packing_completed_at",
+  ];
+
+  protected async getBaselineItems(orderId: string): Promise<BaselineItem[]> {
+    const items = await prisma.stationSummary.findMany({
+      where: { order_id: orderId, station: this.previousStation! },
+      select: { item_id: true, latest_quantity: true },
+    });
+    return items.map((i) => ({
+      item_id: i.item_id,
+      quantity: i.latest_quantity,
+    }));
+  }
+
+  protected async getMarkDoneComparison(orderId: string) {
+    return prisma.$transaction([
+      prisma.stationSummary.findMany({
+        where: { order_id: orderId, station: this.previousStation! },
+        select: { item_id: true, latest_quantity: true },
+      }),
+      prisma.stationSummary.findMany({
+        where: { order_id: orderId, station: this.stationName },
+        select: { item_id: true, latest_quantity: true },
+      }),
+    ]);
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  PACKING SERVICE
+// ---------------------------------------------------------------------------
+
+class PackingService extends BaseStationService {
+  protected readonly stationName = "packing" as StationName;
+  protected readonly orderStatus = "packing_in_progress" as OrderStatus;
+  protected readonly workerField = "packing_worker_id";
+  protected readonly completedField = "packing_completed_at";
+  protected readonly nextOrderStatus = null;
+  protected readonly nextWorkerField = null;
+  protected readonly previousStation = "ironing" as StationName;
+  protected readonly completionMessage = "Packing job completed";
+  protected readonly requiredPreviousCompletions = [
+    "washing_completed_at",
+    "ironing_completed_at",
+  ];
+  protected readonly allCurrentAndFutureCompletions = ["packing_completed_at"];
+
+  protected async getBaselineItems(orderId: string): Promise<BaselineItem[]> {
+    const items = await prisma.stationSummary.findMany({
+      where: { order_id: orderId, station: this.previousStation! },
+      select: { item_id: true, latest_quantity: true },
+    });
+    return items.map((i) => ({
+      item_id: i.item_id,
+      quantity: i.latest_quantity,
+    }));
+  }
+
+  protected async getMarkDoneComparison(orderId: string) {
+    return prisma.$transaction([
+      prisma.stationSummary.findMany({
+        where: { order_id: orderId, station: this.previousStation! },
+        select: { item_id: true, latest_quantity: true },
+      }),
+      prisma.stationSummary.findMany({
+        where: { order_id: orderId, station: this.stationName },
+        select: { item_id: true, latest_quantity: true },
+      }),
+    ]);
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  WORKER STATION SERVICE (orchestrator — unchanged)
+// ---------------------------------------------------------------------------
+
+export class WorkerStationService {
+  private strategies: Record<WorkerStation, WorkerStationStrategy> = {
+    washing: new WashingService(),
+    ironing: new IroningService(),
+    packing: new PackingService(),
+  };
+
+  async checkAvailableJobs(data: CheckAvailableJobsPayloadDTO) {
+    try {
+      const { worker_station, outlet_id } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.checkAvailableJobs(outlet_id);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async checkActiveJobs(data: CheckActiveJobsPayloadDTO) {
+    try {
+      const { worker_station, outlet_id, worker_id } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.checkActiveJobs({
+        outletId: outlet_id,
+        workerId: worker_id,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async assignJob(data: AssignJobServiceStrategyDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.assignJob(rest);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async reInputItem(data: ReInputServiceStrategyPayloadDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.reInputItem(rest);
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async markDone(data: MarkDoneServiceStrategyDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.markDone(rest);
+    } catch (error) {
+      throw error;
+    }
+  }
+}

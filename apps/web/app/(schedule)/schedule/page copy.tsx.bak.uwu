@@ -1,0 +1,135 @@
+"use client";
+
+import { useState } from "react";
+import {
+  CreateWorkerShiftSchema,
+  DayEnum,
+} from "../validation/workerShift.schema";
+
+type Day = (typeof DayEnum)["options"][number];
+
+type DayState = {
+  enabled: boolean;
+  start: string;
+  end: string;
+};
+
+type WeeklyState = Record<Day, DayState>;
+
+const DAYS: Day[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+export default function WorkerShiftForm() {
+  const [weekly, setWeekly] = useState<WeeklyState>(() =>
+    DAYS.reduce((acc, day) => {
+      acc[day] = { enabled: false, start: "", end: "" };
+      return acc;
+    }, {} as WeeklyState)
+  );
+
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // hardcoded for demo
+  const outletId = "35dd708b-1be9-4598-81d7-834b3b44fd51"; // jl demang
+  const workerId = "f3e97637-404c-4034-8b9f-b4d3765c3518"; //my github
+
+  function toggleDay(day: Day) {
+    setWeekly((prev) => ({
+      ...prev,
+      [day]: { ...prev[day], enabled: !prev[day].enabled },
+    }));
+  }
+
+  function updateTime(day: Day, field: "start" | "end", value: string) {
+    setWeekly((prev) => ({
+      ...prev,
+      [day]: { ...prev[day], [field]: value },
+    }));
+  }
+
+  async function handleSubmit() {
+    setError(null);
+    setSuccess(null);
+
+    // 1. build schedules array
+    const schedules = Object.entries(weekly)
+      .filter(([, value]) => value.enabled)
+      .map(([day, value]) => ({
+        day,
+        start: value.start,
+        end: value.end,
+      }));
+
+    // 2. build payload
+    const payload = {
+      outletId,
+      workerId,
+      station: "washing",
+      schedules,
+    };
+
+    // 3. zod validation
+    const parsed = CreateWorkerShiftSchema.safeParse(payload);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    // if (!parsed.success) {
+    //   const firstIssue = parsed.error.issues[0];
+    //   setError(firstIssue?.message ?? "Invalid input");
+    //   return;
+    // }
+
+    // 4. send to backend
+    const res = await fetch("http://localhost:3000/api/admin/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsed.data),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      setError("Failed to save worker shift");
+      return;
+    }
+
+    setSuccess("Worker shift saved successfully");
+  }
+
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <h2>Weekly Worker Shift</h2>
+
+      {DAYS.map((day) => (
+        <div key={day} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <input
+            type="checkbox"
+            checked={weekly[day].enabled}
+            onChange={() => toggleDay(day)}
+          />
+          <strong>{day.toUpperCase()}</strong>
+
+          <input
+            type="time"
+            disabled={!weekly[day].enabled}
+            value={weekly[day].start}
+            onChange={(e) => updateTime(day, "start", e.target.value)}
+          />
+
+          <input
+            type="time"
+            disabled={!weekly[day].enabled}
+            value={weekly[day].end}
+            onChange={(e) => updateTime(day, "end", e.target.value)}
+          />
+        </div>
+      ))}
+
+      <button onClick={handleSubmit}>Submit Weekly Schedule</button>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {success && <p style={{ color: "green" }}>{success}</p>}
+    </div>
+  );
+}

@@ -5,7 +5,25 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 // If your Prisma file is located elsewhere, you can change the path (from config)
 import { prisma } from "../config/prisma";
 
+// custom session response
+import { customSession } from "better-auth/plugins";
+
+// Add this function before your auth configuration
+async function findUserRoles(userId: string) {
+  // Implement your role-finding logic here using Prisma
+  const userWithRoles = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!userWithRoles) {
+    return [];
+  }
+  return userWithRoles.role;
+}
+
 export const auth = betterAuth({
+  baseURL: "http://localhost:3000",
+
   // connect to database orm
   database: prismaAdapter(prisma, {
     provider: "postgresql",
@@ -39,5 +57,18 @@ export const auth = betterAuth({
       generateId: () => crypto.randomUUID(),
     },
   },
+
+  // custom session response
+  plugins: [
+    customSession(async ({ user, session }) => {
+      const roles = await findUserRoles(session.userId);
+      return {
+        user: {
+          ...user,
+          role: roles,
+        },
+        session,
+      };
+    }),
+  ],
 });
-console.log("Uwu Desuwa~");

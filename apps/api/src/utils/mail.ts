@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import "dotenv/config";
+import { HttpError } from "./httpError";
 
 const baseUrl: string = process.env.FRONTEND_URL || "http://localhost:3001";
 
@@ -25,12 +26,20 @@ export async function sendMail({
   subject: string;
   html: string;
 }) {
-  return mailer.sendMail({
-    from: process.env.MAIL_FROM,
-    to,
-    subject,
-    html,
-  });
+  try {
+    const res = await mailer.sendMail({
+      from: process.env.MAIL_FROM,
+      to,
+      subject,
+      html,
+    });
+    if (!res.accepted || res.accepted.length === 0) {
+      throw new HttpError(500, "SMTP server did not accept the email.");
+    }
+    return res;
+  } catch (error) {
+    throw error;
+  }
 }
 
 // 3. Email verification
@@ -47,7 +56,7 @@ export async function sendVerificationEmail(
       <p style="font-size: 20px; font-weight: bold;">${code}</p>
       <p>This code expires in 60 minutes.</p>
       <p>You can also verify your email from this link: </p>
-      <a href="${baseUrl}/verify?token=${hashedToken}">Here</a>
+      <a href="${baseUrl}/verify?token=${hashedToken}">Verify here!</a>
     `,
   });
 }
@@ -59,8 +68,13 @@ export async function sendEmailChangeVerification(email: string, code: string) {
     subject: "Confirm Email Change",
     html: `
       <h2>Confirm Your New Email Address</h2>
-      <p style="font-size: 20px; font-weight: bold;">${code}</p>
-      <p>This code expires in 10 minutes.</p>
+      <p style="font-size: 20px; font-weight: bold;">
+      Click the link below to change your email address:
+      <br/>
+      <a href="${baseUrl}/reset-password?token=${code}">Change to New Email!</a>
+      </p>
+      </p>
+      <p>This code expires in 1 hour.</p>
     `,
   });
 }
@@ -71,9 +85,34 @@ export async function sendPasswordResetEmail(email: string, code: string) {
     to: email,
     subject: "Reset Your Password",
     html: `
-      <h2>Password Reset Code</h2>
-      <p style="font-size: 20px; font-weight: bold;">${code}</p>
-      <p>This code expires in 10 minutes.</p>
+      <h2>Password Reset Link!</h2>
+      <p style="font-size: 20px; font-weight: bold;">
+      Click the link below to reset your password:
+      <br/>
+      <a href="${baseUrl}/reset-password?token=${code}">Reset Password!</a>
+      </p>
+      <p>This code expires in 1 hour.</p>
+    `,
+  });
+}
+
+// 6. Verify account made by admin (worker and driver)
+export async function sendVerifyEmailbyAdmin(
+  email: string,
+  userId: string,
+  hashedToken: string,
+  role: string
+) {
+  return sendMail({
+    to: email,
+    subject: `Verify Your ${role} Account`,
+    html: `
+      <h2>Verify Your Account</h2>
+      <p style="font-size: 20px; font-weight: bold;">
+      Click the link below to verify your account:</p>
+      <br/>
+      <a href="${baseUrl}/verify?token=${hashedToken}?userId=${userId}">Verify here!</a>
+      <p>This code expires in 1 hour.</p>
     `,
   });
 }

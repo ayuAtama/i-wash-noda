@@ -5,15 +5,23 @@ import { verifyToken } from "@/utils/jwt";
 export function requireStep(step: number) {
   return async function (req: Request, res: Response, next: NextFunction) {
     try {
+      // read if there're userid and token in query 
+      // (bypass email verify for worker and driver created by admin)
+      if (req.query.userId && req.query.token) {
+        console.log(req.query);
+        return next();
+      }
+
       // read the token from cookies
       const tokenTempJwt = req.cookies.temp_jwt;
       const tokenNextStep = req.cookies.next_step;
 
       // Check if the token is missing
-      if (!tokenNextStep || !tokenTempJwt)
-        return res
-          .status(401)
-          .json({ error: "Please go to resend page to continue registration" });
+      if (!tokenNextStep || !tokenTempJwt) {
+        return res.status(401).json({
+          error: "Please go to resend/reset page to continue the process",
+        });
+      }
 
       // check if the step is correct (it's not encoded)
       if (Number(tokenNextStep) !== step) {

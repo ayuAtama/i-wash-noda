@@ -1,0 +1,19 @@
+// apps/api/src/controllers/adminOrder.controller.ts
+import { AdminOrderService } from "@/services/adminOrder.services";
+import type { Request, Response, NextFunction } from "express";
+import { HttpError } from "@/utils/httpError";
+
+export class AdminOrderController {
+  private adminOrderService: AdminOrderService;
+
+  constructor(adminOrderService: AdminOrderService) {
+    this.adminOrderService = adminOrderService;
+  }
+
+  createOrder = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+    } catch (error) {
+      next(error);
+    }
+  };
+}

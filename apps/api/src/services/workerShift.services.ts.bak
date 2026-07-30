@@ -1,0 +1,148 @@
+// apps/api/src/services/workerShift.services.ts
+import { prisma } from "@/config/prisma";
+import { Prisma, StationName, WorkerShiftDay } from "@/generated/prisma/client";
+import { HttpError } from "@/utils/httpError";
+
+// temp type
+type WorkerShiftScheduleItem = {
+  id: string;
+  station: StationName;
+  start_time: string;
+  end_time: string;
+};
+
+type WeeklySchedule = Record<
+  "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun",
+  WorkerShiftScheduleItem[]
+>;
+
+type DaySchedule = {
+  enabled: boolean;
+  start?: string; // HH:mm
+  end?: string;
+};
+
+type WeeklyScheduleInput = Record<WorkerShiftDay, DaySchedule>;
+
+export class WorkerShiftService {
+  async getShiftsByWorkerId(workerId: string) {
+    const shifts = await prisma.workerShift.findMany({
+      where: {
+        worker_id: workerId,
+        is_deleted: false,
+      },
+      select: {
+        id: true,
+        day_of_week: true,
+        station: true,
+        end_time: true,
+        start_time: true,
+      },
+      orderBy: [{ day_of_week: "asc" }, { start_time: "asc" }],
+    });
+
+    const weeklySchedule: WeeklySchedule = {
+      mon: [],
+      tue: [],
+      wed: [],
+      thu: [],
+      fri: [],
+      sat: [],
+      sun: [],
+    };
+
+    for (const shift of shifts) {
+      weeklySchedule[shift.day_of_week].push({
+        id: shift.id,
+        station: shift.station,
+        start_time: shift.start_time.toISOString().substring(11, 16),
+        end_time: shift.end_time.toISOString().substring(11, 16),
+      });
+    }
+
+    return weeklySchedule;
+  }
+
+  async replaceWeeklySchedule(
+    outletAdminId: string,
+    workerId: string,
+    outletId: string,
+    station: StationName,
+    schedule: WeeklyScheduleInput
+  ) {
+    // 1️⃣ validate admin
+    const admin = await prisma.user.findUnique({
+      where: { id: outletAdminId },
+      select: { role: true, outlet_id: true },
+    });
+
+    if (!admin || admin.role !== "outlet_admin") {
+      throw new HttpError(403, "Forbidden");
+    }
+
+    if (admin.outlet_id !== outletId) {
+      throw new HttpError(403, "Invalid outlet");
+    }
+
+    // 2️⃣ validate worker
+    const worker = await prisma.user.findUnique({
+      where: { id: workerId },
+      select: {
+        role: true,
+        outlet_id: true,
+        worker_station: true,
+      },
+    });
+
+    if (!worker || worker.role !== "worker") {
+      throw new HttpError(404, "Worker not found");
+    }
+
+    if (worker.outlet_id !== outletId) {
+      throw new HttpError(400, "Worker not in this outlet");
+    }
+
+    if (worker.worker_station !== station) {
+      throw new HttpError(400, "Worker station mismatch");
+    }
+
+    // 3️⃣ build shift data
+    const newShifts = Object.entries(schedule)
+      .filter(([_, v]) => v.enabled)
+      .map(([day, v]) => {
+        if (!v.start || !v.end || v.start >= v.end) {
+          throw new HttpError(400, `Invalid time for ${day}`);
+        }
+
+        return {
+          worker_id: workerId,
+          outlet_id: outletId,
+          station,
+          day_of_week: day as WorkerShiftDay,
+          start_time: new Date(`1970-01-01T${v.start}:00Z`),
+          end_time: new Date(`1970-01-01T${v.end}:00Z`),
+        };
+      });
+
+    // 4️⃣ transaction: replace schedule
+    return await prisma.$transaction(async (tx) => {
+      // soft delete old shifts
+      await tx.workerShift.updateMany({
+        where: {
+          worker_id: workerId,
+          is_deleted: false,
+        },
+        data: { is_deleted: true },
+      });
+
+      // insert new shifts
+      if (newShifts.length > 0) {
+        await tx.workerShift.createMany({
+          data: newShifts,
+        });
+      }
+
+      return { success: true };
+    });
+  }
+}
