@@ -26,15 +26,20 @@ enum WorkerStation {
 }
 
 enum OrderStatus {
-  Menunggu_Penjemputan_Driver
-  Laundry_Sedang_Menuju_Outlet
-  Laundry_Telah_Sampai_Outlet
-  Laundry_Sedang_Dicuci
-  Laundry_Sedang_Disetrika
-  Laundry_Sedang_Dipacking
-  Menunggu_Pembayaran
-  Laundry_Sedang_Dikirim_Menuju_Customer
-  Laundry_Telah_Diterima_Customer
+  waiting_for_driver_pickup
+  out_for_pickup
+  in_transit_to_outlet
+  arrived_at_outlet
+  washing_in_progress
+  ironing_in_progress
+  packing_in_progress
+  waiting_for_payment
+  waiting_for_driver_deliver
+  out_for_delivery
+  delivered
+  complaint_received
+  cancelled
+  finished
 }
 
 enum StationName {
@@ -44,6 +49,12 @@ enum StationName {
 }
 
 enum MismatchStatus {
+  pending
+  approved
+  rejected
+}
+
+enum PaymentProofStatus {
   pending
   approved
   rejected
@@ -73,6 +84,17 @@ enum WorkerShiftDay {
   sun
 }
 
+enum OrderSource {
+  customer_app
+  walk_in
+}
+
+enum ComplaintStatus {
+  pending
+  resolved
+  rejected
+}
+
 // -----------------------
 //  USERS
 // -----------------------
@@ -87,6 +109,7 @@ model User {
   role           Role           @default(customer)
   worker_station WorkerStation?
   outlet_id      String?        @db.Uuid
+  is_deleted     Boolean        @default(false)
   //verified       Boolean        @default(false) use from better auth
   //created_at     DateTime       @default(now()) use from better auth
   //updated_at     DateTime       @updatedAt use from better auth
@@ -103,16 +126,45 @@ model User {
   workerShifts   WorkerShift[]
   approvedLogs   OrderStationLog[]    @relation("ApprovedByRelation")
   driverJobs     DriverJobStatus[]
-  complaints     Complaint[]
+  complaints     Complaint[]          @relation("CustomerComplaints")
+  adminMessages  Complaint[]          @relation("AdminMessages")
+  pickupOrders   Order[]              @relation("PickupDriver")
+  deliveryOrders Order[]              @relation("DeliveryDriver")
+  washingOrders  Order[]              @relation("WashingWorker")
+  ironingOrders  Order[]              @relation("IroningWorker")
+  packingOrders  Order[]              @relation("PackingWorker")
 
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  emailVerified   Boolean          @default(false)
+  image           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  walkInCustomers WalkInCustomer[] @relation("WalkInCustomerCreatedBy")
 
   @@map("users")
+}
+
+// -----------------------
+// WALKIN COSTUMER (NO ACCOUNT)
+// -----------------------
+
+model WalkInCustomer {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  phone      String
+  created_by String   @db.Uuid
+  outlet_id  String   @db.Uuid
+  outletId   Outlet   @relation("WalkInCustomerOutletId", fields: [outlet_id], references: [id])
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // relation
+  order     Order[] @relation("WalkInCustumerOrder")
+  createdBy User    @relation("WalkInCustomerCreatedBy", fields: [created_by], references: [id])
+
+  @@unique([phone])
+  @@map("walk_in_customers")
 }
 
 // -----------------------
@@ -128,7 +180,7 @@ model VerificationToken {
   created_at DateTime @default(now())
 
   //relations
-  user User @relation(fields: [user_id], references: [id])
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("verification_tokens")
 }
@@ -163,9 +215,11 @@ model UserAddress {
   lat        Decimal  @db.Decimal(10, 7)
   lng        Decimal  @db.Decimal(10, 7)
   is_default Boolean  @default(false)
+  is_deleted Boolean  @default(false)
   created_at DateTime @default(now())
 
-  user User @relation(fields: [user_id], references: [id])
+  user   User    @relation(fields: [user_id], references: [id])
+  orders Order[]
 
   @@map("user_addresses")
 }
@@ -183,13 +237,15 @@ model Outlet {
   max_distance_km Int
   price_per_km    Int
   price_per_kg    Int
+  is_deleted      Boolean  @default(false)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
   //relations
-  users  User[]
-  orders Order[]
-  shifts WorkerShift[]
+  users           User[]
+  orders          Order[]
+  shifts          WorkerShift[]
+  walkInCustomers WalkInCustomer[] @relation("WalkInCustomerOutletId")
 
   @@map("outlets")
 }
@@ -202,7 +258,7 @@ model WorkerShift {
   id          String         @id @default(uuid()) @db.Uuid
   worker_id   String         @db.Uuid
   outlet_id   String         @db.Uuid
-  station     StationName
+  station     StationName?
   day_of_week WorkerShiftDay
   start_time  DateTime       @db.Time
   end_time    DateTime       @db.Time
@@ -236,24 +292,41 @@ model Item {
 // -----------------------
 
 model Order {
-  id                 String      @id @default(uuid()) @db.Uuid
-  customer_id        String      @db.Uuid
-  outlet_id          String      @db.Uuid
-  driver_pickup_id   String?     @db.Uuid
-  driver_delivery_id String?     @db.Uuid
-  pickup_fee         Int
-  delivery_fee       Int
-  laundry_price      Int
-  total_amount       Int
-  total_kilo         Decimal     @db.Decimal(5, 2)
-  confirmed_at       DateTime?
-  status             OrderStatus
-  paid               Boolean     @default(false)
-  created_at         DateTime    @default(now())
-  updated_at         DateTime    @updatedAt
+  id                   String      @id @default(uuid()) @db.Uuid
+  customer_id          String?     @db.Uuid
+  walkin_customer_id   String?     @db.Uuid
+  pickup_address_id    String?     @db.Uuid
+  source               OrderSource @default(customer_app)
+  outlet_id            String      @db.Uuid
+  driver_pickup_id     String?     @db.Uuid
+  driver_delivery_id   String?     @db.Uuid
+  washing_worker_id    String?     @db.Uuid
+  ironing_worker_id    String?     @db.Uuid
+  packing_worker_id    String?     @db.Uuid
+  washing_completed_at DateTime?
+  ironing_completed_at DateTime?
+  packing_completed_at DateTime?
+  delivered_at         DateTime?
+  pickup_fee           Int
+  delivery_fee         Int
+  laundry_price        Int
+  total_amount         Int
+  total_kilo           Decimal     @db.Decimal(5, 2)
+  confirmed_at         DateTime?
+  status               OrderStatus
+  paid                 Boolean     @default(false)
+  created_at           DateTime    @default(now())
+  updated_at           DateTime    @updatedAt
 
   //relation
-  customer         User                 @relation("CustomerOrders", fields: [customer_id], references: [id])
+  customer         User?                @relation("CustomerOrders", fields: [customer_id], references: [id])
+  walkInCustomer   WalkInCustomer?      @relation("WalkInCustumerOrder", fields: [walkin_customer_id], references: [id])
+  pickupDriver     User?                @relation("PickupDriver", fields: [driver_pickup_id], references: [id])
+  deliveryDriver   User?                @relation("DeliveryDriver", fields: [driver_delivery_id], references: [id])
+  washingWorker    User?                @relation("WashingWorker", fields: [washing_worker_id], references: [id])
+  ironingWorker    User?                @relation("IroningWorker", fields: [ironing_worker_id], references: [id])
+  packingWorker    User?                @relation("PackingWorker", fields: [packing_worker_id], references: [id])
+  pickupAddress    UserAddress?         @relation(fields: [pickup_address_id], references: [id])
   outlet           Outlet               @relation(fields: [outlet_id], references: [id])
   items            OrderItem[]
   summary          StationSummary[]
@@ -262,7 +335,6 @@ model Order {
   pickupRequests   PickupRequest[]
   deliveryRequests DeliveryRequest[]
   transactions     PaymentTransaction[]
-  driverJobs       DriverJobStatus[]
   complaints       Complaint[]
 
   @@map("orders")
@@ -281,6 +353,7 @@ model OrderItem {
   order Order @relation(fields: [order_id], references: [id])
   item  Item  @relation(fields: [item_id], references: [id])
 
+  @@unique([order_id, item_id])
   @@map("order_items")
 }
 
@@ -294,11 +367,13 @@ model StationSummary {
   item_id         String      @db.Uuid
   station         StationName
   latest_quantity Int
-  updated_at      DateTime    @default(now())
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
 
   order Order @relation(fields: [order_id], references: [id])
   item  Item  @relation(fields: [item_id], references: [id])
 
+  @@unique([order_id, item_id, station])
   @@map("station_summary")
 }
 
@@ -334,12 +409,13 @@ model OrderStationLog {
 model PickupRequest {
   id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @db.Uuid
-  driver_id  String   @db.Uuid
+  driver_id  String?  @db.Uuid
   accepted   Boolean  @default(false)
   created_at DateTime @default(now())
 
-  order  Order @relation(fields: [order_id], references: [id])
-  driver User  @relation(fields: [driver_id], references: [id])
+  order             Order             @relation(fields: [order_id], references: [id])
+  driver            User?             @relation(fields: [driver_id], references: [id])
+  driverJobStatuses DriverJobStatus[]
 
   @@map("pickup_requests")
 }
@@ -351,12 +427,13 @@ model PickupRequest {
 model DeliveryRequest {
   id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @db.Uuid
-  driver_id  String   @db.Uuid
+  driver_id  String?  @db.Uuid
   accepted   Boolean  @default(false)
   created_at DateTime @default(now())
 
-  order  Order @relation(fields: [order_id], references: [id])
-  driver User  @relation(fields: [driver_id], references: [id])
+  order             Order             @relation(fields: [order_id], references: [id])
+  driver            User?             @relation(fields: [driver_id], references: [id])
+  driverJobStatuses DriverJobStatus[]
 
   @@map("delivery_requests")
 }
@@ -366,10 +443,13 @@ model DeliveryRequest {
 // -----------------------
 
 model PaymentProof {
-  id         String   @id @default(uuid()) @db.Uuid
-  order_id   String   @unique @db.Uuid
+  id         String             @id @default(uuid()) @db.Uuid
+  order_id   String             @unique @db.Uuid
   image_url  String
-  created_at DateTime @default(now())
+  status     PaymentProofStatus @default(pending)
+  updated_at DateTime           @updatedAt
+  created_at DateTime           @default(now())
+  is_deleted Boolean            @default(false)
 
   order Order @relation(fields: [order_id], references: [id])
 
@@ -400,15 +480,20 @@ model PaymentTransaction {
 // -----------------------
 
 model DriverJobStatus {
-  id         String              @id @default(uuid()) @db.Uuid
-  driver_id  String              @db.Uuid
-  order_id   String              @db.Uuid
-  status     DriverJobStatusEnum
-  updated_at DateTime            @default(now())
+  id                  String              @id @default(uuid()) @db.Uuid
+  driver_id           String              @db.Uuid
+  pickup_request_id   String?             @db.Uuid
+  delivery_request_id String?             @db.Uuid
+  status              DriverJobStatusEnum
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
 
-  driver User  @relation(fields: [driver_id], references: [id])
-  order  Order @relation(fields: [order_id], references: [id])
+  driver          User             @relation(fields: [driver_id], references: [id])
+  pickupRequest   PickupRequest?   @relation(fields: [pickup_request_id], references: [id])
+  deliveryRequest DeliveryRequest? @relation(fields: [delivery_request_id], references: [id])
 
+  @@unique([pickup_request_id])
+  @@unique([delivery_request_id])
   @@map("driver_job_status")
 }
 
@@ -417,15 +502,21 @@ model DriverJobStatus {
 // -----------------------
 
 model Complaint {
-  id         String   @id @default(uuid()) @db.Uuid
-  order_id   String   @db.Uuid
-  user_id    String   @db.Uuid
-  message    String
-  image_url  String?
-  created_at DateTime @default(now())
+  id             String          @id @default(uuid()) @db.Uuid
+  order_id       String          @db.Uuid
+  user_id        String          @db.Uuid
+  admin_id       String?         @db.Uuid
+  status         ComplaintStatus
+  message        String
+  image_url      String?
+  admin_response String?
+  resolved_at    DateTime?
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
 
   order Order @relation(fields: [order_id], references: [id])
-  user  User  @relation(fields: [user_id], references: [id])
+  user  User  @relation("CustomerComplaints", fields: [user_id], references: [id])
+  admin User? @relation("AdminMessages", fields: [admin_id], references: [id])
 
   @@map("complaints")
 }

@@ -23,6 +23,11 @@ const hashPassword = (token: string) => {
   return bcrypt.hashSync(token, saltRounds); // bcrypt generates a new salt automatically
 };
 
+const comparePassword = (password: string, hashPassword: string): boolean => {
+  const isMatch = bcrypt.compareSync(password, hashPassword);
+  return isMatch;
+};
+
 const generateSessionId = (): string => {
   return crypto.randomBytes(32).toString("hex");
 };
@@ -37,4 +42,5 @@ export {
   hashToken,
   hashSessionId,
   hashPassword,
+  comparePassword,
 };
