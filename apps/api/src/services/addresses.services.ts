@@ -1,17 +1,24 @@
 // apps/api/src/services/addresses.services.ts
-import { prisma } from "@/config/prisma";
-import { Prisma } from "@/generated/prisma/client";
+import { prisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
   CreateAddressDto,
   UpdateAddressDto,
+  ParamsAddressDto,
+  UserIdDto,
 } from "@/validations/address.validation";
+//type PrismaInstance = typeof defaultPrisma;
 
 export class AddressService {
-  async getAll(userId: string) {
+  private readonly prisma: PrismaWrapper;
+
+  constructor(prismaClient: PrismaWrapper = prisma) {
+    this.prisma = prismaClient;
+  }
+
+  async getAll(userId: UserIdDto) {
     try {
-      // get the addresses
-      const addresses = await prisma.userAddress.findMany({
+      const addresses = await this.prisma.userAddress.findMany({
         where: {
           user_id: userId,
           is_deleted: false,
@@ -29,30 +36,21 @@ export class AddressService {
     }
   }
 
-  async create(userId: string, data: CreateAddressDto) {
+  async create(userId: UserIdDto, data: CreateAddressDto) {
     try {
-      // get the data
-      console.log("data from controller:", data);
       const { label, address, lat, lng, isDefault: is_default } = data;
 
-      // create the address
-      const { newAddress } = await prisma.$transaction(async (tx) => {
-        // check if user already has any address
+      const { newAddress } = await this.prisma.$transaction(async (tx) => {
         const addressCount = await tx.userAddress.count({
           where: {
             user_id: userId,
           },
         });
 
-        // if this is the first one, make it is_default true
         const finalIsDefault = addressCount === 0 ? true : Boolean(is_default);
 
-        console.log(is_default, finalIsDefault);
-
-        // check if the address is_default true
         if (finalIsDefault) {
-          // change the previous is_default address' into false
-          const test1 = await tx.userAddress.updateMany({
+          await tx.userAddress.updateMany({
             where: {
               user_id: userId,
               is_default: true,
@@ -63,7 +61,6 @@ export class AddressService {
           });
         }
 
-        // and just store it immediately
         const newAddress = await tx.userAddress.create({
           data: {
             user_id: userId,
@@ -84,22 +81,22 @@ export class AddressService {
     }
   }
 
-  async update(userId: string, addressId: string, data: UpdateAddressDto) {
+  async update(
+    userId: UserIdDto,
+    addressId: ParamsAddressDto["id"],
+    data: UpdateAddressDto,
+  ) {
     try {
-      // get the data
       const { label, address, lat, lng, isDefault: is_default } = data;
 
-      // update the address
-      const { updatedAddress } = await prisma.$transaction(async (tx) => {
-        // check if the address is_default
+      const { updatedAddress } = await this.prisma.$transaction(async (tx) => {
         if (is_default) {
-          // change the previous is_default address' into false
           await tx.userAddress.updateMany({
             where: {
               user_id: userId,
               is_default: true,
               NOT: {
-                id: addressId, // exclude own adress
+                id: addressId,
               },
             },
             data: {
@@ -108,7 +105,6 @@ export class AddressService {
           });
         }
 
-        // and just update it cassually
         const updatedAddress = await tx.userAddress.update({
           where: {
             id: addressId,
@@ -132,10 +128,9 @@ export class AddressService {
     }
   }
 
-  async delete(userId: string, addressId: string) {
+  async delete(userId: UserIdDto, addressId: ParamsAddressDto["id"]) {
     try {
-      const deletedAddress = await prisma.$transaction(async (tx) => {
-        // find the address first to know if it was default
+      const deletedAddress = await this.prisma.$transaction(async (tx) => {
         const address = await tx.userAddress.findFirst({
           where: {
             id: addressId,
@@ -146,7 +141,6 @@ export class AddressService {
 
         if (!address) throw new HttpError(404, "Address not found");
 
-        // delete the address (soft delete)
         const deleted = await tx.userAddress.update({
           where: {
             id: addressId,
@@ -157,9 +151,7 @@ export class AddressService {
           },
         });
 
-        // if deleted address was default, promote another one
         if (address.is_default) {
-          // choose the OLDEST address (created earliest)
           const oldestAddress = await tx.userAddress.findFirst({
             where: {
               user_id: userId,
@@ -170,8 +162,6 @@ export class AddressService {
             },
           });
 
-          // if no address remains, do nothing
-          // having zero addresses is a valid state
           if (oldestAddress) {
             await tx.userAddress.update({
               where: {
@@ -193,11 +183,9 @@ export class AddressService {
     }
   }
 
-  async setDefault(userId: string, addressId: string) {
+  async setDefault(userId: UserIdDto, addressId: ParamsAddressDto["id"]) {
     try {
-      // do it in transaction
-      const defaultAddress = await prisma.$transaction(async (tx) => {
-        // find the address first to know if it was default
+      const defaultAddress = await this.prisma.$transaction(async (tx) => {
         const address = await tx.userAddress.findFirst({
           where: {
             id: addressId,
@@ -207,7 +195,6 @@ export class AddressService {
 
         if (!address) throw new HttpError(404, "Address not found");
 
-        // change all address to !is_default
         await tx.userAddress.updateMany({
           where: {
             user_id: userId,
@@ -217,7 +204,6 @@ export class AddressService {
           },
         });
 
-        // update the address
         const updated = await tx.userAddress.update({
           where: {
             id: addressId,

@@ -2,26 +2,43 @@
 import { z } from "zod";
 import "zod-openapi";
 
-export const CreateWalkInCustomerSchema = z.object({
-  name: z.string().min(1, "Name is required").meta({
-    description: "Name of the customer",
-    example: "John Doe",
-  }),
-  phone: z
-    .string()
-    .regex(/^(?:\+62|62|0)8[1-9][0-9]{6,11}$/, "Invalid phone number")
-    .meta({
-      description: "Phone number of the customer",
-      example: "+6281234567890 or 081234567890",
+export const CreateWalkInCustomerSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").meta({
+      description: "Name of the customer",
+      example: "John Doe",
     }),
-});
+    phone: z
+      .string()
+      .regex(/^(?:\+62|62|0)8[1-9][0-9]{6,11}$/, "Invalid phone number")
+      .meta({
+        description: "Phone number of the customer",
+        example: "+6281234567890 or 081234567890",
+      }),
+  })
+  .meta({
+    id: "CreateWalkInCustomer",
+    description: "Payload for creating a walk-in customer",
+    example: {
+      name: "John Doe",
+      phone: "+6281234567890",
+    },
+  });
 
-export const keywordWalkInCustomerSchema = z.object({
-  keyword: z.string().min(1, "Keyword is required").meta({
-    description: "Keyword to search for walk-in customers",
-    example: "John or 081222222222",
-  }),
-});
+export const keywordWalkInCustomerSchema = z
+  .object({
+    keyword: z.string().min(1, "Keyword is required").meta({
+      description: "Keyword to search for walk-in customers",
+      example: "John or 081222222222",
+    }),
+  })
+  .meta({
+    id: "KeywordWalkInCustomer",
+    description: "Query params for searching walk-in customers",
+    example: {
+      keyword: "John",
+    },
+  });
 
 export const outletIDSchema = z.object({
   outlet_id: z.uuid().meta({
@@ -52,18 +69,34 @@ export const UpdateWalkInCustomerSchema = z
         example: "+6281234567890 or 081234567890",
       }),
   })
+  .meta({
+    id: "UpdateWalkInCustomer",
+    description:
+      "Payload for updating a walk-in customer (at least one field required)",
+    example: {
+      name: "John Updated",
+    },
+  })
   .refine((data) => !!data.name || !!data.phone, {
     message:
       "Either name or phone is required and what the you update without a data?",
     // path: ["name"], // or ["phone"], or omit to make it a form-level error
   });
 
-export const IDParamSchema = z.object({
-  id: z.uuid().meta({
-    description: "Order ID (UUID)",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
+export const IDParamSchema = z
+  .object({
+    id: z.uuid().meta({
+      description: "Walk-in Customer ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  })
+  .meta({
+    id: "WalkInCustomerIdParam",
+    description: "Path params for walk-in customer ID",
+    example: {
+      id: "123e4567-e89b-12d3-a456-426614174000",
+    },
+  });
 
 export class UpdateWalkInCustomerValidation {
   static UpdateWalkInCustomerSchema = UpdateWalkInCustomerSchema;
@@ -119,6 +152,14 @@ export const ItemOrderSchema = z
       description: "Item quantity",
       example: 2,
     }),
+  })
+  .meta({
+    id: "ItemOrder",
+    description: "Item order line (provide either id or name, not both)",
+    example: {
+      id: "123e4567-e89b-12d3-a456-426614174000",
+      quantity: 2,
+    },
   })
   .refine(({ id, name }) => (id ? 1 : 0) + (name ? 1 : 0) === 1, {
     error: "Please only provide exactly one of id or name for the items",
@@ -439,23 +480,41 @@ export class ComplaintOrderValidation {
     example: "123e4567-e89b-12d3-a456-426614174000",
   });
 
-  static ComplaintBodySchema = z.object({
-    adminResponse: z.string().min(1, "Admin response is required").meta({
-      description: "Admin response to the complaint",
-      example: "Your order has been delivered",
-    }),
-  });
+  static ComplaintBodySchema = z
+    .object({
+      adminResponse: z.string().min(1, "Admin response is required").meta({
+        description: "Admin response to the complaint",
+        example: "Your order has been delivered",
+      }),
+    })
+    .meta({
+      id: "ComplaintBody",
+      description: "Payload for responding to a customer complaint",
+      example: {
+        adminResponse:
+          "We apologize for the inconvenience. Your order has been processed.",
+      },
+    });
 
-  static ComplaintParamsSchema = z.object({
-    complaintId: z.uuid().meta({
-      description: "Complaint ID (UUID)",
-      example: "123e4567-e89b-12d3-a456-426614174000",
-    }),
-    status: z.enum(["resolved", "rejected"]).meta({
-      description: "Complaint status",
-      example: "resolved",
-    }),
-  });
+  static ComplaintParamsSchema = z
+    .object({
+      complaintId: z.uuid().meta({
+        description: "Complaint ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      status: z.enum(["resolved", "rejected"]).meta({
+        description: "Complaint status",
+        example: "resolved",
+      }),
+    })
+    .meta({
+      id: "ComplaintParams",
+      description: "Path params for complaint action",
+      example: {
+        complaintId: "123e4567-e89b-12d3-a456-426614174000",
+        status: "resolved",
+      },
+    });
 
   static AdminIDSchema = z.object({
     adminId: z.uuid().meta({

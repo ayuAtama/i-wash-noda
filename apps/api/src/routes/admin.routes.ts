@@ -5,13 +5,14 @@ import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { AdminValidation } from "@/validations/admin.validation";
 import { AdminService } from "@/services/admin.services";
+import { PrismaWrapper } from "@/config/prisma";
 
 export class AdminRoute {
   public router = Router();
   private controller: AdminController;
 
-  constructor() {
-    this.controller = new AdminController(new AdminService());
+  constructor(controller: AdminController) {
+    this.controller = controller;
     this.createInternalUser();
     this.manageInternalUser();
   }
@@ -58,4 +59,6 @@ export class AdminRoute {
   }
 }
 
-export default new AdminRoute().router;
+export default new AdminRoute(
+  new AdminController(new AdminService(new PrismaWrapper())),
+).router;

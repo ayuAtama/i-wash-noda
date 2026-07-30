@@ -1,5 +1,5 @@
 // src/services/deliveryOrder.services.ts
-import { prisma } from "@/config/prisma";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
   DeliveryIdParamsDTO,
@@ -9,9 +9,11 @@ import {
 import { format } from "date-fns";
 
 export class DeliveryOrderService {
+  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+
   async getAllDeliveryRequests(outletId: OutletIdDTO) {
     try {
-      const deliveryRequests = await prisma.deliveryRequest.findMany({
+      const deliveryRequests = await this.prisma.deliveryRequest.findMany({
         where: {
           accepted: false,
           order: {
@@ -77,7 +79,7 @@ export class DeliveryOrderService {
     userId: UserIdDTO,
   ) {
     try {
-      const { success, message, data } = await prisma.$transaction(
+      const { success, message, data } = await this.prisma.$transaction(
         async (tx) => {
           const deliveryRequest = await tx.deliveryRequest.findUnique({
             where: {
@@ -189,7 +191,7 @@ export class DeliveryOrderService {
     deliveryOrderId: DeliveryIdParamsDTO["deliveryId"],
   ) {
     try {
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async (tx) => {
         const driverStatus = await tx.driverJobStatus.findUnique({
           where: {
             delivery_request_id: deliveryOrderId,
@@ -252,6 +254,7 @@ export class DeliveryOrderService {
               },
               data: {
                 status: "delivered",
+                delivered_at: new Date(),
               },
             });
           }
@@ -274,7 +277,7 @@ export class DeliveryOrderService {
   async getAcceptedDeliveryRequests(userId: UserIdDTO, outletId: OutletIdDTO) {
     try {
       // get list all the accepted job
-      const listPickedUpJob = await prisma.driverJobStatus.findMany({
+      const listPickedUpJob = await this.prisma.driverJobStatus.findMany({
         where: {
           driver_id: userId,
           delivery_request_id: { not: null },
@@ -345,7 +348,7 @@ export class DeliveryOrderService {
     outletId: OutletIdDTO,
   ) {
     try {
-      const jobs = await prisma.driverJobStatus.findMany({
+      const jobs = await this.prisma.driverJobStatus.findMany({
         where: {
           driver_id: userId,
           delivery_request_id: {

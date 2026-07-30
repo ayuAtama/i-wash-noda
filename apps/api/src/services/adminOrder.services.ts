@@ -1,5 +1,5 @@
 // src/services/adminOrder.services.ts
-import { prisma } from "@/config/prisma";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { OrderStatus } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
 import {
@@ -26,13 +26,15 @@ import {
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderService {
+  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+
   async createNewWalkInCustomer(data: WalkInCustomerPayloadDTO) {
     try {
       // destructing the data
       const { name, phone, admin_id, outlet_id } = data;
 
       // create the user
-      const customer = await prisma.walkInCustomer.create({
+      const customer = await this.prisma.walkInCustomer.create({
         data: {
           name,
           phone,
@@ -40,7 +42,7 @@ export class AdminOrderService {
           outlet_id: outlet_id,
         },
       });
-      // const customer = await prisma.walkInCustomer.create({
+      // const customer = await this.prisma.walkInCustomer.create({
       //   data,
       // });
       if (!customer) {
@@ -69,7 +71,7 @@ export class AdminOrderService {
       if (!keyword.trim()) throw new HttpError(400, "Invalid keyword");
 
       // check if the keyword valid
-      const customer = await prisma.walkInCustomer.findMany({
+      const customer = await this.prisma.walkInCustomer.findMany({
         where: {
           outlet_id,
           OR: [
@@ -113,7 +115,7 @@ export class AdminOrderService {
       // strip the id
       const { id, outlet_id, ...rest } = data;
       // update the data of the Walkin Customer
-      const update = await prisma.walkInCustomer.update({
+      const update = await this.prisma.walkInCustomer.update({
         where: {
           id,
           outlet_id,
@@ -137,7 +139,7 @@ export class AdminOrderService {
       const { id, outlet_id } = payload;
 
       // delete the account of the Walkin Customer
-      const query = await prisma.walkInCustomer.findUnique({
+      const query = await this.prisma.walkInCustomer.findUnique({
         where: {
           id,
           outlet_id,
@@ -146,7 +148,7 @@ export class AdminOrderService {
 
       if (!query) throw new HttpError(404, "Walkin Customer not found");
 
-      const deleted = await prisma.walkInCustomer.delete({
+      const deleted = await this.prisma.walkInCustomer.delete({
         where: {
           id: query.id,
         },
@@ -180,7 +182,7 @@ export class AdminOrderService {
       } = data;
 
       // make prisma transaction
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async (tx) => {
         // get the data price of the laundry from the outlet
         const { price_per_kg } = await tx.outlet.findFirstOrThrow({
           where: { id: outlet_id },
@@ -387,7 +389,7 @@ export class AdminOrderService {
 
   async getAllOrderOnOutlet(outlet_id: OutletIdParamsSchemaDTO["outlet_id"]) {
     try {
-      const orders = await prisma.order.findMany({
+      const orders = await this.prisma.order.findMany({
         where: {
           outlet_id: outlet_id,
           status: "arrived_at_outlet",
@@ -457,7 +459,7 @@ export class AdminOrderService {
       } = data;
 
       // not allowed the order that doesn't match with the order_outlet's outlet_admin
-      const order = await prisma.order.findUnique({
+      const order = await this.prisma.order.findUnique({
         where: {
           id: order_id,
           outlet_id: outlet_id,
@@ -488,7 +490,7 @@ export class AdminOrderService {
       }
 
       // make a transaction for safety
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async (tx) => {
         // manage the order items (separate for existing and new items)
 
         // sperate the existing first
@@ -720,7 +722,7 @@ export class AdminOrderService {
   async checkCustomerPaymentProof(data: outletIDSchemaDTO) {
     const { outlet_id: outletId } = data;
 
-    const listPaymentProof = await prisma.paymentProof.findMany({
+    const listPaymentProof = await this.prisma.paymentProof.findMany({
       where: {
         order: {
           outlet_id: outletId,
@@ -784,7 +786,7 @@ export class AdminOrderService {
   async actionOfPaymentProof(data: ActionOfPaymentProofValidationDTO) {
     const { outlet_id: outletId, id: paymentProofID, action } = data;
 
-    const isPaymentProofExist = await prisma.paymentProof.findFirst({
+    const isPaymentProofExist = await this.prisma.paymentProof.findFirst({
       where: {
         id: paymentProofID,
         order: {
@@ -806,7 +808,7 @@ export class AdminOrderService {
 
     // reject
     if (action === "rejected") {
-      const reject = await prisma.paymentProof.update({
+      const reject = await this.prisma.paymentProof.update({
         where: {
           id: paymentProofID,
           order: {
@@ -832,7 +834,7 @@ export class AdminOrderService {
     }
 
     // approve
-    const transactionResult = await prisma.$transaction(async (tx) => {
+    const transactionResult = await this.prisma.$transaction(async (tx) => {
       const approve = await tx.paymentProof.update({
         where: { id: paymentProofID },
         data: { status: "approved" },
@@ -908,7 +910,7 @@ export class AdminOrderService {
     try {
       const outlet_id = data;
 
-      const complaintLists = await prisma.complaint.findMany({
+      const complaintLists = await this.prisma.complaint.findMany({
         where: {
           order: {
             outlet_id: outlet_id,
@@ -957,7 +959,7 @@ export class AdminOrderService {
         adminId,
       } = data;
 
-      const guard = await prisma.complaint.findUnique({
+      const guard = await this.prisma.complaint.findUnique({
         where: { id: complaintId },
         select: { id: true, status: true },
       });
@@ -967,52 +969,54 @@ export class AdminOrderService {
       if (guard.status !== "pending")
         throw new HttpError(409, "Complaint already responded");
 
-      const { update, orderUpdate } = await prisma.$transaction(async (tx) => {
-        const update = await tx.complaint.update({
-          where: { id: guard.id },
-          data: {
-            admin_response: admin_response,
-            admin_id: adminId,
-            status: status,
-            resolved_at: status === "resolved" ? new Date() : null,
-          },
-          select: {
-            id: true,
-            order_id: true,
-            user: {
-              select: {
-                name: true,
-              },
+      const { update, orderUpdate } = await this.prisma.$transaction(
+        async (tx) => {
+          const update = await tx.complaint.update({
+            where: { id: guard.id },
+            data: {
+              admin_response: admin_response,
+              admin_id: adminId,
+              status: status,
+              resolved_at: status === "resolved" ? new Date() : null,
             },
-            order: {
-              select: {
-                pickupAddress: {
-                  select: {
-                    address: true,
-                    lat: true,
-                    lng: true,
+            select: {
+              id: true,
+              order_id: true,
+              user: {
+                select: {
+                  name: true,
+                },
+              },
+              order: {
+                select: {
+                  pickupAddress: {
+                    select: {
+                      address: true,
+                      lat: true,
+                      lng: true,
+                    },
                   },
                 },
               },
+              message: true,
+              image_url: true,
+              admin_response: true,
+              status: true,
+              resolved_at: true,
+              updated_at: true,
+              created_at: true,
             },
-            message: true,
-            image_url: true,
-            admin_response: true,
-            status: true,
-            resolved_at: true,
-            updated_at: true,
-            created_at: true,
-          },
-        });
+          });
 
-        const orderUpdate = await tx.order.update({
-          where: { id: update.order_id },
-          data: { status: "finished", confirmed_at: new Date() },
-          select: { id: true, status: true },
-        });
+          const orderUpdate = await tx.order.update({
+            where: { id: update.order_id },
+            data: { status: "finished", confirmed_at: new Date() },
+            select: { id: true, status: true },
+          });
 
-        return { update, orderUpdate };
-      });
+          return { update, orderUpdate };
+        },
+      );
 
       const normalized = {
         id: update.id,
@@ -1037,5 +1041,5 @@ export class AdminOrderService {
     } catch (error) {
       throw error;
     }
-  }
+  };
 }

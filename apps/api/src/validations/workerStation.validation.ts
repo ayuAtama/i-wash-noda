@@ -22,25 +22,38 @@ export const ReInputItemSchema = z
     },
   });
 
-export const ReInputItemBodySchema = z.object({
-  items: z
-    .array(ReInputItemSchema)
-    .min(1, "At least one item must be inputted")
-    .meta({
-      id: "ReInputItemBody",
-      description: "Payload of body for re-input item",
-      example: [
+export const ReInputItemBodySchema = z
+  .object({
+    items: z
+      .array(ReInputItemSchema)
+      .min(1, "At least one item must be inputted")
+      .meta({
+        id: "ReInputItemBody",
+        description: "Payload of body for re-input item",
+        example: [
+          {
+            itemId: "123e4567-e89b-12d3-a456-426614174000",
+            itemQuantity: 10,
+          },
+          {
+            itemId: "123e4567-e89b-12d3-a456-426614174001",
+            itemQuantity: 5,
+          },
+        ],
+      }),
+  })
+  .meta({
+    id: "ReInputItemBodyWrapper",
+    description: "Body payload for re-inputting item quantities",
+    example: {
+      items: [
         {
           itemId: "123e4567-e89b-12d3-a456-426614174000",
           itemQuantity: 10,
         },
-        {
-          itemId: "123e4567-e89b-12d3-a456-426614174001",
-          itemQuantity: 5,
-        },
       ],
-    }),
-});
+    },
+  });
 
 export const ReInputItemParamsSchema = z
   .object({

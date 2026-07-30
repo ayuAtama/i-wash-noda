@@ -9,8 +9,8 @@ export class AddressRoute {
   public router = Router();
   private controller: AddressController;
 
-  constructor() {
-    this.controller = new AddressController(new AddressService());
+  constructor(controller: AddressController) {
+    this.controller = controller;
     this.getAddress();
     this.createAddress();
     this.setDefaultAddress();
@@ -19,7 +19,7 @@ export class AddressRoute {
   }
 
   private getAddress() {
-    this.router.get("/", authenticationMiddleware, this.controller.getAll);
+    this.router.get("/", authenticationMiddleware, this.controller.getAll.bind(this.controller));
   }
 
   private createAddress() {
@@ -85,4 +85,5 @@ export class AddressRoute {
   }
 }
 
-export default new AddressRoute().router;
+export default new AddressRoute(new AddressController(new AddressService()))
+  .router;

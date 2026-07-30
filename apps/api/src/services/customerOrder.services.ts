@@ -1,22 +1,25 @@
-import { prisma } from "@/config/prisma";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
   complainPayloadDTO,
+  markDoneDTO,
   uploadPaymentDTO,
   UserIdDTO,
 } from "@/validations/customerOrder.validation";
 
 export class CustomerOrderService {
+  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+
   async checkActiveOrderStatus(userId: UserIdDTO) {
     try {
       // check if the user is valid
-      const user = await prisma.user.findUnique({
+      const user = await this.prisma.user.findUnique({
         where: { id: userId },
       });
       if (!user) throw new HttpError(404, "User not found");
 
       // find the most recent active order for this customer
-      const order = await prisma.order.findMany({
+      const order = await this.prisma.order.findMany({
         where: {
           customer_id: userId,
           status: {
@@ -58,13 +61,13 @@ export class CustomerOrderService {
   async checkCompletedOrderStatus(userId: UserIdDTO) {
     try {
       // check if the user is valid
-      const user = await prisma.user.findUnique({
+      const user = await this.prisma.user.findUnique({
         where: { id: userId },
       });
       if (!user) throw new HttpError(404, "User not found");
 
       // find the most recent active order for this customer
-      const order = await prisma.order.findMany({
+      const order = await this.prisma.order.findMany({
         where: {
           customer_id: userId,
           status: { in: ["finished", "cancelled"] },
@@ -105,7 +108,7 @@ export class CustomerOrderService {
     try {
       const { orderId, userId, urlProof } = data;
 
-      const orderData = await prisma.order.findFirst({
+      const orderData = await this.prisma.order.findFirst({
         where: {
           id: orderId,
           customer_id: userId,
@@ -130,7 +133,7 @@ export class CustomerOrderService {
           "Proof already uploaded, waiting for admin approval",
         );
 
-      const uploadProof = await prisma.paymentProof.create({
+      const uploadProof = await this.prisma.paymentProof.create({
         data: {
           order_id: orderData.id,
           image_url: urlProof,
@@ -153,12 +156,12 @@ export class CustomerOrderService {
     }
   }
 
-  markDone = async (data: { orderId: string; userId: string }) => {
+  async markDone(data: markDoneDTO) {
     try {
       const { orderId, userId } = data;
 
       // guard
-      const order = await prisma.order.findUnique({
+      const order = await this.prisma.order.findUnique({
         where: { id: orderId, customer_id: userId },
         select: { id: true, status: true, paid: true },
       });
@@ -175,7 +178,7 @@ export class CustomerOrderService {
       if (order.status !== "delivered")
         throw new HttpError(409, "Please dont be a little hacker");
 
-      const markDone = await prisma.order.update({
+      const markDone = await this.prisma.order.update({
         where: { id: order.id },
         data: { status: "finished", confirmed_at: new Date() },
         select: {
@@ -206,19 +209,19 @@ export class CustomerOrderService {
     } catch (error) {
       throw error;
     }
-  };
+  }
 
-  complaint = async (data: complainPayloadDTO) => {
+  async complaint(data: complainPayloadDTO) {
     try {
       const { orderId, userId, complaintMessage, complaintImage } = data;
 
       // guard
-      const guard = await prisma.complaint.findFirst({
+      const guard = await this.prisma.complaint.findFirst({
         where: { order_id: orderId, user_id: userId, status: "pending" },
         select: { id: true, status: true },
       });
       if (!guard) {
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
           const complain = await tx.complaint.create({
             data: {
               order_id: orderId,
@@ -261,5 +264,5 @@ export class CustomerOrderService {
     } catch (error) {
       throw error;
     }
-  };
+  }
 }

@@ -1,7 +1,5 @@
-// ../apps/api/src/index.ts vercel serverless
-import { App } from "./app";
+// src/index.ts — Vercel serverless entry point
+import { Server } from "./server";
 
-const app = new App().app;
-
-// export the express app
-export default app;
+const server = new Server();
+export default server.getApp();

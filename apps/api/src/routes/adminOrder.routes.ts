@@ -3,6 +3,7 @@ import { Router } from "express";
 import { AdminOrderController } from "@/controllers/adminOrder.controller";
 import { Validator } from "@/middleware/validate";
 import { AdminOrderService } from "@/services/adminOrder.services";
+
 import {
   AdminOrderValidation,
   ComplaintOrderValidation,
@@ -20,8 +21,8 @@ export class AdminOrderRoute {
   public router = Router();
   private controller: AdminOrderController;
 
-  constructor() {
-    this.controller = new AdminOrderController(new AdminOrderService());
+  constructor(controller: AdminOrderController) {
+    this.controller = controller;
     this.getAllOrderOnTheOutlet();
     this.updateItemOfOrder();
     this.PaymentProof();
@@ -100,8 +101,8 @@ export class AdminWalkInOrderRoute {
   public router = Router();
   private controller: AdminOrderController;
 
-  constructor() {
-    this.controller = new AdminOrderController(new AdminOrderService());
+  constructor(controller: AdminOrderController) {
+    this.controller = controller;
     this.createWalkinCustomerOrder();
     this.checkWalkinCustomer();
     this.updateWalkinCustomer();
@@ -177,5 +178,7 @@ export class AdminWalkInOrderRoute {
   }
 }
 
-export const adminWalkInOrderRoutes = new AdminWalkInOrderRoute().router;
-export default new AdminOrderRoute().router;
+const controller = new AdminOrderController(new AdminOrderService());
+export const adminWalkInOrderRoutes = new AdminWalkInOrderRoute(controller)
+  .router;
+export default new AdminOrderRoute(controller).router;

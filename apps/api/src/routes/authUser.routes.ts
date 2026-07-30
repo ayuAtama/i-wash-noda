@@ -13,8 +13,8 @@ export class AuthUserRoute {
   public router = Router();
   private controller: AuthUserController;
 
-  constructor() {
-    this.controller = new AuthUserController(new AuthUserService());
+  constructor(controller: AuthUserController) {
+    this.controller = controller;
     this.register();
     this.login();
     this.logout();
@@ -135,4 +135,5 @@ export class AuthUserRoute {
   }
 }
 
-export default new AuthUserRoute().router;
+export default new AuthUserRoute(new AuthUserController(new AuthUserService()))
+  .router;

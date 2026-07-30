@@ -1,5 +1,5 @@
 // src/services/adminMissmatch.services.ts
-import { prisma } from "@/config/prisma";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { MismatchStatus, StationName } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
 import {
@@ -12,6 +12,8 @@ import {
 } from "@/validations/adminMismatch.validation";
 
 export class AdminMissmatchServices {
+  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+
   // get the list of all missmatch data from the outlet
   async getMissmatchID(payload: FetchAllMismatchPayload) {
     try {
@@ -19,7 +21,7 @@ export class AdminMissmatchServices {
       if (!outletId) throw new HttpError(401, "Outlet id not found");
 
       // fetch the missmatch data
-      const missmatch = await prisma.orderStationLog.findMany({
+      const missmatch = await this.prisma.orderStationLog.findMany({
         where: {
           status: "pending",
           order: {
@@ -48,11 +50,11 @@ export class AdminMissmatchServices {
     }
   }
 
-  getDetailMismatchData = async (payload: FetchDetailMismatchPayload) => {
+  async getDetailMismatchData(payload: FetchDetailMismatchPayload) {
     try {
       const { outletId, orderId, stationName } = payload;
 
-      const mismatch = await prisma.orderStationLog.findMany({
+      const mismatch = await this.prisma.orderStationLog.findMany({
         where: {
           order_id: orderId,
           order: {
@@ -80,7 +82,7 @@ export class AdminMissmatchServices {
 
       let formattedActualItems = [];
       if (stationName === StationName.washing) {
-        const actualItem = await prisma.orderItem.findMany({
+        const actualItem = await this.prisma.orderItem.findMany({
           where: {
             order_id: orderId,
             order: {
@@ -109,7 +111,7 @@ export class AdminMissmatchServices {
             "Invalid station name for fetching previous station summary",
           );
         }
-        const actualItem = await prisma.stationSummary.findMany({
+        const actualItem = await this.prisma.stationSummary.findMany({
           where: {
             order_id: orderId,
             order: {
@@ -148,9 +150,9 @@ export class AdminMissmatchServices {
     } catch (error) {
       throw error;
     }
-  };
+  }
 
-  manageMismatch = async (payload: ManageMismatchPayload) => {
+  async manageMismatch(payload: ManageMismatchPayload) {
     try {
       const {
         orderId,
@@ -162,7 +164,7 @@ export class AdminMissmatchServices {
       } = payload;
 
       //guard rail
-      const isExist = await prisma.stationSummary.findFirst({
+      const isExist = await this.prisma.stationSummary.findFirst({
         where: {
           order_id: orderId,
           station: stationName,
@@ -178,7 +180,7 @@ export class AdminMissmatchServices {
         );
       }
 
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async (tx) => {
         const mismatchData = await Promise.all(
           itemDecisions.map(async (item) => {
             const mismatchUpdate = await tx.orderStationLog.updateManyAndReturn(
@@ -236,5 +238,5 @@ export class AdminMissmatchServices {
     } catch (error) {
       throw error;
     }
-  };
+  }
 }

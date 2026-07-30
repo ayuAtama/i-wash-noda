@@ -95,16 +95,10 @@
 
 ## Worker
 
-- [] GET /orders/:id/stations/:station
-- [] POST /orders/:id/stations/:station/submit
-
-- [] PATCH /station-logs/:logId/review
-- [] GET /station-logs/pending
-
-- [ ] Get the list of available orders for each worker station
-- [ ] Re-input item quantities before accepting an order (either create a conflict that requires outlet admin approval or automatically accept if there is no mismatch). Workers can accept multiple orders simultaneously.
-- [ ] Mark an order as completed and pass it to the next worker station (Status Page)
-- [ ] View completed order history
+- [x] Get the list of available orders for each worker station
+- [x] Re-input item quantities before accepting an order (either create a conflict that requires outlet admin approval or automatically accept if there is no mismatch). Workers can accept multiple orders simultaneously.
+- [x] Mark an order as completed and pass it to the next worker station (Status Page)
+- [x] View completed order history
 
 ---
 
@@ -140,16 +134,20 @@
 ## TODO
 
 - [] detailed history using the order id
+- [] endpoint to mark finished for walk-in customers order (outlet_admin) when the customer take the order and paid
+- [] fetched data into descending order by date
+- [] add a support for pagination on endpoint (/api/admin/schedule)
+- [] Do all to endpoint that return data to be paginated
+- [] Add a support for filtering for certain endpoints
+- [x] make a cronjob to mark the status label `delivered` to `completed` after 24 hours (every 12 hours)
 - [x] endpoint to upload payment proofs (customer)
 - [x] endpoint to check the payment proofs (outlet_admin)
 - [x] endpoint to approve the payment proofs (outlet_admin) and automatically make a delivery request to the driver (only for customer_app)
-- [] endpoint to fetch all delivery requests (driver)
-- [] endpoint to accept the delivery request jobs (driver)
-- [] endpoint to check all active delivery requests (driver) (accepted jobs)
-- [] endpoint to check all completed delivery requests (driver) (completed jobs)
-- [] endpoint to mark done for delivery request (driver) and change the order status into `delivered`
-- [] make a cronjob to mark the status label `delivered` to `completed` after 24 hours (every 12 hours)
-- [] endpoint to mark finished for walk-in customers order (outlet_admin) when the customer take the order and paid
+- [x] endpoint to fetch all delivery requests (driver)
+- [x] endpoint to accept the delivery request jobs (driver)
+- [x] endpoint to check all active delivery requests (driver) (accepted jobs)
+- [x] endpoint to check all completed delivery requests (driver) (completed jobs)
+- [x] endpoint to mark done for delivery request (driver) and change the order status into `delivered`
 
 - [x] endpoint to check order status for customers
 - [x] endpoint to check completed order status for customers
@@ -167,14 +165,10 @@
 
 - [x] ownership of the job for each worker station
 - [x] change the user id in the request body into params (/api/admin/walk-in-customer/orders/:id)
-- [] fetched data into descending order by date
-- [] add a support for pagination on endpoint (/api/admin/schedule)
-- [] Do all to endpoint that return data to be paginated
-- [] Add a support for filtering for certain endpoints
 
 ---
 
 ### Notes
 
-- \n required
+- \* login required
 - \*\* Specified role required

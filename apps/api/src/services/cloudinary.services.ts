@@ -1,12 +1,22 @@
+// apps/api/src/services/cloudinary.services.ts
 import cloudinary from "@/utils/cloudinary";
 import { getUnixTime } from "date-fns/getUnixTime";
+import { CloudinarySignatureServiceDto } from "@/validations/cloudinary.validation";
+
+type CloudinaryInstance = typeof cloudinary;
 
 export class CloudinaryService {
-  async getSignature(
-    userId: string,
-    folder: string,
-    params?: string,
-    unique?: boolean,
+  private readonly cloudinary: CloudinaryInstance;
+
+  constructor(cloudinaryClient: CloudinaryInstance = cloudinary) {
+    this.cloudinary = cloudinaryClient;
+  }
+
+  public async getSignature(
+    userId: CloudinarySignatureServiceDto["userId"],
+    folder: CloudinarySignatureServiceDto["folder"],
+    params?: CloudinarySignatureServiceDto["params"],
+    unique?: CloudinarySignatureServiceDto["unique"],
   ) {
     try {
       const timestamp = getUnixTime(new Date());
@@ -19,7 +29,7 @@ export class CloudinaryService {
         allowed_formats: ["jpg", "png", "jpeg", "pdf"],
       };
 
-      const signature = cloudinary.utils.api_sign_request(
+      const signature = this.cloudinary.utils.api_sign_request(
         paramsToSign,
         process.env.CLOUDINARY_API_SECRET! as string,
       );
