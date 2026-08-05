@@ -102,16 +102,50 @@ export class MidtransService {
     const existing = await prisma.paymentTransaction.findFirst({
       where: { order_id: orderId, status: "pending" },
       orderBy: { created_at: "desc" },
-      select: { snap_token: true, provider_order_id: true },
+      select: { id: true, snap_token: true, provider_order_id: true },
     });
 
-    if (existing?.snap_token) {
-      return { snap_token: existing.snap_token };
+    if (existing?.snap_token && existing.provider_order_id) {
+      try {
+        const status = await getTransactionStatus(existing.provider_order_id);
+        const mapped = mapTransactionStatus(
+          status.transaction_status,
+          status.fraud_status,
+        );
+        if (mapped === "paid") {
+          await prisma.$transaction(async (tx) => {
+            await tx.paymentTransaction.update({
+              where: { id: existing.id },
+              data: {
+                status: "paid",
+                provider_transaction_id: status.transaction_id ?? null,
+                payment_type: status.payment_type ?? null,
+                fraud_status: status.fraud_status ?? null,
+                transaction_time: status.transaction_time
+                  ? new Date(status.transaction_time)
+                  : null,
+                raw_response: status as Prisma.InputJsonValue,
+              },
+            });
+            const current = await tx.order.findUnique({
+              where: { id: orderId },
+              select: { paid: true },
+            });
+            if (current && !current.paid) {
+              await finalizePaidOrder(tx, orderId);
+            }
+          });
+          return { snap_token: existing.snap_token, already_paid: true };
+        }
+        if (mapped !== null) {
+          return { snap_token: existing.snap_token };
+        }
+      } catch {
+        return { snap_token: existing.snap_token };
+      }
     }
 
-    const providerOrderId =
-      existing?.provider_order_id ??
-      `IWN-${orderId.slice(0, 8).toUpperCase()}-${Date.now()}`;
+    const providerOrderId = `IWN-${orderId.slice(0, 8).toUpperCase()}-${Date.now()}`;
 
     const snapResponse = await createSnapTransaction({
       order_id: providerOrderId,
@@ -127,18 +161,27 @@ export class MidtransService {
       },
     });
 
-    await prisma.paymentTransaction.upsert({
-      where: { provider_order_id: providerOrderId },
-      update: { snap_token: snapResponse.token },
-      create: {
-        order_id: orderId,
-        amount: order.total_amount,
-        status: "pending",
-        provider_order_id: providerOrderId,
-        snap_token: snapResponse.token,
-        raw_response: { redirect_url: snapResponse.redirect_url },
-      },
-    });
+    if (existing) {
+      await prisma.paymentTransaction.update({
+        where: { id: existing.id },
+        data: {
+          provider_order_id: providerOrderId,
+          snap_token: snapResponse.token,
+          raw_response: { redirect_url: snapResponse.redirect_url },
+        },
+      });
+    } else {
+      await prisma.paymentTransaction.create({
+        data: {
+          order_id: orderId,
+          amount: order.total_amount,
+          status: "pending",
+          provider_order_id: providerOrderId,
+          snap_token: snapResponse.token,
+          raw_response: { redirect_url: snapResponse.redirect_url },
+        },
+      });
+    }
 
     return {
       snap_token: snapResponse.token,

@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import { loadSnapScript, openSnap } from "@/lib/midtrans";
+import { loadSnapScript, openSnapEmbed } from "@/lib/midtrans";
 
 const statusSteps = [
   "waiting_for_driver_pickup",
@@ -49,6 +49,7 @@ export default function OrderDetailPage() {
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [embedOpen, setEmbedOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer-orders"],
@@ -101,7 +102,13 @@ export default function OrderDetailPage() {
   const payMutation = useMutation({
     mutationFn: () => api.post(`/api/orders/${params.id}/pay`),
     onSuccess: async (res) => {
-      const snapToken = res.data?.data?.snap_token;
+      const data = res.data?.data;
+      const snapToken = data?.snap_token;
+      if (data?.already_paid) {
+        addToast({ type: "success", title: "Payment already settled" });
+        syncMutation.mutate();
+        return;
+      }
       if (!snapToken) {
         addToast({
           type: "error",
@@ -112,7 +119,8 @@ export default function OrderDetailPage() {
       }
       try {
         await loadSnapScript();
-        openSnap(snapToken, {
+        setEmbedOpen(true);
+        openSnapEmbed(snapToken, "snap-embed-container", {
           onSuccess: () => {
             addToast({ type: "success", title: "Payment successful" });
             syncMutation.mutate();
@@ -125,11 +133,12 @@ export default function OrderDetailPage() {
             addToast({ type: "error", title: "Payment failed" });
           },
           onClose: () => {
-            addToast({ type: "info", title: "Payment window closed" });
+            setEmbedOpen(false);
             syncMutation.mutate();
           },
         });
       } catch (err: any) {
+        setEmbedOpen(false);
         addToast({ type: "error", title: "Pay failed", message: err.message });
       }
     },
@@ -251,7 +260,10 @@ export default function OrderDetailPage() {
             <div className="flex flex-wrap gap-3">
               {order.status === "waiting_for_payment" && (
                 <Button
-                  onClick={() => payMutation.mutate()}
+                  onClick={() => {
+                    setEmbedOpen(true);
+                    payMutation.mutate();
+                  }}
                   loading={payMutation.isPending}
                 >
                   Pay with Midtrans
@@ -269,6 +281,12 @@ export default function OrderDetailPage() {
               Upload a screenshot of your payment confirmation, or pay online
               via Midtrans Snap
             </p>
+            {embedOpen && (
+              <div
+                id="snap-embed-container"
+                className="mt-4 min-h-[600px] rounded-lg border border-gray-200"
+              />
+            )}
           </Card>
         </div>
       </div>

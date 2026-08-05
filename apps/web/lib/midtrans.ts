@@ -13,10 +13,15 @@ export interface SnapOptions {
   onClose?: () => void;
 }
 
+export interface SnapEmbedOptions extends SnapOptions {
+  embedId: string;
+}
+
 declare global {
   interface Window {
     snap?: {
       pay: (snapToken: string, options: SnapOptions) => void;
+      embed: (snapToken: string, options: SnapEmbedOptions) => void;
     };
   }
 }
@@ -55,12 +60,25 @@ export function loadSnapScript(): Promise<void> {
   });
 }
 
-export function openSnap(
-  snapToken: string,
-  options: SnapOptions = {},
-): void {
+export function openSnap(snapToken: string, options: SnapOptions = {}): void {
   if (!window.snap) {
     throw new Error("Midtrans Snap is not loaded yet");
   }
   window.snap.pay(snapToken, options);
+}
+
+export function openSnapEmbed(
+  snapToken: string,
+  embedId: string,
+  options: Omit<SnapEmbedOptions, "embedId"> = {},
+): void {
+  if (!window.snap) {
+    throw new Error("Midtrans Snap is not loaded yet");
+  }
+  const container = document.getElementById(embedId);
+  if (!container) {
+    throw new Error(`Snap embed container #${embedId} not found`);
+  }
+  container.innerHTML = "";
+  window.snap.embed(snapToken, { embedId, ...options });
 }
