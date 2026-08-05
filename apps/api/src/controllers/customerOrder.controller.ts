@@ -49,6 +49,18 @@ export class CustomerOrderController {
     }
   };
 
+  getMyOrders = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId =
+        (req.access_token?.sub as UserIdDTO) ?? (req.user?.id as UserIdDTO);
+      if (!userId) throw new HttpError(401, "Invalid user id");
+      const result = await this.CustomerOrderService.getMyOrders(userId);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   uploadPaymentProof = async (
     req: Request,
     res: Response,

@@ -43,7 +43,11 @@ export interface SnapRequestPayload {
     email?: string | null;
   };
   item_details?: SnapItemDetails[];
-  expiry?: { start_time: string; unit: "minutes" | "hours" | "days"; duration: number };
+  expiry?: {
+    start_time: string;
+    unit: "minutes" | "hours" | "days";
+    duration: number;
+  };
 }
 
 export interface SnapResponse {
@@ -51,9 +55,35 @@ export interface SnapResponse {
   redirect_url: string;
 }
 
+function formatMidtransStartTime(value: string): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const d = new Date(value);
+  const shifted = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(
+    shifted.getUTCDate(),
+  )} ${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(
+    shifted.getUTCSeconds(),
+  )} +0700`;
+}
+
 export async function createSnapTransaction(
   payload: SnapRequestPayload,
 ): Promise<SnapResponse> {
+  const body = {
+    transaction_details: {
+      order_id: payload.order_id,
+      gross_amount: payload.gross_amount,
+    },
+    item_details: payload.item_details,
+    customer_details: payload.customer_details,
+    expiry: payload.expiry
+      ? {
+          ...payload.expiry,
+          start_time: formatMidtransStartTime(payload.expiry.start_time),
+        }
+      : undefined,
+  };
+
   const response = await fetch(midtransConfig.snapCreateUrl, {
     method: "POST",
     headers: {
@@ -61,7 +91,7 @@ export async function createSnapTransaction(
       "Content-Type": "application/json",
       Authorization: getBasicAuth(),
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 
   const data = await response.json().catch(() => ({}));

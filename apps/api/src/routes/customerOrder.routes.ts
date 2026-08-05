@@ -13,9 +13,19 @@ class CustomerOrderRoute {
   constructor(controller: CustomerOrderController) {
     this.controller = controller;
     this.customerOrder();
+    this.listOrders();
     this.uploadPaymentProof();
     this.markDone();
     this.complaint();
+  }
+
+  private listOrders() {
+    this.router.get(
+      "/",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      this.controller.getMyOrders,
+    );
   }
 
   private customerOrder() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
@@ -14,34 +14,37 @@ import { formatDate, formatCurrency } from "@/lib/utils";
 import { loadSnapScript, openSnap } from "@/lib/midtrans";
 
 const statusSteps = [
+  "waiting_for_driver_pickup",
+  "out_for_pickup",
+  "in_transit_to_outlet",
   "arrived_at_outlet",
   "washing_in_progress",
-  "washing_completed",
   "ironing_in_progress",
-  "ironing_completed",
   "packing_in_progress",
-  "packed",
-  "ready_for_pickup",
+  "waiting_for_payment",
+  "waiting_for_driver_deliver",
   "out_for_delivery",
   "delivered",
+  "finished",
 ];
 
 const statusLabels: Record<string, string> = {
+  waiting_for_driver_pickup: "Waiting for Driver Pickup",
+  out_for_pickup: "Out for Pickup",
+  in_transit_to_outlet: "In Transit to Outlet",
   arrived_at_outlet: "Arrived at Outlet",
   washing_in_progress: "Washing",
-  washing_completed: "Washing Completed",
   ironing_in_progress: "Ironing",
-  ironing_completed: "Ironing Completed",
   packing_in_progress: "Packing",
-  packed: "Packed",
-  ready_for_pickup: "Ready for Pickup",
+  waiting_for_payment: "Waiting for Payment",
+  waiting_for_driver_deliver: "Waiting for Driver Delivery",
   out_for_delivery: "Out for Delivery",
   delivered: "Delivered",
+  finished: "Finished",
 };
 
 export default function OrderDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,7 +52,7 @@ export default function OrderDetailPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer-orders"],
-    queryFn: () => api.get("/api/").then((r) => r.data),
+    queryFn: () => api.get("/api/orders").then((r) => r.data),
     retry: false,
   });
 
@@ -58,7 +61,7 @@ export default function OrderDetailPage() {
   const uploadMutation = useMutation({
     mutationFn: (file: File) => {
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("proof", file);
       return api.post(`/api/orders/${params.id}/payment-proof`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -192,8 +195,6 @@ export default function OrderDetailPage() {
                   <tr className="border-b border-gray-200 text-left text-gray-500">
                     <th className="pb-2 font-medium">Item</th>
                     <th className="pb-2 font-medium text-center">Qty</th>
-                    <th className="pb-2 font-medium text-right">Price</th>
-                    <th className="pb-2 font-medium text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -202,28 +203,20 @@ export default function OrderDetailPage() {
                       key={item.id}
                       className="border-b border-gray-50 last:border-0"
                     >
-                      <td className="py-2">
-                        {item.item?.name || item.item_id}
-                      </td>
+                      <td className="py-2">{item.name || item.item_id}</td>
                       <td className="py-2 text-center">
                         {item.quantity_initial}
-                      </td>
-                      <td className="py-2 text-right">
-                        {formatCurrency(item.price)}
-                      </td>
-                      <td className="py-2 text-right font-medium">
-                        {formatCurrency(item.subtotal)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200">
-                    <td colSpan={3} className="py-2 font-semibold text-right">
+                    <td colSpan={1} className="py-2 font-semibold text-right">
                       Total
                     </td>
                     <td className="py-2 text-right font-bold">
-                      {formatCurrency(order.total_price || 0)}
+                      {formatCurrency(order.total_amount || 0)}
                     </td>
                   </tr>
                 </tfoot>

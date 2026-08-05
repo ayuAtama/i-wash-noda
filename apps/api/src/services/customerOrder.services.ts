@@ -104,6 +104,59 @@ export class CustomerOrderService {
     }
   }
 
+  async getMyOrders(userId: UserIdDTO) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
+      if (!user) throw new HttpError(404, "User not found");
+
+      const orders = await this.prisma.order.findMany({
+        where: { customer_id: userId },
+        select: {
+          id: true,
+          status: true,
+          paid: true,
+          total_amount: true,
+          created_at: true,
+          updated_at: true,
+          items: {
+            select: {
+              id: true,
+              quantity_initial: true,
+              item: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: { created_at: "desc" },
+      });
+
+      const data = orders.map((order) => ({
+        id: order.id,
+        status: order.status,
+        paid: order.paid,
+        total_amount: order.total_amount,
+        total_price: order.total_amount,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+        items: order.items.map((oi) => ({
+          id: oi.id,
+          name: oi.item.name,
+          quantity_initial: oi.quantity_initial,
+        })),
+      }));
+
+      return {
+        success: true,
+        message: "Orders fetched successfully",
+        data,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async uploadPaymentProof(data: uploadPaymentDTO) {
     try {
       const { orderId, userId, urlProof } = data;
