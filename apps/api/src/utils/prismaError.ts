@@ -38,11 +38,17 @@ export function mapPrismaError(
         409,
         "Duplicate field",
         extractField(err) ?? ["unknown"],
+        "DUPLICATE_FIELD",
       );
 
     // Record not found
     case "P2025":
-      return new HttpError(404, "Record not found");
+      return new HttpError(
+        404,
+        "Record not found",
+        undefined,
+        "RECORD_NOT_FOUND",
+      );
 
     // Foreign key failed
     case "P2003":
@@ -50,6 +56,7 @@ export function mapPrismaError(
         409,
         "Foreign key constraint failed",
         extractField(err) ?? ["unknown"],
+        "FOREIGN_KEY_ERROR",
       );
 
     // Query interpretation error
@@ -58,6 +65,7 @@ export function mapPrismaError(
         400,
         "Invalid value for field",
         extractField(err) ?? ["unknown"],
+        "INVALID_FIELD_VALUE",
       );
 
     // Required field is missing
@@ -66,6 +74,7 @@ export function mapPrismaError(
         400,
         "Required field missing",
         extractField(err) ?? ["unknown"],
+        "REQUIRED_FIELD_MISSING",
       );
 
     // Null constraint failed
@@ -74,6 +83,7 @@ export function mapPrismaError(
         400,
         "Input violates null constraint",
         extractField(err) ?? ["unknown"],
+        "NULL_CONSTRAINT_ERROR",
       );
 
     // Value too long for column type
@@ -82,6 +92,7 @@ export function mapPrismaError(
         400,
         "Value is too long for field",
         extractField(err) ?? ["unknown"],
+        "VALUE_TOO_LONG",
       );
 
     // Invalid value type
@@ -90,6 +101,7 @@ export function mapPrismaError(
         400,
         "Invalid value type",
         extractField(err) ?? ["unknown"],
+        "INVALID_VALUE_TYPE",
       );
 
     // Record already exists (unique + upsert mismatch)
@@ -98,31 +110,57 @@ export function mapPrismaError(
         409,
         "Record already exists",
         extractField(err) ?? ["unknown"],
+        "RECORD_EXISTS",
       );
 
     // Broken relation
     case "P2014":
-      return new HttpError(409, "Failed to detach related record");
+      return new HttpError(
+        409,
+        "Failed to detach related record",
+        undefined,
+        "RELATION_ERROR",
+      );
 
     // Operation timed out
     case "P2018":
-      return new HttpError(503, "Database timeout");
+      return new HttpError(503, "Database timeout", undefined, "DB_TIMEOUT");
 
     // Constraint name invalid
     case "P2021":
-      return new HttpError(500, "Table or view does not exist");
+      return new HttpError(
+        500,
+        "Table or view does not exist",
+        undefined,
+        "TABLE_NOT_FOUND",
+      );
 
     // Column does not exist
     case "P2022":
-      return new HttpError(500, "Column does not exist");
+      return new HttpError(
+        500,
+        "Column does not exist",
+        undefined,
+        "COLUMN_NOT_FOUND",
+      );
 
     // Connection failure
     case "P2024":
-      return new HttpError(503, "Database connection issue");
+      return new HttpError(
+        503,
+        "Database connection issue",
+        undefined,
+        "DB_CONNECTION_ERROR",
+      );
 
     // connection unreachable
     case "P1001":
-      return new HttpError(503, "Database unreachable");
+      return new HttpError(
+        503,
+        "Database unreachable",
+        undefined,
+        "DB_UNREACHABLE",
+      );
 
     // case "P2028":
     //   return new HttpError(
@@ -131,6 +169,11 @@ export function mapPrismaError(
     //   );
 
     default:
-      return new HttpError(500, `Unmapped Prisma error: ${err.code}`);
+      return new HttpError(
+        500,
+        `Unmapped Prisma error: ${err.code}`,
+        undefined,
+        "UNMAPPED_PRISMA_ERROR",
+      );
   }
 }

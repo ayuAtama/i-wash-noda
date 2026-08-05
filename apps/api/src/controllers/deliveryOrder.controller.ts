@@ -1,108 +1,139 @@
+// src/controllers/deliveryOrder.controller.ts
+import { DeliveryOrderService } from "@/services/deliveryOrder.services";
 import type { Request, Response, NextFunction } from "express";
-import { DeliveryOrderService } from "@/services/deliverOrder.services";
 import { HttpError } from "@/utils/httpError";
-import { DeliveryIdParamsDTO } from "@/validations/deliveryOder.validation";
+import { DeliveryIdParamsDto } from "@/validations/delivery.validation";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class DeliveryOrderController {
-  private DeliveryOrderService: DeliveryOrderService;
+  private service: DeliveryOrderService;
 
-  constructor(DeliveryOrderService: DeliveryOrderService) {
-    this.DeliveryOrderService = DeliveryOrderService;
+  constructor(service: DeliveryOrderService) {
+    this.service = service;
   }
 
-  available = async (req: Request, res: Response, next: NextFunction) => {
+  getAllDeliveryRequests = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
-      if (!req.context)
-        throw new HttpError(
-          500,
-          "The Dev forgets to attach the resolve context middleware",
-        );
-      const { outlet_id: outletId } = req.context;
-      const result =
-        await this.DeliveryOrderService.getAllDeliveryRequests(outletId);
+      const userId = req.access_token?.sub;
+      const outletId = req.context?.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      if (!userId) throw new HttpError(401, "Unauthorized");
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
+
+      const result = await this.service.getAllDeliveryRequests(
+        userId,
+        outletId,
+        page,
+        limit,
+      );
+      res.status(200).json({
+        success: true,
+        message: "Delivery requests fetched successfully",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  acceptDeliveryRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const userId = req.access_token?.sub;
+      const outletId = req.context?.outlet_id;
+      const { id } = req.validated!.params as DeliveryIdParamsDto;
+      if (!userId) throw new HttpError(401, "Unauthorized");
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
+
+      const result = await this.service.acceptDeliveryRequest(
+        id,
+        userId,
+        outletId,
+      );
       res.status(200).json(result);
     } catch (error) {
       next(error);
     }
   };
 
-  accept = async (req: Request, res: Response, next: NextFunction) => {
+  updateDeliveryStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
-      if (!req.context)
-        throw new HttpError(
-          500,
-          "The Dev forgets to attach the resolve context middleware",
-        );
-      const { outlet_id: outletId } = req.context;
-      const userId = req.access_token?.sub ?? req.user?.id;
-      if (!userId) throw new HttpError(401, "Unauthorized, login first");
-      const { deliveryId } = req.validated!.params as DeliveryIdParamsDTO;
-      const acceptDelivery =
-        await this.DeliveryOrderService.acceptDeliveryRequest(
-          outletId,
-          deliveryId,
-          userId,
-        );
-      res.status(200).json(acceptDelivery);
+      const userId = req.access_token?.sub;
+      const { id } = req.validated!.params as DeliveryIdParamsDto;
+      if (!userId) throw new HttpError(401, "Unauthorized");
+
+      const result = await this.service.updateDeliveryStatus(userId, id);
+      res.status(200).json({
+        success: true,
+        message: "Delivery status updated successfully",
+        data: result,
+      });
     } catch (error) {
       next(error);
     }
   };
 
-  updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+  getAcceptedDeliveries = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
-      const userId = req.access_token?.sub ?? req.user?.id;
-      if (!userId) throw new HttpError(401, "Unauthorized, login first");
-      const { deliveryId } = req.validated!.params as DeliveryIdParamsDTO;
-      const updateStatus = await this.DeliveryOrderService.upateStatusDriver(
+      const userId = req.access_token?.sub;
+      const outletId = req.context?.outlet_id;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      if (!userId) throw new HttpError(401, "Unauthorized");
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
+
+      const result = await this.service.getAcceptedDeliveries(
         userId,
-        deliveryId,
+        outletId,
+        page,
+        limit,
       );
-      res.status(200).json(updateStatus);
-    } catch (err) {
-      next(err);
+      res.status(200).json({
+        success: true,
+        message: "Accepted deliveries fetched successfully",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
     }
   };
 
-  activeJobs = async (req: Request, res: Response, next: NextFunction) => {
+  getCompletedDeliveries = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
-      if (!req.context)
-        throw new HttpError(
-          500,
-          "The Dev forgets to attach the resolve context middleware",
-        );
-      const { outlet_id: outletId } = req.context;
-      const userId = req.access_token?.sub ?? req.user?.id;
-      if (!userId) throw new HttpError(401, "Unauthorized, login first");
-      const activeJobs =
-        await this.DeliveryOrderService.getAcceptedDeliveryRequests(
-          userId,
-          outletId,
-        );
-      res.status(200).json(activeJobs);
-    } catch (err) {
-      next(err);
-    }
-  };
+      const userId = req.access_token?.sub;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      if (!userId) throw new HttpError(401, "Unauthorized");
 
-  completedJobs = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      if (!req.context)
-        throw new HttpError(
-          500,
-          "The Dev forgets to attach the resolve context middleware",
-        );
-      const { outlet_id: outletId } = req.context;
-      const userId = req.access_token?.sub ?? req.user?.id;
-      if (!userId) throw new HttpError(401, "Unauthorized, login first");
-      const completedJobs =
-        await this.DeliveryOrderService.getALLAlreadyDeliveredRequests(
-          userId,
-          outletId,
-        );
-      res.status(200).json(completedJobs);
-    } catch (err) {
-      next(err);
+      const result = await this.service.getCompletedDeliveries(
+        userId,
+        page,
+        limit,
+      );
+      res.status(200).json({
+        success: true,
+        message: "Completed deliveries fetched successfully",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
     }
   };
 }

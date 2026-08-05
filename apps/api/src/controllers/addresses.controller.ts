@@ -7,6 +7,7 @@ import {
   UpdateAddressDto,
 } from "@/validations/address.validation";
 import type { Request, Response, NextFunction } from "express";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class AddressController {
   private addressService: AddressService;
@@ -17,15 +18,15 @@ export class AddressController {
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // get the data
       const userId = req.access_token?.sub ?? req.user?.id;
       if (!userId) throw new HttpError(401, "Invalid user id");
-      const addresses = await this.addressService.getAll(userId);
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.addressService.getAll(userId, page, limit);
 
       res.status(200).json({
         success: true,
         message: "Addresses fetched successfully",
-        data: addresses,
+        ...result,
       });
     } catch (err) {
       next(err);

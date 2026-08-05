@@ -1,81 +1,85 @@
+// src/routes/deliveryOrder.routes.ts
 import { Router } from "express";
 import { DeliveryOrderController } from "@/controllers/deliveryOrder.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
-import { Validator } from "@/middleware/validate";
-import { DeliveryOrderValidation } from "@/validations/deliveryOder.validation";
 import { resolveContext } from "@/middleware/resolveContext";
-import { DeliveryOrderService } from "@/services/deliverOrder.services";
+import { Validator } from "@/middleware/validate";
+import { DeliveryValidation } from "@/validations/delivery.validation";
+import { DeliveryOrderService } from "@/services/deliveryOrder.services";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
 export class DeliveryOrderRoute {
   public router = Router();
   private controller: DeliveryOrderController;
 
-  constructor(controller: DeliveryOrderController) {
-    this.controller = controller;
-    this.activeJobs();
-    this.checkAvailableJobs();
-    this.takeTheJob();
-    this.updateStatus();
-    this.completeJobs();
+  constructor() {
+    this.controller = new DeliveryOrderController(new DeliveryOrderService());
+    this.getAllDeliveryRequests();
+    this.acceptDeliveryRequest();
+    this.updateDeliveryStatus();
+    this.getAcceptedDeliveries();
+    this.getCompletedDeliveries();
   }
 
-  private checkAvailableJobs() {
+  private getAllDeliveryRequests() {
     this.router.get(
-      "/available",
+      "/",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.available,
+      Validator.validate({ query: PaginationSchema }),
+      this.controller.getAllDeliveryRequests,
     );
   }
 
-  private takeTheJob() {
+  private acceptDeliveryRequest() {
     this.router.post(
-      "/:deliveryId/accept",
+      "/:id/accept",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
-      Validator.validate({
-        params: DeliveryOrderValidation.DeliveryIdParamsSchema,
-      }),
       resolveContext,
-      this.controller.accept,
+      Validator.validate({
+        params: DeliveryValidation.DeliveryIdParamsSchema,
+      }),
+      this.controller.acceptDeliveryRequest,
     );
   }
 
-  private updateStatus() {
+  private updateDeliveryStatus() {
     this.router.patch(
-      "/:deliveryId/next",
+      "/:id/next",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
+      resolveContext,
       Validator.validate({
-        params: DeliveryOrderValidation.DeliveryIdParamsSchema,
+        params: DeliveryValidation.DeliveryIdParamsSchema,
       }),
-      resolveContext,
-      this.controller.updateStatus,
+      this.controller.updateDeliveryStatus,
     );
   }
 
-  private activeJobs() {
+  private getAcceptedDeliveries() {
     this.router.get(
-      "/active",
+      "/accepted",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.activeJobs,
+      Validator.validate({ query: PaginationSchema }),
+      this.controller.getAcceptedDeliveries,
     );
   }
 
-  private completeJobs() {
+  private getCompletedDeliveries() {
     this.router.get(
-      "/complete",
+      "/completed",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
-      this.controller.completedJobs,
+      Validator.validate({ query: PaginationSchema }),
+      this.controller.getCompletedDeliveries,
     );
   }
 }
-export default new DeliveryOrderRoute(
-  new DeliveryOrderController(new DeliveryOrderService()),
-).router;
+
+export default new DeliveryOrderRoute().router;

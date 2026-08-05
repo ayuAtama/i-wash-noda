@@ -18,14 +18,22 @@ export class AdminValidation {
         description: "Outlet ID (required for driver, outlet_admin)",
         example: "123e4567-e89b-12d3-a456-426614174000",
       }),
+      worker_station: z
+        .enum(["washing", "ironing", "packing"])
+        .optional()
+        .meta({
+          description: "Worker station (required when role is worker)",
+          example: "washing",
+        }),
     })
     .meta({
       id: "RegisterInternalUser",
       description: "Payload for registering an internal user",
       example: {
-        email: "driver@example.com",
-        role: "driver",
+        email: "staff@example.com",
+        role: "worker",
         outlet_id: "123e4567-e89b-12d3-a456-426614174000",
+        worker_station: "washing",
       },
     });
 

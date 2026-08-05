@@ -53,6 +53,8 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 type Location = {
   lat: number;
@@ -62,9 +64,15 @@ type Location = {
 
 export default function LocationGate() {
   const [step, setStep] = useState<"explain" | "loading" | "done">("explain");
-
   const [location, setLocation] = useState<Location | null>(null);
-  const [error, setError] = useState<string | null>(null);
+
+  const ipMutation = useMutation({
+    mutationFn: () => api.get("/api/ip-gps").then((r) => r.data),
+    onSuccess: (data) => {
+      setLocation({ lat: data.latitude, lng: data.longitude, source: "ip" });
+      setStep("done");
+    },
+  });
 
   const requestGPS = () => {
     setStep("loading");
@@ -79,26 +87,10 @@ export default function LocationGate() {
         setStep("done");
       },
       () => {
-        getLocationFromIP();
+        ipMutation.mutate();
       },
       { enableHighAccuracy: true },
     );
-  };
-
-  const getLocationFromIP = async () => {
-    try {
-      const res = await fetch("/api/ip-gps");
-      const data = await res.json();
-
-      setLocation({
-        lat: data.latitude,
-        lng: data.longitude,
-        source: "ip",
-      });
-      setStep("done");
-    } catch {
-      setError("Failed to get location");
-    }
   };
 
   return (
@@ -108,7 +100,9 @@ export default function LocationGate() {
           <h2>Allow Location</h2>
           <p>We use your location to show nearby outlets.</p>
           <button onClick={requestGPS}>Allow location</button>
-          <button onClick={getLocationFromIP}>Continue without GPS</button>
+          <button onClick={() => ipMutation.mutate()}>
+            Continue without GPS
+          </button>
         </div>
       )}
 
@@ -127,7 +121,7 @@ export default function LocationGate() {
         </div>
       )}
 
-      {error && <p>{error}</p>}
+      {ipMutation.isError && <p>Failed to get location</p>}
     </div>
   );
 }

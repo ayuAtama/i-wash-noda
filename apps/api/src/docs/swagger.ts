@@ -197,6 +197,11 @@ export const openApiDocument = createDocument({
       description: "Worker schedule management with filtering and dashboard",
     },
     {
+      name: "User Profile",
+      description: "User profile management including avatar",
+    },
+
+    {
       name: "Pickup Requests",
       description: "Customer pickup request management",
     },
@@ -760,6 +765,87 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Invalid input" },
           "401": { description: "Not authenticated" },
+        },
+      },
+    },
+    "/api/me/avatar": {
+      post: {
+        summary: "Upload user avatar",
+        tags: ["User Profile"],
+        security: [{ CookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  avatar: {
+                    type: "string",
+                    format: "binary",
+                    description:
+                      "Image file (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF, HEIC). Max 2MB. Resized to max 500x500.",
+                  },
+                },
+                required: ["avatar"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OK - Avatar uploaded successfully",
+            content: {
+              "application/json": {
+                schema: AuthValidation.AvatarUploadResponseSchema,
+                example: {
+                  success: true,
+                  message: "Avatar uploaded successfully",
+                  data: {
+                    image:
+                      "https://res.cloudinary.com/xxx/image/upload/v123/avatars/abc.jpg",
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Bad Request - Validation failed",
+            content: {
+              "application/json": {
+                example: {
+                  success: false,
+                  message: "File too large. Maximum size is 2MB",
+                  code: "AVATAR_FILE_TOO_LARGE",
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+          "429": { description: "Too Many Requests - Rate limited" },
+        },
+      },
+      delete: {
+        summary: "Delete user avatar",
+        tags: ["User Profile"],
+        security: [{ CookieAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK - Avatar deleted successfully",
+            content: {
+              "application/json": {
+                schema: AuthValidation.AvatarDeleteResponseSchema,
+                example: {
+                  success: true,
+                  message: "Avatar deleted successfully",
+                  data: { image: null },
+                },
+              },
+            },
+          },
+          "401": { description: "Unauthorized - Not authenticated" },
+          "404": { description: "Not Found - User or avatar not found" },
+          "429": { description: "Too Many Requests - Rate limited" },
         },
       },
     },

@@ -7,6 +7,7 @@ import {
   OutletCoverageQueryDto,
   OutletIdParamDto,
 } from "@/validations/outlet.validation";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class OutletController {
   private outletService: OutletService;
@@ -48,13 +49,14 @@ export class OutletController {
     }
   };
 
-  getAll = async (_req: Request, res: Response, next: NextFunction) => {
+  getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const outlets = await this.outletService.getAll();
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.outletService.getAll(page, limit);
       res.json({
         success: true,
         message: "Outlets fetched successfully",
-        data: outlets,
+        ...result,
       });
     } catch (error) {
       next(error);

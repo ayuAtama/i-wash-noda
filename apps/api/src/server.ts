@@ -29,6 +29,13 @@ import pickupOrderRoutes from "./routes/pickupOrder.routes";
 import workerStationRoutes from "./routes/workerStation.routes";
 import deliveryOrderRoutes from "./routes/deliveryOrder.routes";
 
+// realtime & payments
+import sseRoutes from "./routes/sse.routes";
+import workerOrderRoutes from "./routes/workerOrder.routes";
+import paymentRoutes from "./routes/payment.routes";
+import adminPaymentRoutes from "./routes/adminPayment.routes";
+import midtransRoutes from "./routes/midtrans.routes";
+
 // infrastructure
 import cloudinaryRoutes from "./routes/cloudinary.routes";
 
@@ -45,16 +52,21 @@ export class Server {
       .register("/api/admin/schedule", workerShiftRoutes)
       .register("/api/admin/mismatch", adminMismatchRoutes)
       .register("/api/admin/orders", adminOrderRoutes)
+      .register("/api/admin/orders", adminPaymentRoutes)
       .register("/api/admin/walk-in-customer", adminWalkInOrderRoutes)
       .register("/api/admin/outlets", adminOutletRoutes)
       .register("/api/admin/items", ItemRoute)
       .register("/api/outlets", OutletRoute)
       .register("/api/addresses", AddressRoute)
       .register("/api/orders", customerOrderRoutes)
+      .register("/api/orders", paymentRoutes)
+      .register("/api/payments/midtrans", midtransRoutes)
       .register("/api/pickup-requests", pickupRequestRoutes)
       .register("/api/pickup-requests", pickupOrderRoutes)
       .register("/api/workers", workerStationRoutes)
+      .register("/api/worker/orders", workerOrderRoutes)
       .register("/api/driver/delivery-requests", deliveryOrderRoutes)
+      .register("/api/sse", sseRoutes)
       .register("/api/signature", cloudinaryRoutes);
 
     this.app = new App(registry);

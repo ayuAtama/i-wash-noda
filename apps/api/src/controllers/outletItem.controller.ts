@@ -6,6 +6,7 @@ import {
   CreateOutletDto,
   OutletIdParamDto,
 } from "@/validations/outlet.validation";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class OutletItemController {
   private outletItemService: OutletItemService;
@@ -48,13 +49,14 @@ export class OutletItemController {
     }
   };
 
-  getAll = async (_req: Request, res: Response, next: NextFunction) => {
+  getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const outlets = await this.outletItemService.getAll();
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.outletItemService.getAll(page, limit);
       res.json({
         success: true,
         message: "Outlets fetched successfully",
-        data: outlets,
+        ...result,
       });
     } catch (error) {
       next(error);
@@ -112,13 +114,14 @@ export class OutletItemController {
     });
   };
 
-  getAllItems = async (_req: Request, res: Response, next: NextFunction) => {
+  getAllItems = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const items = await this.outletItemService.getAllItems();
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.outletItemService.getAllItems(page, limit);
       res.json({
         success: true,
         message: "Items fetched successfully",
-        data: items,
+        ...result,
       });
     } catch (error) {
       next(error);

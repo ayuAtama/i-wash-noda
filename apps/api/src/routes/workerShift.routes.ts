@@ -1,5 +1,17 @@
-// apps/api/src/routes/workerShift.services.ts
+// apps/api/src/routes/workerShift.routes.ts
 import { Router } from "express";
+import { z } from "zod";
+
+const WorkerPaginationSchema = z.object({
+  page: PaginationSchema.shape.page,
+  limit: PaginationSchema.shape.limit,
+});
+
+const UnScheduledWorkerPaginationSchema = FetchUnScheduledWorkerSchema.extend({
+  page: PaginationSchema.shape.page,
+  limit: PaginationSchema.shape.limit,
+});
+
 import { WorkerShiftController } from "@/controllers/workerShift.controller";
 import { WorkerShiftService } from "@/services/workerShift.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
@@ -7,10 +19,12 @@ import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import {
   CreateWorkerShiftSchema,
+  UpdateWorkerShiftSchema,
   WorkerShiftIdParamsSechema,
   FetchUnScheduledWorkerSchema,
-  FilterQueryScheduleSchema,
+  FetchWorkerScheduleSchema,
 } from "@/validations/workerShift.validation";
+import { PaginationSchema } from "@/validations/pagination.validation";
 import { resolveContext } from "@/middleware/resolveContext";
 import ensureWorkerOnShift from "@/middleware/ensureWorkerOnShift";
 
@@ -20,24 +34,17 @@ export class WorkerShiftRoute {
 
   constructor(controller: WorkerShiftController) {
     this.controller = controller;
-    this.getSchedule();
-    this.scheduleSummaryDashboard();
-    this.fetchUnScheduledWorker();
     this.createSchedule();
+    this.updateSchedule();
+    this.fetchUnScheduledWorker();
+    this.fetchAllSchedules();
+    this.fetchWorkers();
+    this.fetchWashingWorkers();
+    this.fetchIroningWorkers();
+    this.fetchPackingWorkers();
+    this.fetchDrivers();
+    this.scheduleSummaryDashboard();
     this.getScheduleById();
-  }
-
-  private getSchedule() {
-    this.router.get(
-      "/",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin", "outlet_admin"),
-      resolveContext,
-      Validator.validate({
-        query: FilterQueryScheduleSchema,
-      }),
-      this.controller.getSchedule,
-    );
   }
 
   private createSchedule() {
@@ -51,6 +58,88 @@ export class WorkerShiftRoute {
         body: CreateWorkerShiftSchema,
       }),
       this.controller.createSchedule,
+    );
+  }
+
+  private updateSchedule() {
+    this.router.put(
+      "/:id",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        params: WorkerShiftIdParamsSechema,
+        body: UpdateWorkerShiftSchema,
+      }),
+      this.controller.updateSchedule,
+    );
+  }
+
+  private fetchAllSchedules() {
+    this.router.get(
+      "/",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
+      Validator.validate({
+        query: FetchWorkerScheduleSchema,
+      }),
+      this.controller.fetchAllSchedules,
+    );
+  }
+
+  private fetchWorkers() {
+    this.router.get(
+      "/workers",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
+      Validator.validate({ query: WorkerPaginationSchema }),
+      this.controller.fetchWorkers,
+    );
+  }
+
+  private fetchWashingWorkers() {
+    this.router.get(
+      "/washing",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
+      Validator.validate({ query: WorkerPaginationSchema }),
+      this.controller.fetchWashingWorkers,
+    );
+  }
+
+  private fetchIroningWorkers() {
+    this.router.get(
+      "/ironing",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
+      Validator.validate({ query: WorkerPaginationSchema }),
+      this.controller.fetchIroningWorkers,
+    );
+  }
+
+  private fetchPackingWorkers() {
+    this.router.get(
+      "/packing",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
+      Validator.validate({ query: WorkerPaginationSchema }),
+      this.controller.fetchPackingWorkers,
+    );
+  }
+
+  private fetchDrivers() {
+    this.router.get(
+      "/driver",
+      authenticationMiddleware,
+      authorizationMiddleware("super_admin", "outlet_admin"),
+      resolveContext,
+      Validator.validate({ query: WorkerPaginationSchema }),
+      this.controller.fetchDrivers,
     );
   }
 
@@ -75,7 +164,7 @@ export class WorkerShiftRoute {
       authorizationMiddleware("super_admin", "outlet_admin"),
       resolveContext,
       Validator.validate({
-        query: FetchUnScheduledWorkerSchema,
+        query: UnScheduledWorkerPaginationSchema,
       }),
       this.controller.fetchUnScheduledWorker,
     );

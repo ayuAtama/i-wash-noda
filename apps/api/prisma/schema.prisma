@@ -463,7 +463,12 @@ model PaymentProof {
 model PaymentTransaction {
   id                      String               @id @default(uuid()) @db.Uuid
   order_id                String               @db.Uuid
-  provider_transaction_id String?              @db.Uuid
+  provider_transaction_id String?
+  provider_order_id       String?              @unique
+  payment_type            String?
+  snap_token              String?
+  fraud_status            String?
+  transaction_time        DateTime?
   amount                  Int
   status                  PaymentGatewayStatus
   raw_response            Json?

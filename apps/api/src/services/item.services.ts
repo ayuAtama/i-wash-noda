@@ -1,4 +1,4 @@
-// apps/api/src/services/outletItem.services.ts
+// apps/api/src/services/item.services.ts
 import {
   CreateItemDto,
   ParamsItemDto,
@@ -11,13 +11,22 @@ import { HttpError } from "../utils/httpError";
 export default class ItemService {
   constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
 
-  async getAllItems() {
+  async getAllItems(page: number = 1, limit: number = 10) {
     try {
-      return await this.prisma.item.findMany({
-        orderBy: {
-          created_at: "desc",
-        },
-      });
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {};
+      const [items, total] = await Promise.all([
+        this.prisma.item.findMany({
+          orderBy: { created_at: "desc" },
+          skip,
+          take,
+        }),
+        this.prisma.item.count({ where }),
+      ]);
+      return {
+        data: items,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }
@@ -62,16 +71,23 @@ export default class ItemService {
     }
   }
 
-  async searchItem(searchItem: QueryItemDto["name"]) {
+  async searchItem(searchItem: QueryItemDto["name"], page: number = 1, limit: number = 10) {
     try {
-      return await this.prisma.item.findMany({
-        where: {
-          name: {
-            contains: searchItem,
-            mode: "insensitive", // case insensitive
-          },
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {
+        name: {
+          contains: searchItem,
+          mode: "insensitive" as const,
         },
-      });
+      };
+      const [items, total] = await Promise.all([
+        this.prisma.item.findMany({ where, skip, take }),
+        this.prisma.item.count({ where }),
+      ]);
+      return {
+        data: items,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }

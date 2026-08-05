@@ -16,21 +16,28 @@ export class AddressService {
     this.prisma = prismaClient;
   }
 
-  async getAll(userId: UserIdDto) {
+  async getAll(userId: string, page: number = 1, limit: number = 10) {
     try {
-      const addresses = await this.prisma.userAddress.findMany({
-        where: {
-          user_id: userId,
-          is_deleted: false,
-        },
-        orderBy: {
-          created_at: "desc",
-        },
-      });
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {
+        user_id: userId,
+        is_deleted: false,
+      };
 
-      const totalAddresses = addresses.length;
+      const [addresses, total] = await Promise.all([
+        this.prisma.userAddress.findMany({
+          where,
+          orderBy: { created_at: "desc" },
+          skip,
+          take,
+        }),
+        this.prisma.userAddress.count({ where }),
+      ]);
 
-      return { totalAddresses, addresses };
+      return {
+        data: addresses,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }

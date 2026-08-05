@@ -8,6 +8,7 @@ import {
   RegisterInternalUserDto,
   RemoveUserDto,
 } from "@/validations/admin.validation";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class AdminController {
   private adminService: AdminService;
@@ -21,11 +22,11 @@ export class AdminController {
       // check what role
       const userRole = req.user?.role ?? req.access_token?.role;
 
-      // destructre email, role, and outlet_id
+      // destructre email, role, outlet_id, and worker_station
       if (!req.validated) {
         throw new HttpError(400, "Missing email or role or outlet_id");
       }
-      const { email, role, outlet_id } = req.validated
+      const { email, role, outlet_id, worker_station } = req.validated
         .body as RegisterInternalUserDto;
       //check if email or role is missing and validate the role
       if (!email || !role) {
@@ -47,7 +48,10 @@ export class AdminController {
       }
 
       // create the user (outlet_id empty if role is super_admin)
-      const payload = { email, role, outlet_id };
+      const payload: any = { email, role, outlet_id };
+      if (worker_station && role === "worker") {
+        payload.worker_station = worker_station;
+      }
       const result = await this.adminService.registerInternalUser(payload);
       return res.status(201).json({
         success: true,
@@ -62,13 +66,14 @@ export class AdminController {
     }
   };
 
-  getAllUser = async (_req: Request, res: Response, next: NextFunction) => {
+  getAllUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.adminService.getAllUser();
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.adminService.getAllUser(page, limit);
       return res.status(200).json({
         success: true,
         message: "Users fetched successfully",
-        data: result,
+        ...result,
       });
     } catch (error) {
       next(error);

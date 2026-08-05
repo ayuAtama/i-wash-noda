@@ -7,6 +7,8 @@ import {
   ParamsItemDto,
   QueryItemDto,
 } from "@/validations/item.validation";
+import { sseService } from "@/services/sse.services";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
 export class ItemController {
   private ItemService: ItemService;
@@ -15,13 +17,14 @@ export class ItemController {
     this.ItemService = ItemService;
   }
 
-  getAllItems = async (_req: Request, res: Response, next: NextFunction) => {
+  getAllItems = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const items = await this.ItemService.getAllItems();
+      const { page, limit } = req.validated!.query as PaginationDTO;
+      const result = await this.ItemService.getAllItems(page, limit);
       res.json({
         success: true,
         message: "Items fetched successfully",
-        data: items,
+        ...result,
       });
     } catch (error) {
       next(error);
@@ -46,6 +49,9 @@ export class ItemController {
     try {
       const newItem = req.validated!.body as CreateItemDto;
       const item = await this.ItemService.createItem(newItem);
+
+      sseService.broadcast("item:updated", "item:updated");
+
       res.status(201).json({
         success: true,
         message: "Item created successfully",
@@ -97,16 +103,14 @@ export class ItemController {
 
   searchItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      //const name = req.query.name as string;
-      //const { name: searchItems } = req.query;
       const { name } = req.validated!.query as QueryItemDto;
-      console.log(name, typeof name);
+      const { page, limit } = req.validated!.query as PaginationDTO;
       if (!name) {
         throw new HttpError(400, "Please, input a valid item name");
       }
-      const searchItem = await this.ItemService.searchItem(name);
-      if (searchItem.length === 0) {
-        res.status(404).json({
+      const result = await this.ItemService.searchItem(name, page, limit);
+      if (result.data.length === 0) {
+        return res.status(404).json({
           success: false,
           message: `${name} not found in the database`,
         });
@@ -114,7 +118,7 @@ export class ItemController {
       res.status(200).json({
         success: true,
         message: "Item searched successfully",
-        data: searchItem,
+        ...result,
       });
     } catch (error) {
       next(error);

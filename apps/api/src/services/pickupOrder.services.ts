@@ -1,5 +1,7 @@
 // src/services/pickupOrder.services.ts
-import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
+import { prisma } from "@/config/prisma";
+import { Outlet } from "@/generated/prisma/client";
+import { DriverJobStatusEnum } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
 import {
   OutletIdDto,
@@ -9,43 +11,54 @@ import {
 import { format } from "date-fns";
 
 export class PickupOrderService {
-  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
-
-  async getAllPickupRequests(outletId: OutletIdDto) {
+  // get all the pickup requests based on outlet id
+  async getAllPickupRequests(
+    outletId: OutletIdDto,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     try {
-      const pickupRequests = await this.prisma.pickupRequest.findMany({
-        where: {
-          accepted: false,
-          order: {
-            outlet_id: outletId,
-            status: "waiting_for_driver_pickup",
-          },
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {
+        accepted: false,
+        order: {
+          outlet_id: outletId,
+          status: "waiting_for_driver_pickup" as const,
         },
-        select: {
-          id: true,
-          order_id: true,
-          created_at: true,
-          order: {
-            select: {
-              id: true,
-              pickupAddress: {
-                select: {
-                  id: true,
-                  address: true,
-                  lat: true,
-                  lng: true,
+      };
+
+      const [pickupRequests, total] = await Promise.all([
+        prisma.pickupRequest.findMany({
+          where,
+          select: {
+            id: true,
+            order_id: true,
+            created_at: true,
+            order: {
+              select: {
+                id: true,
+                pickupAddress: {
+                  select: {
+                    id: true,
+                    address: true,
+                    lat: true,
+                    lng: true,
+                  },
                 },
-              },
-              customer: {
-                select: {
-                  id: true,
-                  name: true,
+                customer: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+          skip,
+          take,
+        }),
+        prisma.pickupRequest.count({ where }),
+      ]);
 
       const result = pickupRequests.map((pickupRequest) => {
         const readableDate = format(
@@ -63,7 +76,10 @@ export class PickupOrderService {
         };
       });
 
-      return result;
+      return {
+        data: result,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }
@@ -75,8 +91,10 @@ export class PickupOrderService {
     userId: UserIdDto,
   ) {
     try {
-      const { success, message, data } = await this.prisma.$transaction(
+      //accept the pickup request
+      const { success, message, data } = await prisma.$transaction(
         async (tx) => {
+          // check if the pickup request match with the outlet's driver
           const pickupRequest = await tx.pickupRequest.findUnique({
             where: {
               id: pickupOrderId,
@@ -99,6 +117,7 @@ export class PickupOrderService {
             throw new HttpError(400, "Pickup request already accepted");
           }
 
+          // update the pickup request
           const updatePickupRequest = await tx.pickupRequest.update({
             where: {
               id: pickupOrderId,
@@ -110,13 +129,14 @@ export class PickupOrderService {
             },
           });
 
+          // update the order status
           const updateOrderStatus = await tx.order.update({
             where: {
               id: updatePickupRequest.order_id,
             },
             data: {
               driver_pickup_id: updatePickupRequest.driver_id,
-              status: "out_for_pickup",
+              status: "in_transit_to_outlet",
             },
             select: {
               id: true,
@@ -143,6 +163,7 @@ export class PickupOrderService {
             },
           });
 
+          // create driver status
           const driverStatus = await tx.driverJobStatus.create({
             data: {
               driver_id: userId,
@@ -171,18 +192,25 @@ export class PickupOrderService {
   async upateStatusDriver(
     userId: UserIdDto,
     pickupOrderId: PickupIdParamsDto["id"],
+    // status: DriverJobStatusEnum,
   ) {
     try {
-      const result = await this.prisma.$transaction(async (tx) => {
+      // run all db operations in a single transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // update status
+
+        // find the driver status first
         const driverStatus = await tx.driverJobStatus.findUnique({
           where: {
             pickup_request_id: pickupOrderId,
             driver_id: userId,
           },
-          select: { status: true },
         });
 
+        // throw not found
         if (!driverStatus) throw new HttpError(404, "This job not found");
+
+        // update the status into on_delivery if the status is in_transit
 
         if (driverStatus.status === "in_transit") {
           const updateStatus = await tx.driverJobStatus.update({
@@ -194,31 +222,11 @@ export class PickupOrderService {
               status: "on_delivery",
               updated_at: new Date(),
             },
-            select: {
-              id: true,
-              status: true,
-              pickup_request_id: true,
-              driver_id: true,
-              updated_at: true,
-              created_at: true,
-              pickupRequest: {
-                select: {
-                  order_id: true,
-                },
-              },
-            },
           });
-
-          await tx.order.update({
-            where: {
-              id: updateStatus.pickupRequest?.order_id,
-            },
-            data: { status: "in_transit_to_outlet" },
-          });
-
           return updateStatus;
         }
 
+        // if on_delivery update to done
         if (driverStatus.status === "on_delivery") {
           const updateStatus = await tx.driverJobStatus.update({
             where: {
@@ -229,28 +237,21 @@ export class PickupOrderService {
               status: "done",
               updated_at: new Date(),
             },
-            select: {
-              id: true,
-              status: true,
-              pickup_request_id: true,
-              driver_id: true,
-              updated_at: true,
-              created_at: true,
-              pickupRequest: {
-                select: {
-                  order_id: true,
-                },
-              },
+          });
+
+          // fetch the order id
+          const order = await tx.pickupRequest.findUnique({
+            where: {
+              id: pickupOrderId,
+              driver_id: userId,
             },
           });
 
-          if (
-            updateStatus?.pickupRequest?.order_id &&
-            updateStatus.status === "done"
-          ) {
+          // update the order status into arrived at outlet
+          if (order?.order_id && updateStatus.status === "done") {
             await tx.order.update({
               where: {
-                id: updateStatus.pickupRequest.order_id,
+                id: order.order_id,
               },
               data: {
                 status: "arrived_at_outlet",
@@ -260,6 +261,7 @@ export class PickupOrderService {
           return updateStatus;
         }
 
+        // throw it already done
         if (driverStatus.status === "done")
           throw new HttpError(400, "This Job already done");
       });
@@ -270,144 +272,151 @@ export class PickupOrderService {
     }
   }
 
-  async getAcceptedPickupRequests(userId: UserIdDto, outletId: OutletIdDto) {
+  async getAcceptedPickupRequests(
+    userId: UserIdDto,
+    outletId: OutletIdDto,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     try {
-      const listPickedUpJob = await this.prisma.driverJobStatus.findMany({
-        where: {
-          driver_id: userId,
-          pickup_request_id: { not: null },
-          status: { not: "done" },
-          pickupRequest: {
-            order: {
-              outlet_id: outletId,
-            },
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {
+        driver_id: userId,
+        pickup_request_id: { not: null },
+        status: { not: "done" as const },
+        pickupRequest: {
+          order: {
+            outlet_id: outletId,
           },
         },
-        select: {
-          id: true,
-          status: true,
-          updated_at: true,
-          pickupRequest: {
-            select: {
-              id: true,
-              order: {
-                select: {
-                  customer: {
-                    select: {
-                      name: true,
+      };
+
+      const [listPickedUpJob, total] = await Promise.all([
+        prisma.driverJobStatus.findMany({
+          where,
+          select: {
+            id: true,
+            status: true,
+            updated_at: true,
+            pickupRequest: {
+              select: {
+                id: true,
+                order: {
+                  select: {
+                    customer: {
+                      select: {
+                        name: true,
+                      },
                     },
-                  },
-                  outlet: {
-                    select: {
-                      name: true,
+                    outlet: {
+                      select: {
+                        name: true,
+                      },
                     },
-                  },
-                  pickupAddress: {
-                    select: {
-                      address: true,
-                      lat: true,
-                      lng: true,
+                    pickupAddress: {
+                      select: {
+                        address: true,
+                        lat: true,
+                        lng: true,
+                      },
                     },
                   },
                 },
               },
             },
           },
-        },
-      });
+          skip,
+          take,
+        }),
+        prisma.driverJobStatus.count({ where }),
+      ]);
 
-      const flattenResponse = listPickedUpJob.map((listPickedUpJob) => ({
-        id: listPickedUpJob.pickupRequest?.id,
-        status: listPickedUpJob.status,
-        updated_at: listPickedUpJob.updated_at,
-
-        customer: listPickedUpJob.pickupRequest?.order.customer,
-        outlet: listPickedUpJob.pickupRequest?.order.outlet,
-        pickupAddress: listPickedUpJob.pickupRequest?.order.pickupAddress,
+      const flattenResponse = listPickedUpJob.map((item) => ({
+        id: item.pickupRequest?.id,
+        status: item.status,
+        updated_at: item.updated_at,
+        customer: item.pickupRequest?.order.customer,
+        outlet: item.pickupRequest?.order.outlet,
+        pickupAddress: item.pickupRequest?.order.pickupAddress,
       }));
 
-      return flattenResponse;
+      return {
+        data: flattenResponse,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }
   }
 
-  async getAllAlreadyPickedUpJob(userId: UserIdDto, outletId: OutletIdDto) {
+  async getAllAlreadyPickedUpJob(
+    userId: UserIdDto,
+    outletId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     try {
-      const jobs = await this.prisma.driverJobStatus.findMany({
-        where: {
-          driver_id: userId,
-          pickup_request_id: {
-            not: null,
-          },
-          status: "done",
-          pickupRequest: {
-            order: {
-              outlet_id: outletId,
-            },
-          },
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+      const where = {
+        driver_id: userId,
+        pickup_request_id: {
+          not: null,
         },
-        select: {
-          id: true,
-          status: true,
-          updated_at: true,
+        status: "done" as const,
+      };
 
-          pickupRequest: {
-            select: {
-              id: true,
-              created_at: true,
-
-              order: {
-                select: {
-                  id: true,
-                  total_amount: true,
-                  total_kilo: true,
-                  pickup_fee: true,
-                  status: true,
-                  created_at: true,
-
-                  customer: {
-                    select: {
-                      name: true,
+      const [jobs, total] = await Promise.all([
+        prisma.driverJobStatus.findMany({
+          where,
+          select: {
+            id: true,
+            status: true,
+            updated_at: true,
+            pickupRequest: {
+              select: {
+                id: true,
+                created_at: true,
+                order: {
+                  select: {
+                    id: true,
+                    total_amount: true,
+                    total_kilo: true,
+                    pickup_fee: true,
+                    status: true,
+                    created_at: true,
+                    customer: {
+                      select: {
+                        name: true,
+                      },
                     },
-                  },
-
-                  pickupAddress: {
-                    select: {
-                      address: true,
-                      lat: true,
-                      lng: true,
+                    pickupAddress: {
+                      select: {
+                        address: true,
+                        lat: true,
+                        lng: true,
+                      },
                     },
-                  },
-
-                  outlet: {
-                    select: {
-                      name: true,
-                      address: true,
+                    outlet: {
+                      select: {
+                        name: true,
+                        address: true,
+                      },
                     },
                   },
                 },
               },
             },
           },
-        },
-        orderBy: {
-          created_at: "desc",
-        },
-      });
+          skip,
+          take,
+        }),
+        prisma.driverJobStatus.count({ where }),
+      ]);
 
-      const result = jobs.map((job) => ({
-        id: job.pickupRequest?.id,
-        status: job.status,
-        order_id: job.pickupRequest?.order.id,
-        customer_name: job.pickupRequest?.order.customer?.name,
-        pickup_address: job.pickupRequest?.order.pickupAddress?.address,
-        pickup_coordinates: `${job.pickupRequest?.order.pickupAddress?.lat}, ${job.pickupRequest?.order.pickupAddress?.lng}`,
-        created_at: job.pickupRequest?.created_at,
-        updated_at: job.updated_at,
-      }));
-
-      return result;
+      return {
+        data: jobs,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     } catch (error) {
       throw error;
     }

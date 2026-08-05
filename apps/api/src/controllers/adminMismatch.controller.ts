@@ -1,112 +1,99 @@
+// src/controllers/adminMismatch.controller.ts
 import { AdminMissmatchServices } from "@/services/adminMissmatch.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
 import {
-  DetailMismatchDataParamsDTO,
-  ManageMismatchSchemaDTO,
-  OrderIdStationNameParamsDTO,
-  ParamsValidationDTO,
-  QueryValidationDTO,
+  MismatchIdParamsDto,
+  MismatchQueryDto,
+  ApproveMismatchDto,
+  RejectMismatchDto,
 } from "@/validations/adminMismatch.validation";
+import { PaginationDTO } from "@/validations/pagination.validation";
 
-export class AdminMissmatchController {
-  private adminMissmatchServices: AdminMissmatchServices;
+export class AdminMismatchController {
+  private service: AdminMissmatchServices;
 
-  constructor(adminMissmatchServices: AdminMissmatchServices) {
-    this.adminMissmatchServices = adminMissmatchServices;
+  constructor(service: AdminMissmatchServices) {
+    this.service = service;
   }
 
-  getMissmatchID = async (req: Request, res: Response, next: NextFunction) => {
+  getMismatches = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const context = req.context;
-      if (!context)
-        throw new HttpError(
-          401,
-          "Context not found or perhaps forget to use the resolveContext middlewere",
-        );
-      const { outlet_id: outletId } = context;
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const outletId = req.context?.outlet_id;
+      if (!userId) throw new HttpError(401, "Unauthorized");
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
 
-      const query = req.validated!.query as QueryValidationDTO;
-      const payload = {
-        ...query,
+      const { station } = (req.validated?.query ?? {}) as MismatchQueryDto;
+      const { page, limit } = req.validated!.query as PaginationDTO;
+
+      const result = await this.service.getMismatches(
+        userId,
         outletId,
-      };
+        station,
+        page,
+        limit,
+      );
 
-      const data = await this.adminMissmatchServices.getMissmatchID(payload);
-      res.status(200).json(data);
+      res.status(200).json({
+        success: true,
+        message: "Mismatches fetched successfully",
+        ...result,
+      });
     } catch (error) {
       next(error);
     }
   };
 
-  getDetailMismatchData = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) => {
+  approve = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { orderId, stationName } = req.validated!
-        .params as DetailMismatchDataParamsDTO;
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const outletId = req.context?.outlet_id;
+      const { id } = req.validated!.params as MismatchIdParamsDto;
+      const { acceptedQuantity } = req.validated!.body as ApproveMismatchDto;
+      if (!userId) throw new HttpError(401, "Unauthorized");
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
 
-      if (!req.context)
-        throw new HttpError(
-          500,
-          "The Developer forgot to add the context middleware",
-        );
-
-      const { outlet_id: outletId } = req.context;
-
-      const payload = {
-        orderId,
+      const data = await this.service.approveMismatch(
+        id,
+        userId,
         outletId,
-        stationName,
-      };
+        acceptedQuantity,
+      );
 
-      const mismatchData =
-        await this.adminMissmatchServices.getDetailMismatchData(payload);
-
-      res.status(200).json(mismatchData);
-    } catch (err) {
-      next(err);
+      res.status(200).json({
+        success: true,
+        message: "Mismatch approved successfully",
+        data,
+      });
+    } catch (error) {
+      next(error);
     }
   };
 
-  manageMismatch = async (req: Request, res: Response, next: NextFunction) => {
+  reject = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (!req.access_token) throw new HttpError(401, "Please login first");
-      const { sub: adminId } = req.access_token;
-      if (!adminId) throw new HttpError(401, "Please login first");
-      if (!req.context)
-        throw new HttpError(
-          500,
-          "The Developer forgot to add the context middleware",
-        );
-      const { outlet_id: outletId } = req.context!;
-      if (!outletId) throw new HttpError(401, "Please login first");
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const outletId = req.context?.outlet_id;
+      const { id } = req.validated!.params as MismatchIdParamsDto;
+      const { note } = req.validated!.body as RejectMismatchDto;
+      if (!userId) throw new HttpError(401, "Unauthorized");
+      if (!outletId) throw new HttpError(401, "Outlet id not found");
 
-      // console.log(req.validated);
-      const { orderId, stationName } = req.validated!
-        .params as OrderIdStationNameParamsDTO;
-      const body = req.validated!.body as ManageMismatchSchemaDTO;
-
-      // direct
-      // const { orderId, stationName } = req.params;
-      // const body = req.body;
-
-      const payload = {
-        ...body,
-        adminId,
-        orderId,
-        stationName,
+      const data = await this.service.rejectMismatch(
+        id,
+        userId,
         outletId,
-      };
+        note,
+      );
 
-      const data = await this.adminMissmatchServices.manageMismatch(payload);
-      res.status(200).json(data);
-    } catch (err) {
-      next(err);
+      res.status(200).json({
+        success: true,
+        message: "Mismatch rejected",
+        data,
+      });
+    } catch (error) {
+      next(error);
     }
   };
 }
-
-export default AdminMissmatchController;

@@ -5,6 +5,7 @@ import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { ItemValidation } from "@/validations/item.validation";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
 class ItemRoute {
   public router = Router();
@@ -25,6 +26,8 @@ class ItemRoute {
       "/",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
+      Validator.validate({ query: PaginationSchema }),
+
       this.controller.getAllItems,
     );
   }
@@ -35,7 +38,10 @@ class ItemRoute {
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
       Validator.validate({
-        query: ItemValidation.QueryItemSchema,
+        query: ItemValidation.QueryItemSchema.extend({
+          page: PaginationSchema.shape.page,
+          limit: PaginationSchema.shape.limit,
+        }),
       }),
       this.controller.searchItem,
     );

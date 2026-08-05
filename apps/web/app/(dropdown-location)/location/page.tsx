@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   getProvinces,
   getCities,
@@ -14,14 +15,6 @@ import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 type Item = { id: number; name: string };
 
 export default function LocationStepByStep() {
-  /* ===========================
-     LOCATION DROPDOWN STATE
-  =========================== */
-  const [provinces, setProvinces] = useState<Item[]>([]);
-  const [cities, setCities] = useState<Item[]>([]);
-  const [districts, setDistricts] = useState<Item[]>([]);
-  const [subdistricts, setSubDistricts] = useState<Item[]>([]);
-
   const [provinceId, setProvinceId] = useState<number | null>(null);
   const [cityId, setCityId] = useState<number | null>(null);
   const [districtId, setDistrictId] = useState<number | null>(null);
@@ -30,16 +23,6 @@ export default function LocationStepByStep() {
   const [street, setStreet] = useState("");
   const [houseNumber, setHouseNumber] = useState("");
 
-  const [loading, setLoading] = useState(false);
-
-  /* ===========================
-     GEOCODING RESULT (🔥 INI)
-  =========================== */
-  const [geoResult, setGeoResult] = useState<any>(null);
-
-  /* ===========================
-     MAP STATE
-  =========================== */
   const [mapCenter, setMapCenter] = useState<{
     lat: number;
     lng: number;
@@ -48,58 +31,74 @@ export default function LocationStepByStep() {
     null,
   );
 
-  /* ===========================
-     GOOGLE MAPS LOADER
-  =========================== */
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
   });
 
   /* ===========================
-     LOAD DROPDOWNS
+     CASCADING DROPDOWNS (useQuery)
   =========================== */
-  useEffect(() => {
-    getProvinces().then(setProvinces);
-  }, []);
+  const { data: provinces = [] } = useQuery({
+    queryKey: ["provinces"],
+    queryFn: getProvinces,
+  });
 
-  useEffect(() => {
-    if (!provinceId) return;
-    setCities([]);
-    setCityId(null);
-    setDistricts([]);
-    setDistrictId(null);
-    setSubDistricts([]);
-    setSubdistrictId(null);
-    getCities(String(provinceId)).then(setCities);
-  }, [provinceId]);
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities", provinceId],
+    queryFn: () => getCities(String(provinceId)),
+    enabled: !!provinceId,
+  });
 
-  useEffect(() => {
-    if (!cityId) return;
-    setDistricts([]);
-    setDistrictId(null);
-    setSubDistricts([]);
-    setSubdistrictId(null);
-    getDistricts(String(cityId)).then(setDistricts);
-  }, [cityId]);
+  const { data: districts = [] } = useQuery({
+    queryKey: ["districts", cityId],
+    queryFn: () => getDistricts(String(cityId)),
+    enabled: !!cityId,
+  });
 
-  useEffect(() => {
-    if (!districtId) return;
-    setSubDistricts([]);
-    setSubdistrictId(null);
-    getSubDistricts(String(districtId)).then(setSubDistricts);
-  }, [districtId]);
+  const { data: subdistricts = [] } = useQuery({
+    queryKey: ["subdistricts", districtId],
+    queryFn: () => getSubDistricts(String(districtId)),
+    enabled: !!districtId,
+  });
 
   function findItem(list: Item[], id: number | null) {
     return list.find((i) => i.id === id) ?? null;
   }
 
-  /* ===========================
-     SUBMIT → GEOCODE → FRONTEND
-  =========================== */
-  async function handleSubmit() {
-    setLoading(true);
+  function handleProvinceChange(value: number | null) {
+    setProvinceId(value);
+    setCityId(null);
+    setDistrictId(null);
+    setSubdistrictId(null);
+  }
 
+  function handleCityChange(value: number | null) {
+    setCityId(value);
+    setDistrictId(null);
+    setSubdistrictId(null);
+  }
+
+  function handleDistrictChange(value: number | null) {
+    setDistrictId(value);
+    setSubdistrictId(null);
+  }
+
+  /* ===========================
+     GEOCODING (useMutation)
+  =========================== */
+  const geoMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof getLatLngFromLocation>[0]) =>
+      getLatLngFromLocation(payload),
+    onSuccess: (geo) => {
+      if (geo.lat && geo.lng) {
+        setMapCenter({ lat: geo.lat, lng: geo.lng });
+        setPosition({ lat: geo.lat, lng: geo.lng });
+      }
+    },
+  });
+
+  function handleSubmit() {
     const payload = {
       province: findItem(provinces, provinceId),
       city: findItem(cities, cityId),
@@ -109,28 +108,15 @@ export default function LocationStepByStep() {
       houseNumber,
     };
 
-    const geo = await getLatLngFromLocation(payload);
-
-    // 🔥 SIMPAN HASIL JSON LENGKAP
-    setGeoResult(geo);
-
-    if (geo.lat && geo.lng) {
-      setMapCenter({ lat: geo.lat, lng: geo.lng });
-      setPosition({ lat: geo.lat, lng: geo.lng });
-    }
-
-    setLoading(false);
+    geoMutation.mutate(payload);
   }
 
   /* ===========================
-     MAP CLICK → PRECISE LOCATION
+     MAP CLICK
   =========================== */
   const handleMapClick = (e: google.maps.MapMouseEvent) => {
     if (!e.latLng) return;
-    setPosition({
-      lat: e.latLng.lat(),
-      lng: e.latLng.lng(),
-    });
+    setPosition({ lat: e.latLng.lat(), lng: e.latLng.lng() });
   };
 
   /* ===========================
@@ -140,10 +126,10 @@ export default function LocationStepByStep() {
     <div style={{ maxWidth: 420 }}>
       <select
         value={provinceId ?? ""}
-        onChange={(e) => setProvinceId(Number(e.target.value) || null)}
+        onChange={(e) => handleProvinceChange(Number(e.target.value) || null)}
       >
         <option value="">Provinsi</option>
-        {provinces.map((p) => (
+        {provinces.map((p: Item) => (
           <option key={p.id} value={p.id}>
             {p.name}
           </option>
@@ -152,11 +138,11 @@ export default function LocationStepByStep() {
 
       <select
         value={cityId ?? ""}
-        onChange={(e) => setCityId(Number(e.target.value) || null)}
+        onChange={(e) => handleCityChange(Number(e.target.value) || null)}
         disabled={!cities.length}
       >
         <option value="">Kota</option>
-        {cities.map((c) => (
+        {cities.map((c: Item) => (
           <option key={c.id} value={c.id}>
             {c.name}
           </option>
@@ -165,11 +151,11 @@ export default function LocationStepByStep() {
 
       <select
         value={districtId ?? ""}
-        onChange={(e) => setDistrictId(Number(e.target.value) || null)}
+        onChange={(e) => handleDistrictChange(Number(e.target.value) || null)}
         disabled={!districts.length}
       >
         <option value="">Kecamatan</option>
-        {districts.map((d) => (
+        {districts.map((d: Item) => (
           <option key={d.id} value={d.id}>
             {d.name}
           </option>
@@ -182,7 +168,7 @@ export default function LocationStepByStep() {
         disabled={!subdistricts.length}
       >
         <option value="">Kelurahan / Desa</option>
-        {subdistricts.map((s) => (
+        {subdistricts.map((s: Item) => (
           <option key={s.id} value={s.id}>
             {s.name}
           </option>
@@ -200,14 +186,14 @@ export default function LocationStepByStep() {
         onChange={(e) => setHouseNumber(e.target.value)}
       />
 
-      <button onClick={handleSubmit} disabled={!subdistrictId || loading}>
-        {loading ? "Loading..." : "Submit"}
+      <button
+        onClick={handleSubmit}
+        disabled={!subdistrictId || geoMutation.isPending}
+      >
+        {geoMutation.isPending ? "Loading..." : "Submit"}
       </button>
 
-      {/* ===========================
-         DEBUG JSON (🔥 HASIL OPENCAGE)
-      =========================== */}
-      {geoResult && (
+      {geoMutation.data && (
         <pre
           style={{
             marginTop: 16,
@@ -219,13 +205,10 @@ export default function LocationStepByStep() {
             fontSize: 12,
           }}
         >
-          {JSON.stringify(geoResult, null, 2)}
+          {JSON.stringify(geoMutation.data, null, 2)}
         </pre>
       )}
 
-      {/* ===========================
-         MAP
-      =========================== */}
       {mapCenter && isLoaded && (
         <GoogleMap
           mapContainerStyle={{ width: "100%", height: "400px" }}

@@ -356,6 +356,46 @@ export class AuthValidation {
     description: "Session ID",
     example: "588a2fff8ea23e4623b41ed8c5e68312f96e7d4a8c0d6c0bf8760ff1175c7550",
   });
+
+  static AvatarUploadResponseSchema = z
+    .object({
+      success: z.boolean(),
+      message: z.string(),
+      data: z.object({
+        image: z.string().url().nullable(),
+      }),
+    })
+    .meta({
+      id: "AvatarUploadResponse",
+      description: "Response for avatar upload",
+      example: {
+        success: true,
+        message: "Avatar uploaded successfully",
+        data: {
+          image:
+            "https://res.cloudinary.com/xxx/image/upload/v123/avatars/abc.jpg",
+        },
+      },
+    });
+
+  static AvatarDeleteResponseSchema = z
+    .object({
+      success: z.boolean(),
+      message: z.string(),
+      data: z.object({
+        image: z.null(),
+      }),
+    })
+    .meta({
+      id: "AvatarDeleteResponse",
+      description: "Response for avatar deletion",
+      example: {
+        success: true,
+        message: "Avatar deleted successfully",
+        data: { image: null },
+      },
+    });
+
 }
 
 export type RegisterDto = z.infer<typeof AuthValidation.RegisterSchema>;
@@ -395,3 +435,11 @@ export type EmailDto = z.infer<typeof AuthValidation.email>;
 export type temp_jwtDTO = z.infer<typeof AuthValidation.complereUserDataSchema>;
 export type UserIdDto = z.infer<typeof AuthValidation.userId>;
 export type SessionIdDto = z.infer<typeof AuthValidation.sesionId>;
+
+export type AvatarUploadResponseDto = z.infer<
+  typeof AuthValidation.AvatarUploadResponseSchema
+>;
+export type AvatarDeleteResponseDto = z.infer<
+  typeof AuthValidation.AvatarDeleteResponseSchema
+>;
+

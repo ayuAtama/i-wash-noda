@@ -1,45 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("kanawe9310@roastic.com");
   const [password, setPassword] = useState("astolfo_love");
-  const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<any>(null);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const mutation = useMutation({
+    mutationFn: (credentials: { email: string; password: string }) =>
+      api.post("/api/login", credentials).then((r) => r.data),
+  });
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
-    setResponse(null);
-
-    try {
-      const res = await fetch("http://localhost:3000/api/login", {
-        method: "POST",
-        credentials: "include", // <-- REQUIRED
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-
-      const data = await res.json();
-
-      setResponse({
-        status: res.status,
-        data,
-      });
-    } catch (error) {
-      setResponse({
-        error: "Failed to connect to API",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (!email || !password) return;
+    mutation.reset();
+    mutation.mutate({ email, password });
+  }
 
   return (
     <main
@@ -75,19 +54,41 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
+        <button
+          type="submit"
+          disabled={mutation.isPending || !email || !password}
+        >
+          {mutation.isPending ? "Logging in..." : "Login"}
         </button>
 
-        {response && (
+        {mutation.isError && (
           <pre
             style={{
-              background: "#f5f5f5",
+              background: "#fef2f2",
+              color: "#dc2626",
               padding: "1rem",
               overflow: "auto",
             }}
           >
-            {JSON.stringify(response, null, 2)}
+            {JSON.stringify(
+              (mutation.error as any)?.response?.data ||
+                mutation.error?.message,
+              null,
+              2,
+            )}
+          </pre>
+        )}
+
+        {mutation.isSuccess && (
+          <pre
+            style={{
+              background: "#f0fdf4",
+              color: "#16a34a",
+              padding: "1rem",
+              overflow: "auto",
+            }}
+          >
+            {JSON.stringify(mutation.data, null, 2)}
           </pre>
         )}
       </form>

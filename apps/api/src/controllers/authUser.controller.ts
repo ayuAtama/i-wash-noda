@@ -1,5 +1,6 @@
 // src/controllers/authUser.controller.ts
 import type { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { AuthUserService } from "../services/authUser.services";
 import { HttpError } from "@/utils/httpError";
 import { addDays, addHours, addMinutes, addYears, format } from "date-fns";
@@ -111,13 +112,10 @@ export class AuthUserController {
 
   verify = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const payload =
-        (req.validated!.body as VerifyDtoBody) ??
-        (req.validated!.query as VerifyDtoParams);
-
-      // store the hashed token from query or the raw token from body
-      //const token = req.query.token || req.body.token;
-      const token = payload.token;
+      // get token from body (6-digit OTP) or query (hashed token for admin bypass)
+      const bodyToken = (req.validated!.body as VerifyDtoBody)?.token;
+      const queryToken = (req.validated!.query as VerifyDtoParams)?.token;
+      const token = bodyToken ?? queryToken;
 
       // bypass the cookies next_step and temp_jwt for account created by admin (worker & driver)
       const userId = (req.query.userId as string) ?? req.access_token?.sub;
@@ -685,6 +683,86 @@ export class AuthUserController {
         success: true,
         message: "Email updated successfully",
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub || req.user?.id;
+
+      if (!userId) {
+        throw new HttpError(
+          401,
+          "Unauthorized, login first",
+          undefined,
+          "UNAUTHORIZED",
+        );
+      }
+
+      if (!z.string().uuid().safeParse(userId).success) {
+        throw new HttpError(
+          400,
+          "Invalid user ID format",
+          undefined,
+          "AVATAR_INVALID_USER_ID",
+        );
+      }
+
+      if (!req.file) {
+        throw new HttpError(
+          400,
+          "No file uploaded",
+          undefined,
+          "AVATAR_MISSING_FILE",
+        );
+      }
+
+      const result = await this.authUserService.updateAvatar(
+        userId,
+        req.file.path,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Avatar uploaded successfully",
+        data: { image: result.image },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteAvatar = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub || req.user?.id;
+
+      if (!userId) {
+        throw new HttpError(
+          401,
+          "Unauthorized, login first",
+          undefined,
+          "UNAUTHORIZED",
+        );
+      }
+
+      if (!z.string().uuid().safeParse(userId).success) {
+        throw new HttpError(
+          400,
+          "Invalid user ID format",
+          undefined,
+          "AVATAR_INVALID_USER_ID",
+        );
+      }
+
+      const result = await this.authUserService.deleteAvatar(userId);
+
+      return res.status(200).json({
+        success: true,
+        message: "Avatar deleted successfully",
+        data: { image: result.image },
       });
     } catch (error) {
       next(error);

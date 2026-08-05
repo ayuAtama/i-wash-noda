@@ -1,240 +1,203 @@
 // src/services/adminMissmatch.services.ts
-import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
-import { MismatchStatus, StationName } from "@/generated/prisma/enums";
+import { prisma } from "@/config/prisma";
+import { StationName } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
-import {
-  DetailMismatchDataParamsDTO,
-  FetchAllMismatchPayload,
-  FetchDetailMismatchPayload,
-  ManageMismatchPayload,
-  manageMismatchPayloadDTO,
-  ManageMismatchSchemaDTO,
-} from "@/validations/adminMismatch.validation";
 
 export class AdminMissmatchServices {
-  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
-
-  // get the list of all missmatch data from the outlet
-  async getMissmatchID(payload: FetchAllMismatchPayload) {
+  async getMismatches(
+    userId: string,
+    outletId: string,
+    station?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     try {
-      const { outletId, stationName } = payload;
-      if (!outletId) throw new HttpError(401, "Outlet id not found");
-
-      // fetch the missmatch data
-      const missmatch = await this.prisma.orderStationLog.findMany({
-        where: {
-          status: "pending",
-          order: {
-            outlet_id: outletId,
-          },
-          station: stationName ?? {},
-        },
-        distinct: ["order_id", "station"],
-        select: {
-          order_id: true,
-          station: true,
-          created_at: true,
-        },
-        orderBy: {
-          created_at: "desc",
-        },
+      const { outlet_id } = await prisma.user.findFirstOrThrow({
+        where: { id: userId },
+        select: { outlet_id: true },
       });
 
-      return {
-        success: true,
-        message: "Missmatch data fetched successfully",
-        data: missmatch,
+      if (outlet_id !== outletId) {
+        throw new HttpError(401, "Unauthorized");
+      }
+
+      const where: any = {
+        status: "pending",
+        order: { outlet_id: outletId },
       };
-    } catch (error) {
-      throw error;
-    }
-  }
 
-  async getDetailMismatchData(payload: FetchDetailMismatchPayload) {
-    try {
-      const { outletId, orderId, stationName } = payload;
-
-      const mismatch = await this.prisma.orderStationLog.findMany({
-        where: {
-          order_id: orderId,
-          order: {
-            outlet_id: outletId,
-          },
-          status: "pending",
-          station: stationName,
-        },
-        select: {
-          item_id: true,
-          quantity_input: true,
-          admin_note: true,
-          station: true,
-          item: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
-
-      if (mismatch.length === 0) {
-        throw new HttpError(404, "No mismatch data found");
+      if (station) {
+        where.station = station as StationName;
       }
 
-      let formattedActualItems = [];
-      if (stationName === StationName.washing) {
-        const actualItem = await this.prisma.orderItem.findMany({
-          where: {
-            order_id: orderId,
-            order: {
-              outlet_id: outletId,
-            },
-          },
+      const { skip, take } = { skip: (page - 1) * limit, take: limit };
+
+      const [missmatchData, total] = await Promise.all([
+        prisma.orderStationLog.findMany({
+          where,
           select: {
+            id: true,
             item_id: true,
-            quantity_initial: true,
-          },
-        });
-
-        formattedActualItems = actualItem.map((item) => ({
-          itemId: item.item_id,
-          expectedQuantity: item.quantity_initial,
-        }));
-      } else {
-        let stationBefore: StationName;
-        if (stationName === StationName.ironing) {
-          stationBefore = StationName.washing;
-        } else if (stationName === StationName.packing) {
-          stationBefore = StationName.ironing;
-        } else {
-          throw new HttpError(
-            400,
-            "Invalid station name for fetching previous station summary",
-          );
-        }
-        const actualItem = await this.prisma.stationSummary.findMany({
-          where: {
-            order_id: orderId,
+            station: true,
+            quantity_input: true,
+            created_at: true,
             order: {
-              outlet_id: outletId,
-            },
-            station: stationBefore,
-          },
-          select: {
-            item_id: true,
-            latest_quantity: true,
-          },
-        });
-
-        formattedActualItems = actualItem.map((item) => ({
-          itemId: item.item_id,
-          expectedQuantity: item.latest_quantity,
-        }));
-      }
-
-      const formattedMismatch = mismatch.map((item) => ({
-        itemId: item.item_id,
-        itemName: item.item.name,
-        quantityInput: item.quantity_input,
-        adminNote: item.admin_note,
-        station: item.station,
-      }));
-
-      return {
-        success: true,
-        message: "Mismatch data fetched successfully",
-        data: {
-          mismatch: formattedMismatch,
-          expectedItems: formattedActualItems,
-        },
-      };
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async manageMismatch(payload: ManageMismatchPayload) {
-    try {
-      const {
-        orderId,
-        stationName,
-        adminId,
-        outletId,
-        finalQuantities,
-        itemDecisions,
-      } = payload;
-
-      //guard rail
-      const isExist = await this.prisma.stationSummary.findFirst({
-        where: {
-          order_id: orderId,
-          station: stationName,
-          order: {
-            outlet_id: outletId,
-          },
-        },
-      });
-      if (isExist) {
-        throw new HttpError(
-          400,
-          "You have managed the mismatch data or it already accepted automatically",
-        );
-      }
-
-      const result = await this.prisma.$transaction(async (tx) => {
-        const mismatchData = await Promise.all(
-          itemDecisions.map(async (item) => {
-            const mismatchUpdate = await tx.orderStationLog.updateManyAndReturn(
-              {
-                where: {
-                  order_id: orderId,
-                  station: stationName,
-                  item_id: item.itemId,
-                },
-                data: {
-                  status: item.status as MismatchStatus,
-                  admin_note: item.adminNote,
-                  approved_by: adminId,
-                  approved_at: new Date(),
-                },
-                select: {
-                  item_id: true,
-                  quantity_input: true,
-                  admin_note: true,
-                  station: true,
-                },
-              },
-            );
-            return mismatchUpdate;
-          }),
-        );
-
-        const summaryData = await Promise.all(
-          finalQuantities.map(async (item) => {
-            const summaryUpdate = await tx.stationSummary.createManyAndReturn({
-              data: {
-                order_id: orderId,
-                item_id: item.itemId,
-                latest_quantity: item.latestQuantity,
-                station: stationName,
-              },
               select: {
-                item_id: true,
-                latest_quantity: true,
-                station: true,
+                id: true,
+                items: {
+                  select: {
+                    item_id: true,
+                    quantity_initial: true,
+                  },
+                },
               },
-            });
-            return summaryUpdate;
-          }),
-        );
-
-        return { itemDecisions: mismatchData, finalQuantities: summaryData };
-      });
+            },
+            item: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            worker: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          skip,
+          take,
+        }),
+        prisma.orderStationLog.count({ where }),
+      ]);
 
       return {
-        success: true,
-        message: "Missmatch data has been managed successfully",
-        data: result,
+        data: missmatchData,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
       };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async approveMismatch(
+    logId: string,
+    adminId: string,
+    outletId: string,
+    acceptedQuantity: number,
+  ) {
+    try {
+      const { outlet_id } = await prisma.user.findFirstOrThrow({
+        where: { id: adminId },
+        select: { outlet_id: true },
+      });
+
+      if (outlet_id !== outletId) {
+        throw new HttpError(401, "Unauthorized");
+      }
+
+      const log = await prisma.orderStationLog.findUnique({
+        where: { id: logId },
+        select: {
+          id: true,
+          order_id: true,
+          item_id: true,
+          station: true,
+          status: true,
+        },
+      });
+
+      if (!log) throw new HttpError(404, "Mismatch log not found");
+      if (log.status !== "pending") {
+        throw new HttpError(400, "This mismatch is already resolved");
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedLog = await tx.orderStationLog.update({
+          where: { id: logId },
+          data: {
+            status: "approved",
+            approved_by: adminId,
+            approved_at: new Date(),
+            quantity_input: acceptedQuantity,
+          },
+        });
+
+        const existingSummary = await tx.stationSummary.findUnique({
+          where: {
+            order_id_item_id_station: {
+              order_id: log.order_id,
+              item_id: log.item_id,
+              station: log.station,
+            },
+          },
+        });
+
+        if (existingSummary) {
+          await tx.stationSummary.update({
+            where: { id: existingSummary.id },
+            data: {
+              latest_quantity: acceptedQuantity,
+              updated_at: new Date(),
+            },
+          });
+        } else {
+          await tx.stationSummary.create({
+            data: {
+              order_id: log.order_id,
+              item_id: log.item_id,
+              station: log.station,
+              latest_quantity: acceptedQuantity,
+            },
+          });
+        }
+
+        return updatedLog;
+      });
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async rejectMismatch(
+    logId: string,
+    adminId: string,
+    outletId: string,
+    note: string,
+  ) {
+    try {
+      const { outlet_id } = await prisma.user.findFirstOrThrow({
+        where: { id: adminId },
+        select: { outlet_id: true },
+      });
+
+      if (outlet_id !== outletId) {
+        throw new HttpError(401, "Unauthorized");
+      }
+
+      const log = await prisma.orderStationLog.findUnique({
+        where: { id: logId },
+        select: { id: true, status: true },
+      });
+
+      if (!log) throw new HttpError(404, "Mismatch log not found");
+      if (log.status !== "pending") {
+        throw new HttpError(400, "This mismatch is already resolved");
+      }
+
+      const updatedLog = await prisma.orderStationLog.update({
+        where: { id: logId },
+        data: {
+          status: "rejected",
+          approved_by: adminId,
+          approved_at: new Date(),
+          admin_note: note,
+        },
+      });
+
+      return updatedLog;
     } catch (error) {
       throw error;
     }

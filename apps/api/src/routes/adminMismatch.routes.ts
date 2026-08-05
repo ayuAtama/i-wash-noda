@@ -1,64 +1,68 @@
+// src/routes/adminMismatch.routes.ts
 import { Router } from "express";
-import AdminMissmatchController from "@/controllers/adminMismatch.controller";
+import { AdminMismatchController } from "@/controllers/adminMismatch.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { resolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { AdminMismatchValidation } from "@/validations/adminMismatch.validation";
 import { AdminMissmatchServices } from "@/services/adminMissmatch.services";
+import { PaginationSchema } from "@/validations/pagination.validation";
 
-export class AdminMissmatchRoute {
+export class AdminMismatchRoute {
   public router = Router();
-  private controller: AdminMissmatchController;
+  private controller: AdminMismatchController;
 
-  constructor(controller: AdminMissmatchController) {
-    this.controller = controller;
-    this.getMissmatchID();
-    this.getDetailMismatchData();
-    this.manageMismatch();
+  constructor() {
+    this.controller = new AdminMismatchController(new AdminMissmatchServices());
+    this.getMismatches();
+    this.approve();
+    this.reject();
   }
 
-  private getMissmatchID() {
+  private getMismatches() {
     this.router.get(
       "/",
       authenticationMiddleware,
       authorizationMiddleware("outlet_admin"),
       resolveContext,
       Validator.validate({
-        query: AdminMismatchValidation.QueryValidation,
+        query: AdminMismatchValidation.MismatchQuerySchema.extend({
+          page: PaginationSchema.shape.page,
+          limit: PaginationSchema.shape.limit,
+        }),
       }),
-      this.controller.getMissmatchID,
+      this.controller.getMismatches,
     );
   }
 
-  private getDetailMismatchData() {
-    this.router.get(
-      "/:orderId/:stationName",
+  private approve() {
+    this.router.patch(
+      "/:id/approve",
       authenticationMiddleware,
       authorizationMiddleware("outlet_admin"),
       resolveContext,
       Validator.validate({
-        params: AdminMismatchValidation.DetailMismatchDataParams,
+        params: AdminMismatchValidation.MismatchIdParamsSchema,
+        body: AdminMismatchValidation.ApproveMismatchSchema,
       }),
-      this.controller.getDetailMismatchData,
+      this.controller.approve,
     );
   }
 
-  private manageMismatch() {
-    this.router.put(
-      "/:orderId/:stationName",
+  private reject() {
+    this.router.patch(
+      "/:id/reject",
       authenticationMiddleware,
       authorizationMiddleware("outlet_admin"),
       resolveContext,
       Validator.validate({
-        params: AdminMismatchValidation.OrderIdStationNameParams,
-        body: AdminMismatchValidation.ManageMismatchSchema,
+        params: AdminMismatchValidation.MismatchIdParamsSchema,
+        body: AdminMismatchValidation.RejectMismatchSchema,
       }),
-      this.controller.manageMismatch,
+      this.controller.reject,
     );
   }
 }
 
-export default new AdminMissmatchRoute(
-  new AdminMissmatchController(new AdminMissmatchServices()),
-).router;
+export default new AdminMismatchRoute().router;
