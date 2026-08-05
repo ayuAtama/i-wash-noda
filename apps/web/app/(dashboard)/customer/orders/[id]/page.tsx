@@ -284,7 +284,7 @@ export default function OrderDetailPage() {
             {embedOpen && (
               <div
                 id="snap-embed-container"
-                className="mt-4 min-h-[600px] rounded-lg border border-gray-200"
+                className="mt-4 relative w-full inset-0 rounded-lg border border-gray-200"
               />
             )}
           </Card>
