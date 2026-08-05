@@ -55,6 +55,45 @@ export interface SnapResponse {
   redirect_url: string;
 }
 
+export interface MidtransStatusResponse {
+  transaction_status?: string;
+  fraud_status?: string;
+  status_code?: string;
+  transaction_id?: string;
+  payment_type?: string;
+  transaction_time?: string;
+  settlement_time?: string;
+  gross_amount?: string;
+  status_message?: string;
+}
+
+function apiBaseUrl(): string {
+  return SNAP_BASE_URL.replace("app.", "api.");
+}
+
+export async function getTransactionStatus(
+  orderId: string,
+): Promise<MidtransStatusResponse> {
+  const response = await fetch(`${apiBaseUrl()}/v2/${orderId}/status`, {
+    headers: {
+      Accept: "application/json",
+      Authorization: getBasicAuth(),
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new HttpError(
+      502,
+      (data as { status_message?: string })?.status_message ??
+        "Failed to fetch Midtrans transaction status",
+    );
+  }
+
+  return data as MidtransStatusResponse;
+}
+
 function formatMidtransStartTime(value: string): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const d = new Date(value);

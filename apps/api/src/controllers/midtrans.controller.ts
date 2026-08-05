@@ -57,4 +57,25 @@ export class MidtransController {
       next(error);
     }
   };
+
+  syncPaymentStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const { id: orderId } = req.validated!.params as OrderIdParamsDto;
+      if (!userId) throw new HttpError(401, "Unauthorized");
+
+      const data = await this.service.syncPaymentStatus(orderId, userId);
+      res.status(200).json({
+        success: true,
+        message: "Payment status synced with Midtrans",
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

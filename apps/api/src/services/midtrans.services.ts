@@ -3,6 +3,7 @@ import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
   createSnapTransaction,
+  getTransactionStatus,
   verifyNotificationSignature,
 } from "@/config/midtrans";
 import { Prisma } from "@/generated/prisma/client";
@@ -181,10 +182,7 @@ export class MidtransService {
       throw new HttpError(404, "Transaction not found");
     }
 
-    const nextStatus = mapTransactionStatus(
-      transaction_status,
-      fraud_status,
-    );
+    const nextStatus = mapTransactionStatus(transaction_status, fraud_status);
     if (!nextStatus) {
       return { message: "Unknown transaction status, no action taken" };
     }
@@ -247,6 +245,81 @@ export class MidtransService {
       order_status: order.status,
       paid: order.paid,
       transactions,
+    };
+  }
+
+  async syncPaymentStatus(orderId: string, userId: string) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, customer_id: true, status: true, paid: true },
+    });
+
+    if (!order) throw new HttpError(404, "Order not found");
+    if (order.customer_id !== userId) {
+      throw new HttpError(403, "Not your order");
+    }
+
+    const transaction = await prisma.paymentTransaction.findFirst({
+      where: { order_id: orderId },
+      orderBy: { created_at: "desc" },
+      select: { id: true, provider_order_id: true, status: true },
+    });
+
+    if (!transaction?.provider_order_id) {
+      throw new HttpError(404, "No payment transaction for this order");
+    }
+
+    const status = await getTransactionStatus(transaction.provider_order_id);
+
+    const nextStatus = mapTransactionStatus(
+      status.transaction_status,
+      status.fraud_status,
+    );
+    if (!nextStatus) {
+      return {
+        synced: false,
+        order_status: order.status,
+        paid: order.paid,
+        transaction_status: status.transaction_status,
+      };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: nextStatus,
+          provider_transaction_id: status.transaction_id ?? null,
+          payment_type: status.payment_type ?? null,
+          fraud_status: status.fraud_status ?? null,
+          transaction_time: status.transaction_time
+            ? new Date(status.transaction_time)
+            : null,
+          raw_response: status as Prisma.InputJsonValue,
+        },
+      });
+
+      if (nextStatus === "paid") {
+        const current = await tx.order.findUnique({
+          where: { id: orderId },
+          select: { paid: true },
+        });
+        if (current && !current.paid) {
+          await finalizePaidOrder(tx, orderId);
+        }
+      }
+    });
+
+    const updated = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { status: true, paid: true },
+    });
+
+    return {
+      synced: true,
+      order_status: updated?.status,
+      paid: updated?.paid,
+      transaction_status: status.transaction_status,
     };
   }
 }

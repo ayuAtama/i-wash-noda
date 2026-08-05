@@ -88,6 +88,16 @@ export default function OrderDetailPage() {
     }
   };
 
+  const syncMutation = useMutation({
+    mutationFn: () => api.post(`/api/orders/${params.id}/payment-sync`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+    },
+  });
+
   const payMutation = useMutation({
     mutationFn: () => api.post(`/api/orders/${params.id}/pay`),
     onSuccess: async (res) => {
@@ -105,17 +115,18 @@ export default function OrderDetailPage() {
         openSnap(snapToken, {
           onSuccess: () => {
             addToast({ type: "success", title: "Payment successful" });
-            queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+            syncMutation.mutate();
           },
           onPending: () => {
             addToast({ type: "info", title: "Payment pending" });
-            queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+            syncMutation.mutate();
           },
           onError: () => {
             addToast({ type: "error", title: "Payment failed" });
           },
           onClose: () => {
             addToast({ type: "info", title: "Payment window closed" });
+            syncMutation.mutate();
           },
         });
       } catch (err: any) {

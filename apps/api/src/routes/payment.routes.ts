@@ -75,6 +75,16 @@ export class PaymentRoute {
       }),
       this.midtransController.paymentStatus,
     );
+
+    this.router.post(
+      "/:id/payment-sync",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      Validator.validate({
+        params: PaymentValidation.OrderIdParamsSchema,
+      }),
+      this.midtransController.syncPaymentStatus,
+    );
   }
 }
 
