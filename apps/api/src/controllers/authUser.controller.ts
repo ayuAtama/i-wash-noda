@@ -689,28 +689,50 @@ export class AuthUserController {
     }
   };
 
+  // ── Helper: Extract userId from request ──
+  // We need this in both uploadAvatar and deleteAvatar, so we extract it once.
+  // req.access_token?.sub = Better Auth user ID
+  // req.user?.id          = JWT user ID (legacy)
+  private getUserId(req: Request): string {
+    const userId = req.access_token?.sub || req.user?.id;
+
+    if (!userId) {
+      throw new HttpError(
+        401,
+        "Unauthorized, login first",
+        undefined,
+        "UNAUTHORIZED",
+      );
+    }
+
+    if (!z.string().uuid().safeParse(userId).success) {
+      throw new HttpError(
+        400,
+        "Invalid user ID format",
+        undefined,
+        "AVATAR_INVALID_USER_ID",
+      );
+    }
+
+    return userId;
+  }
+
+  /**
+   * POST /api/me/avatar
+   *
+   * Handles avatar upload. By the time this runs, multer has already:
+   *   1. Validated the file (correct type, correct extension, under 5MB)
+   *   2. Uploaded it to Cloudinary
+   *   3. Set req.file.path = Cloudinary URL (e.g. "https://res.cloudinary.com/xxx/...")
+   *
+   * All we need to do here: save the Cloudinary URL to the user's DB record.
+   */
   uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.access_token?.sub || req.user?.id;
+      const userId = this.getUserId(req);
 
-      if (!userId) {
-        throw new HttpError(
-          401,
-          "Unauthorized, login first",
-          undefined,
-          "UNAUTHORIZED",
-        );
-      }
-
-      if (!z.string().uuid().safeParse(userId).success) {
-        throw new HttpError(
-          400,
-          "Invalid user ID format",
-          undefined,
-          "AVATAR_INVALID_USER_ID",
-        );
-      }
-
+      // Multer should have set req.file after a successful upload.
+      // If it's missing, something went wrong with the middleware.
       if (!req.file) {
         throw new HttpError(
           400,
@@ -720,6 +742,7 @@ export class AuthUserController {
         );
       }
 
+      // req.file.path = Cloudinary URL (set by CloudinaryStorage in multer)
       const result = await this.authUserService.updateAvatar(
         userId,
         req.file.path,
@@ -735,34 +758,25 @@ export class AuthUserController {
     }
   };
 
+  /**
+   * DELETE /api/me/avatar
+   *
+   * Deletes the user's avatar. This:
+   *   1. Deletes the image file from Cloudinary (frees storage)
+   *   2. Sets user.image = null in the database
+   *
+   * No multer needed here — no file is being uploaded.
+   */
   deleteAvatar = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.access_token?.sub || req.user?.id;
-
-      if (!userId) {
-        throw new HttpError(
-          401,
-          "Unauthorized, login first",
-          undefined,
-          "UNAUTHORIZED",
-        );
-      }
-
-      if (!z.string().uuid().safeParse(userId).success) {
-        throw new HttpError(
-          400,
-          "Invalid user ID format",
-          undefined,
-          "AVATAR_INVALID_USER_ID",
-        );
-      }
+      const userId = this.getUserId(req);
 
       const result = await this.authUserService.deleteAvatar(userId);
 
       return res.status(200).json({
         success: true,
         message: "Avatar deleted successfully",
-        data: { image: result.image },
+        data: { image: result.image }, // will be null after deletion
       });
     } catch (error) {
       next(error);

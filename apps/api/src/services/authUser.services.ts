@@ -851,43 +851,57 @@ export class AuthUserService {
     }
   }
 
+  /**
+   * Update user's avatar image.
+   *
+   * Flow:
+   *   1. Validate inputs (userId is UUID, imageUrl is from Cloudinary)
+   *   2. Check if user already has an avatar → delete old one from Cloudinary
+   *   3. Save the new Cloudinary URL to the database
+   *
+   * @param userId   - The user's UUID
+   * @param imageUrl - The Cloudinary URL (set by multer's req.file.path)
+   */
   async updateAvatar(userId: string, imageUrl: string) {
-    try {
-      if (!z.string().uuid().safeParse(userId).success) {
-        throw new HttpError(
-          400,
-          "Invalid user ID format",
-          undefined,
-          "AVATAR_INVALID_USER_ID",
-        );
-      }
+    // Validate userId is a valid UUID
+    if (!z.string().uuid().safeParse(userId).success) {
+      throw new HttpError(
+        400,
+        "Invalid user ID format",
+        undefined,
+        "AVATAR_INVALID_USER_ID",
+      );
+    }
 
-      if (!imageUrl.includes("cloudinary.com")) {
-        throw new HttpError(
-          400,
-          "Invalid image URL",
-          undefined,
-          "AVATAR_INVALID_URL",
-        );
-      }
+    // Security check: only accept Cloudinary URLs (prevents saving arbitrary URLs)
+    if (!imageUrl.includes("cloudinary.com")) {
+      throw new HttpError(
+        400,
+        "Invalid image URL",
+        undefined,
+        "AVATAR_INVALID_URL",
+      );
+    }
 
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { image: true },
       });
 
-      if (!user) {
-        throw new HttpError(
-          404,
-          "User not found",
-          undefined,
-          "AVATAR_USER_NOT_FOUND",
-        );
-      }
+    if (!user) {
+      throw new HttpError(
+        404,
+        "User not found",
+        undefined,
+        "AVATAR_USER_NOT_FOUND",
+      );
+    }
 
-      if (user.image) {
-        await deleteImage(user.image);
-      }
+    // If user already has an avatar, delete the old one from Cloudinary first.
+    // This prevents orphaned images from piling up and consuming storage.
+    if (user.image) {
+      await deleteImage(user.image);
+    }
 
       const updatedUser = await this.prisma.user.update({
         where: { id: userId },
@@ -895,43 +909,48 @@ export class AuthUserService {
         select: { image: true },
       });
 
-      return updatedUser;
-    } catch (error) {
-      if (error instanceof HttpError) {
-        throw error;
-      }
-      throw error;
-    }
+    return updatedUser;
   }
 
+  /**
+   * Delete user's avatar image.
+   *
+   * Flow:
+   *   1. Fetch the user to get the current avatar URL
+   *   2. Delete the image file from Cloudinary (frees storage)
+   *   3. Set user.image = null in the database
+   *
+   * @param userId - The user's UUID
+   */
   async deleteAvatar(userId: string) {
-    try {
-      if (!z.string().uuid().safeParse(userId).success) {
-        throw new HttpError(
-          400,
-          "Invalid user ID format",
-          undefined,
-          "AVATAR_INVALID_USER_ID",
-        );
-      }
+    // Validate userId is a valid UUID
+    if (!z.string().uuid().safeParse(userId).success) {
+      throw new HttpError(
+        400,
+        "Invalid user ID format",
+        undefined,
+        "AVATAR_INVALID_USER_ID",
+      );
+    }
 
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { image: true },
       });
 
-      if (!user) {
-        throw new HttpError(
-          404,
-          "User not found",
-          undefined,
-          "AVATAR_USER_NOT_FOUND",
-        );
-      }
+    if (!user) {
+      throw new HttpError(
+        404,
+        "User not found",
+        undefined,
+        "AVATAR_USER_NOT_FOUND",
+      );
+    }
 
-      if (user.image) {
-        await deleteImage(user.image);
-      }
+    // Delete the image from Cloudinary (if one exists)
+    if (user.image) {
+      await deleteImage(user.image);
+    }
 
       const updatedUser = await this.prisma.user.update({
         where: { id: userId },
@@ -939,12 +958,6 @@ export class AuthUserService {
         select: { image: true },
       });
 
-      return updatedUser;
-    } catch (error) {
-      if (error instanceof HttpError) {
-        throw error;
-      }
-      throw error;
-    }
+    return updatedUser;
   }
 }

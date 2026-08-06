@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -14,18 +14,23 @@ import { useToast } from "@/components/ui/toast";
 export default function ProfilePage() {
   const { user } = useAuth();
   const { addToast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Ref to the hidden file input — we click it programmatically when the button is pressed
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Form state — initialized with current user data
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
 
+  // ── Profile update mutation ──
+  // Sends updated name/phone to the server
   const updateMutation = useMutation({
     mutationFn: () => api.put("/api/me", { name, phone }),
     onSuccess: () => {
       addToast({ type: "success", title: "Profile updated" });
-      window.location.reload();
+      // Refresh the "me" query so the sidebar/header show the new name
+      queryClient.invalidateQueries({ queryKey: ["me"] });
     },
     onError: (err: any) => {
       addToast({
@@ -36,20 +41,24 @@ export default function ProfilePage() {
     },
   });
 
+  // ── Avatar upload mutation ──
+  // Sends the file as multipart/form-data (required for file uploads)
   const avatarMutation = useMutation({
     mutationFn: (file: File) => {
       const formData = new FormData();
-      formData.append("avatar", file);
+      formData.append("avatar", file); // "avatar" must match the backend middleware field name
       return api.post("/api/me/avatar", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
     },
     onSuccess: () => {
       addToast({ type: "success", title: "Avatar updated" });
-      window.location.reload();
+      // Refresh the "me" query so the new avatar shows everywhere
+      queryClient.invalidateQueries({ queryKey: ["me"] });
     },
   });
 
+  // When user selects a file, immediately start uploading
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) avatarMutation.mutate(file);
@@ -62,12 +71,15 @@ export default function ProfilePage() {
         description="Manage your account settings"
       />
 
-      {/* Avatar */}
+      {/* ── Avatar Section ── */}
       <Card>
         <CardHeader>Profile Photo</CardHeader>
         <div className="flex items-center gap-4">
+          {/* Current avatar — shows image or initials */}
           <Avatar src={user?.image} name={user?.name} size="lg" />
+
           <div>
+            {/* Hidden file input — the button below triggers it */}
             <input
               ref={fileInputRef}
               type="file"
@@ -88,7 +100,7 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      {/* Personal Info */}
+      {/* ── Personal Info Section ── */}
       <Card>
         <CardHeader>Personal Information</CardHeader>
         <form
@@ -124,7 +136,7 @@ export default function ProfilePage() {
         </form>
       </Card>
 
-      {/* Password */}
+      {/* ── Password Reset Section ── */}
       <Card>
         <CardHeader>Change Password</CardHeader>
         <form

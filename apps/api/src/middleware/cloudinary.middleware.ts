@@ -1,50 +1,81 @@
+/**
+ * Cloudinary Upload Middleware
+ *
+ * This file creates a multer middleware that:
+ *   1. Validates the incoming file (correct type? correct extension? not too big?)
+ *   2. Streams the file to Cloudinary (our image hosting service)
+ *   3. Attaches the Cloudinary URL to req.file.path so the controller can use it
+ *
+ * The file never stays on our server — it passes through and goes straight to Cloudinary.
+ */
+
 import multer from "multer";
 import { Request } from "express";
 import {
   createCloudinaryStorage,
   CloudinaryUploadOptions,
-  UploadType,
   imageMimeTypes,
   typeDefaults,
 } from "@/utils/cloudinary";
 import { HttpError } from "@/utils/httpError";
 
-const typeMimeTypes: Record<UploadType, string[]> = {
-  image: imageMimeTypes.image,
-  video: imageMimeTypes.video,
-  audio: imageMimeTypes.audio,
-  document: imageMimeTypes.document,
-};
-
+/**
+ * Error codes we return when upload validation fails.
+ * The frontend can check these codes to show specific error messages.
+ */
 const ERROR_CODES = {
-  INVALID_MIME: "UPLOAD_INVALID_MIME",
-  INVALID_FORMAT: "UPLOAD_INVALID_FORMAT",
+  INVALID_MIME: "UPLOAD_INVALID_MIME", // e.g. someone sent a .exe instead of .jpg
+  INVALID_FORMAT: "UPLOAD_INVALID_FORMAT", // e.g. MIME type says "image" but extension is ".xyz"
 } as const;
 
+/**
+ * Creates a multer middleware configured to upload files to Cloudinary.
+ *
+ * Usage in routes:
+ *   cloudinaryUploadMiddleware("avatar", { type: "image", maxSize: 5 })
+ *
+ * The field name ("avatar") must match what the frontend sends:
+ *   formData.append("avatar", file)  ← this "avatar" must match
+ *
+ * @param fieldName - The FormData field name that contains the file (e.g. "avatar")
+ * @param options   - Upload settings like type, max size, allowed formats
+ */
 export function cloudinaryUploadMiddleware(
   fieldName: string,
   options: CloudinaryUploadOptions = {},
 ) {
+  // Which file type are we accepting? Default to "image".
+  // This determines the default max size and allowed formats.
   const type = options.type || "image";
+
+  // Max file size in MB (converts to bytes for multer)
   const maxSize = options.maxSize || typeDefaults[type].maxSize;
+
+  // Which file extensions are allowed? (e.g. ["jpeg", "jpg", "png", "gif"])
   const allowedFormats = options.allowedFormats || typeDefaults[type].formats;
 
+  // Create CloudinaryStorage — this tells multer to stream files
+  // to Cloudinary instead of saving them to disk on our server.
   const storage = createCloudinaryStorage(fieldName, options);
 
   return multer({
     storage,
     limits: {
-      fileSize: maxSize * 1024 * 1024,
+      fileSize: maxSize * 1024 * 1024, // convert MB to bytes
     },
     fileFilter: (
       _req: Request,
       file: Express.Multer.File,
       cb: multer.FileFilterCallback,
     ) => {
-      const typeMimes = typeMimeTypes[type];
-      const mimeAllowed = typeMimes.includes(file.mimetype);
+      // ── CHECK 1: Is the MIME type correct? ──
+      // MIME type is what the browser declares the file as.
+      // e.g. "image/jpeg", "image/png", "video/mp4"
+      // We check: is this MIME type in our allowed list for this upload type?
+      const mimeAllowed = imageMimeTypes[type].includes(file.mimetype);
 
       if (!mimeAllowed) {
+        // e.g. "Only Image files are allowed"
         const typeName = type.charAt(0).toUpperCase() + type.slice(1);
         cb(
           new HttpError(
@@ -57,14 +88,20 @@ export function cloudinaryUploadMiddleware(
         return;
       }
 
+      // ── CHECK 2: Is the file extension valid? ──
+      // Some files lie about their MIME type, so we also check the actual extension.
+      // e.g. "photo.jpg" → extension is "jpg"
       const extension = file.originalname.split(".").pop()?.toLowerCase() || "";
+
       const formatAllowed = allowedFormats.some(
-        (f: string) =>
-          f.toLowerCase() === extension ||
-          (f.toLowerCase() === "jpg" && extension === "jpeg"),
+        (format: string) =>
+          format.toLowerCase() === extension ||
+          // Special case: "jpg" and "jpeg" are the same thing
+          (format.toLowerCase() === "jpg" && extension === "jpeg"),
       );
 
       if (!formatAllowed) {
+        // e.g. "Only JPG, PNG, GIF files are allowed"
         const extList = allowedFormats.map((f) => f.toUpperCase()).join(", ");
         cb(
           new HttpError(
@@ -77,7 +114,8 @@ export function cloudinaryUploadMiddleware(
         return;
       }
 
+      // Both checks passed — let the file through
       cb(null, true);
     },
-  }).single(fieldName);
+  }).single(fieldName); // .single() = expect exactly one file in this field
 }
