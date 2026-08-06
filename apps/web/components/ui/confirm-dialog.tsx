@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Modal from "./modal";
-import Button from "./button";
+import { Button } from "./button";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: "danger" | "primary";
+  variant?: "destructive" | "default";
   loading?: boolean;
 }
 
@@ -24,7 +24,7 @@ export default function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
-  variant = "danger",
+  variant = "destructive",
   loading = false,
 }: ConfirmDialogProps) {
   return (

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import PageHeader from "@/components/ui/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -157,7 +157,7 @@ export default function SchedulePage() {
             </div>
             <Button
               type="submit"
-              fullWidth
+              className="w-full"
               loading={createMutation.isPending}
               disabled={!outletId || !workerId}
             >

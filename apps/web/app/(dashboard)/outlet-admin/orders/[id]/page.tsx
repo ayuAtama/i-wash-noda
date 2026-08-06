@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";

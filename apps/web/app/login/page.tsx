@@ -5,8 +5,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
-import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
 
 const dashboards: Record<string, string> = {
@@ -177,7 +177,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              fullWidth
+              className="w-full"
               loading={loginMutation.isPending}
               disabled={!email || !password}
             >

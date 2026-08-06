@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import Select from "@/components/ui/select";
 import PageHeader from "@/components/ui/page-header";
 import { PageSpinner } from "@/components/ui/spinner";

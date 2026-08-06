@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
