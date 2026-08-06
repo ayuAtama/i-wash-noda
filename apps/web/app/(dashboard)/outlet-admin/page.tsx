@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import { formatDate, formatCurrency } from "@/lib/utils";

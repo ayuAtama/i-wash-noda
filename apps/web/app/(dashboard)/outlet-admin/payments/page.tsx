@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import EmptyState from "@/components/ui/empty-state";
 import Modal from "@/components/ui/modal";
-import Textarea from "@/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
 
@@ -114,7 +114,7 @@ export default function PaymentsPage() {
                     Confirm
                   </Button>
                   <Button
-                    variant="danger"
+                    variant="destructive"
                     size="sm"
                     onClick={() => setRejectModal(order.id)}
                   >
@@ -145,7 +145,7 @@ export default function PaymentsPage() {
               Cancel
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               onClick={() =>
                 rejectModal &&
                 rejectMutation.mutate({

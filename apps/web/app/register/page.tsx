@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type Step = "register" | "verify" | "complete";
 
@@ -163,7 +163,7 @@ export default function RegisterPage() {
               />
               <Button
                 type="submit"
-                fullWidth
+                className="w-full"
                 loading={registerMutation.isPending}
                 disabled={!name || !email || !password || !phone}
               >
@@ -187,7 +187,7 @@ export default function RegisterPage() {
               />
               <Button
                 type="submit"
-                fullWidth
+                className="w-full"
                 loading={verifyMutation.isPending}
                 disabled={!token}
               >
@@ -210,7 +210,7 @@ export default function RegisterPage() {
               />
               <Button
                 type="submit"
-                fullWidth
+                className="w-full"
                 loading={completeMutation.isPending}
               >
                 Complete Registration

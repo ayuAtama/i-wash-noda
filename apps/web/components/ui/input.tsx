@@ -1,59 +1,59 @@
-import { forwardRef } from "react";
+import * as React from "react";
+import { Input as InputPrimitive } from "@base-ui/react/input";
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+import { cn } from "@/lib/utils";
+
+function slugify(value: string) {
+  return value.toLowerCase().replace(/\s+/g, "-");
+}
+
+function Input({
+  className,
+  type,
+  label,
+  error,
+  hint,
+  id,
+  ...props
+}: React.ComponentProps<"input"> & {
   label?: string;
   error?: string;
   hint?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+}) {
+  const inputId = id || (label ? slugify(label) : undefined);
+  const input = (
+    <InputPrimitive
+      id={inputId}
+      type={type}
+      aria-invalid={error ? true : undefined}
+      data-slot="input"
+      className={cn(
+        "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className,
+      )}
+      {...props}
+    />
+  );
+
+  if (!label && !error && !hint) return input;
+
+  return (
+    <div className="w-full">
+      {label && (
+        <label
+          htmlFor={inputId}
+          className="mb-1.5 block text-sm font-medium text-foreground"
+        >
+          {label}
+        </label>
+      )}
+      {input}
+      {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
+      {hint && !error && (
+        <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>
+      )}
+    </div>
+  );
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(
-  (
-    { className = "", label, error, hint, leftIcon, rightIcon, id, ...props },
-    ref,
-  ) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
-
-    return (
-      <div className="w-full">
-        {label && (
-          <label
-            htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            {label}
-          </label>
-        )}
-        <div className="relative">
-          {leftIcon && (
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              {leftIcon}
-            </div>
-          )}
-          <input
-            ref={ref}
-            id={inputId}
-            className={`block w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-colors
-              ${error ? "border-danger-500 focus:border-danger-500 focus:ring-danger-500" : "border-gray-300 focus:border-primary-500 focus:ring-primary-500"}
-              ${leftIcon ? "pl-10" : ""}
-              ${rightIcon ? "pr-10" : ""}
-              focus:ring-1 ${className}`}
-            {...props}
-          />
-          {rightIcon && (
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-              {rightIcon}
-            </div>
-          )}
-        </div>
-        {error && <p className="mt-1 text-xs text-danger-600">{error}</p>}
-        {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
-      </div>
-    );
-  },
-);
-
-Input.displayName = "Input";
-
-export default Input;
+export { Input };

@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import api from "@/lib/api";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { PageSpinner } from "@/components/ui/spinner";
 import { Card } from "@/components/ui/card";
 import { formatDate, formatCurrency } from "@/lib/utils";

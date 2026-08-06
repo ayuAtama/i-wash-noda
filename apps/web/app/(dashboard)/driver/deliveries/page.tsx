@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";

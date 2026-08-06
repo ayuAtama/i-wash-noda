@@ -1,42 +1,53 @@
-import { forwardRef } from "react";
+import * as React from "react";
 
-interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+import { cn } from "@/lib/utils";
+
+function Textarea({
+  className,
+  label,
+  error,
+  hint,
+  id,
+  ...props
+}: React.ComponentProps<"textarea"> & {
   label?: string;
   error?: string;
   hint?: string;
+}) {
+  const textareaId =
+    id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
+  const textarea = (
+    <textarea
+      id={textareaId}
+      aria-invalid={error ? true : undefined}
+      data-slot="textarea"
+      className={cn(
+        "flex field-sizing-content min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className,
+      )}
+      {...props}
+    />
+  );
+
+  if (!label && !error && !hint) return textarea;
+
+  return (
+    <div className="w-full">
+      {label && (
+        <label
+          htmlFor={textareaId}
+          className="mb-1.5 block text-sm font-medium text-foreground"
+        >
+          {label}
+        </label>
+      )}
+      {textarea}
+      {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
+      {hint && !error && (
+        <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>
+      )}
+    </div>
+  );
 }
 
-const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className = "", label, error, hint, id, ...props }, ref) => {
-    const textareaId = id || label?.toLowerCase().replace(/\s+/g, "-");
-
-    return (
-      <div className="w-full">
-        {label && (
-          <label
-            htmlFor={textareaId}
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            {label}
-          </label>
-        )}
-        <textarea
-          ref={ref}
-          id={textareaId}
-          className={`block w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-colors resize-y
-            ${error ? "border-danger-500 focus:border-danger-500 focus:ring-danger-500" : "border-gray-300 focus:border-primary-500 focus:ring-primary-500"}
-            focus:ring-1 ${className}`}
-          rows={4}
-          {...props}
-        />
-        {error && <p className="mt-1 text-xs text-danger-600">{error}</p>}
-        {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
-      </div>
-    );
-  },
-);
-
-Textarea.displayName = "Textarea";
-
-export default Textarea;
+export { Textarea };

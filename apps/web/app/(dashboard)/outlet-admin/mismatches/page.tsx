@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
-import Button from "@/components/ui/button";
-import Textarea from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import PageHeader from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
@@ -115,7 +115,7 @@ export default function MismatchesPage() {
                       Approve
                     </Button>
                     <Button
-                      variant="danger"
+                      variant="destructive"
                       size="sm"
                       onClick={() =>
                         setResolveModal({ id: m.id, action: "reject" })
@@ -149,7 +149,9 @@ export default function MismatchesPage() {
               Cancel
             </Button>
             <Button
-              variant={resolveModal?.action === "reject" ? "danger" : "primary"}
+              variant={
+                resolveModal?.action === "reject" ? "destructive" : "default"
+              }
               onClick={() =>
                 resolveModal &&
                 resolveMutation.mutate({
