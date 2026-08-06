@@ -136,7 +136,7 @@ export class PickupRequestController {
 
       // call the service
       const { success, message, data } =
-        await this.pickupRequestService.checkOrderStatus(userId);
+        await this.pickupRequestService.checkPickupOrderStatus(userId);
 
       // response
       res.status(200).json({ success, message, data });

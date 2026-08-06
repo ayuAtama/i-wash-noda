@@ -16,7 +16,7 @@ export default function CustomerDashboard() {
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["customer-orders"],
-    queryFn: () => api.get("/api/").then((r) => r.data),
+    queryFn: () => api.get("/api/orders").then((r) => r.data),
     retry: false,
   });
 
@@ -54,7 +54,7 @@ export default function CustomerDashboard() {
           label="Total Spent"
           value={formatCurrency(
             orderList.reduce(
-              (s: number, o: any) => s + (o.total_price || 0),
+              (s: number, o: any) => s + (o.total_amount || 0),
               0,
             ),
           )}
@@ -106,7 +106,7 @@ export default function CustomerDashboard() {
                       {formatDate(order.created_at)}
                     </td>
                     <td className="py-3 text-right font-medium">
-                      {formatCurrency(order.total_price || 0)}
+                      {formatCurrency(order.total_amount || 0)}
                     </td>
                   </tr>
                 ))}

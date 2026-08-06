@@ -1,23 +1,31 @@
 // apps/api/src/services/workerShift.services.ts
-import { prisma } from "@/config/prisma";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import { validateNoOverlap } from "@/utils/validateNoOverlap";
 import timeToUtcDate from "@/utils/timeToUTCDate";
 import {
   CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
+  FilterQueryScheduleDTO,
+  GetScheduleDTO,
+  OutletIDDTO,
   UnScheduleWorkerPayloadDTO,
+  WorkerIdDTO,
   FetchWorkerSchedulePayloadDTO,
 } from "@/validations/workerShift.validation";
 import { Prisma, WorkerShiftDay } from "@/generated/prisma/client";
+import { today } from "@/utils/today";
 
 // sse experiment
 import { sseService } from "./sse.services";
 
+
 export class WorkerShiftService {
-  async getShiftsByWorkerId(workerId: string) {
+  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+
+  async getShiftsByWorkerId(workerId: WorkerIdDTO) {
     try {
-      return await prisma.workerShift.findMany({
+      return await this.prisma.workerShift.findMany({
         where: {
           worker_id: workerId,
         },
@@ -38,13 +46,14 @@ export class WorkerShiftService {
 
   async replaceWeeklySchedule(data: CreateSchedulePayloadDTO) {
     try {
-      const { workerId, schedules, outlet_id: outletId } = data;
+      const { id: workerId, schedules, outlet_id: outletId } = data;
       // worker id from fetch in dasboard
       // outled id from req.contex
       // station?? fetch in service layer?
 
       // get the user to validate existence and fallback station
-      const user = await prisma.user.findFirst({
+      const user = await this.prisma.user.findFirst({
+
         where: { id: workerId, outlet_id: outletId },
         select: { role: true, worker_station: true },
       });
@@ -57,7 +66,7 @@ export class WorkerShiftService {
       validateNoOverlap(schedules);
 
       // One transaction = atomic weekly replacement
-      const res = await prisma.$transaction(async (tx) => {
+      const res = await this.prisma.$transaction(async (tx) => {
         // permanent delete old shifts
         await tx.workerShift.deleteMany({
           where: {
@@ -113,7 +122,7 @@ export class WorkerShiftService {
       } as Prisma.UserWhereInput;
 
       const [workers, total] = await Promise.all([
-        prisma.user.findMany({
+        this.prisma.user.findMany({
           where,
           select: {
             id: true,
@@ -125,8 +134,9 @@ export class WorkerShiftService {
           skip,
           take,
         }),
-        prisma.user.count({ where }),
+        this.prisma.user.count({ where }),
       ]);
+
 
       return {
         data: workers,
@@ -150,7 +160,7 @@ export class WorkerShiftService {
       };
 
       const [schedules, totalSchedules] = await Promise.all([
-        prisma.workerShift.findMany({
+        this.prisma.workerShift.findMany({
           where,
           include: {
             worker: {
@@ -161,23 +171,24 @@ export class WorkerShiftService {
           take: limit,
           orderBy: { created_at: "desc" },
         }),
-        prisma.workerShift.count({ where }),
+        this.prisma.workerShift.count({ where }),
       ]);
 
       const today = new Date()
         .toLocaleString("en-US", { weekday: "short" })
         .toLowerCase() as WorkerShiftDay;
       const [total_worker, total_driver, on_duty_today] = await Promise.all([
-        prisma.user.count({
+        this.prisma.user.count({
           where: { outlet_id, role: "worker", is_deleted: false },
         }),
-        prisma.user.count({
+        this.prisma.user.count({
           where: { outlet_id, role: "driver", is_deleted: false },
         }),
-        prisma.workerShift
+        this.prisma.workerShift
           .groupBy({
             by: ["worker_id"],
             where: { outlet_id, day_of_week: today },
+          orderBy: { worker_id: "asc" },
           })
           .then((res) => res.length),
       ]);
@@ -222,7 +233,7 @@ export class WorkerShiftService {
       if (station) where.worker_station = station;
 
       const [users, total] = await Promise.all([
-        prisma.user.findMany({
+        this.prisma.user.findMany({
           where,
           select: {
             id: true,
@@ -235,13 +246,121 @@ export class WorkerShiftService {
           skip,
           take,
         }),
-        prisma.user.count({ where }),
+        this.prisma.user.count({ where }),
       ]);
 
       return {
         data: users,
         meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
       };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async scheduleSummaryDashboard(data: OutletIDDTO) {
+    try {
+      const { outlet_id } = data;
+
+      // fetch the data on transaction for the dashboard
+      const [totalWorker, totalDriver, totalOnDutyByWorker] =
+        await this.prisma.$transaction([
+          // fetch the total worker
+          this.prisma.user.count({
+            where: {
+              outlet_id,
+              role: "worker",
+            },
+          }),
+
+          // fetch the total driver
+          this.prisma.user.count({
+            where: {
+              outlet_id,
+              role: "driver",
+            },
+          }),
+
+          // onduty
+          this.prisma.workerShift.groupBy({
+            by: ["worker_id"],
+            where: {
+              outlet_id,
+              day_of_week: today(),
+            },
+            _count: {
+              id: true,
+            },
+            orderBy: { worker_id: "asc" },
+          }),
+        ]);
+
+      return {
+        totalWorker,
+        totalDriver,
+        totalOnDuty: totalOnDutyByWorker.length,
+        today: today(),
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getSchedule(data: GetScheduleDTO) {
+    try {
+      const { role, station, name, outlet_id } = data;
+
+      // redifine the where
+      const where: Prisma.WorkerShiftWhereInput = {
+        outlet_id: outlet_id,
+      };
+
+      // role the filter
+      if (role === "driver") {
+        where.station = null;
+      } else if (role === "worker") {
+        where.station = { not: null };
+      }
+
+      // station filter
+      if (station) {
+        where.station = station;
+      }
+
+      // throw error if checking role === driver and station
+      if (role === "driver" && station) {
+        throw new HttpError(400, "Invalid request");
+      }
+
+      // get the data
+      const res = await this.prisma.workerShift.findMany({
+        where,
+        select: {
+          id: true,
+          worker_id: true,
+          day_of_week: true,
+          start_time: true,
+          end_time: true,
+          station: true,
+          worker: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: name ? { worker: { name: name } } : undefined,
+      });
+
+      // normalize
+      const normalized = res.map(({ worker, ...r }) => {
+        return {
+          ...r,
+          name: worker.name,
+          start_time: r.start_time.toISOString().slice(11, 16),
+          end_time: r.end_time.toISOString().slice(11, 16),
+        };
+      });
+      return normalized;
     } catch (error) {
       throw error;
     }

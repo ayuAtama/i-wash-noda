@@ -89,6 +89,11 @@ export class AddressValidation {
         id: "123e4567-e89b-12d3-a456-426614174000",
       },
     });
+
+  static UserIdSchema = z.uuid().meta({
+    description: "User ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  });
 }
 
 export type CreateAddressDto = z.infer<
@@ -100,3 +105,4 @@ export type UpdateAddressDto = z.infer<
 export type ParamsAddressDto = z.infer<
   typeof AddressValidation.ParamsAddressSchema
 >;
+export type UserIdDto = z.infer<typeof AddressValidation.UserIdSchema>;

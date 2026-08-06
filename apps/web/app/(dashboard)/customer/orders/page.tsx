@@ -14,16 +14,19 @@ import { formatDate, formatCurrency } from "@/lib/utils";
 
 const statusOptions = [
   { value: "", label: "All Statuses" },
+  { value: "waiting_for_driver_pickup", label: "Waiting for Pickup" },
+  { value: "out_for_pickup", label: "Out for Pickup" },
+  { value: "in_transit_to_outlet", label: "In Transit" },
   { value: "arrived_at_outlet", label: "Arrived" },
   { value: "washing_in_progress", label: "Washing" },
-  { value: "washing_completed", label: "Washed" },
   { value: "ironing_in_progress", label: "Ironing" },
-  { value: "ironing_completed", label: "Ironed" },
   { value: "packing_in_progress", label: "Packing" },
-  { value: "packed", label: "Packed" },
-  { value: "ready_for_pickup", label: "Ready" },
+  { value: "waiting_for_payment", label: "Waiting for Payment" },
+  { value: "waiting_for_driver_deliver", label: "Waiting for Delivery" },
   { value: "out_for_delivery", label: "Out for Delivery" },
   { value: "delivered", label: "Delivered" },
+  { value: "finished", label: "Finished" },
+  { value: "complaint_received", label: "Complaint" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
@@ -32,7 +35,7 @@ export default function CustomerOrdersPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer-orders"],
-    queryFn: () => api.get("/api/").then((r) => r.data),
+    queryFn: () => api.get("/api/orders").then((r) => r.data),
     retry: false,
   });
 
@@ -105,7 +108,7 @@ export default function CustomerOrdersPage() {
                     {formatDate(order.created_at)}
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {formatCurrency(order.total_price || 0)}
+                    {formatCurrency(order.total_amount || 0)}
                   </td>
                 </tr>
               ))}

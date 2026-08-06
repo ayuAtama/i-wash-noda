@@ -11,13 +11,10 @@ export class OutletRoute {
   public router = Router();
   private controller: OutletController;
 
-  constructor() {
-    this.controller = new OutletController(new OutletService());
+  constructor(controller: OutletController) {
+    this.controller = controller;
     this.getCoveragedOutlet();
     this.getAllOutlets();
-    this.createOutlet();
-    this.updateOutlet();
-    this.deleteOutlet();
   }
 
   private getCoveragedOutlet() {
@@ -36,6 +33,18 @@ export class OutletRoute {
       Validator.validate({ query: PaginationSchema }),
       this.controller.getAll,
     );
+  }
+}
+
+export class AdminOutletRoute {
+  public router = Router();
+  private controller: OutletController;
+
+  constructor(controller: OutletController) {
+    this.controller = controller;
+    this.createOutlet();
+    this.updateOutlet();
+    this.deleteOutlet();
   }
 
   private createOutlet() {
@@ -92,4 +101,6 @@ export class OutletRoute {
   }
 }
 
-export default new OutletRoute().router;
+const controller = new OutletController(new OutletService());
+export const adminOutletRoutes = new AdminOutletRoute(controller).router;
+export default new OutletRoute(controller).router;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { StationName } from "@/generated/prisma/enums";
 import "zod-openapi";
 
 const StationFilterEnum = z.enum(["washing", "ironing", "packing"]).meta({
@@ -50,6 +51,80 @@ export class AdminMismatchValidation {
     .meta({
       id: "RejectMismatch",
       description: "Reject a mismatched item",
+    });
+
+  static QueryValidation = z
+    .object({
+      stationName: z.enum(StationName).optional().meta({
+        description: "Filter by station name",
+        example: "washing",
+      }),
+    })
+    .meta({
+      id: "MismatchFilterQuery",
+      description: "Query params for filtering mismatches",
+      example: {
+        stationName: "washing",
+      },
+    });
+
+  static DetailMismatchDataParams = z
+    .object({
+      orderId: z.uuid().meta({
+        description: "Order ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      stationName: z.enum(StationName).meta({
+        description: "Station Name",
+        example: "washing",
+      }),
+    })
+    .meta({
+      id: "DetailMismatchDataParams",
+      description: "Path params for fetching detail mismatch data",
+      example: {
+        orderId: "123e4567-e89b-12d3-a456-426614174000",
+        stationName: "washing",
+      },
+    });
+
+  static OrderIdStationNameParams =
+    AdminMismatchValidation.DetailMismatchDataParams;
+
+  static ManageMismatchSchema = z
+    .object({
+      finalQuantities: z.array(
+        z.object({
+          itemId: z.uuid().meta({
+            description: "Item ID (UUID)",
+            example: "123e4567-e89b-12d3-a456-426614174000",
+          }),
+          latestQuantity: z.number().min(1).max(100).meta({
+            description: "Latest quantity of the item",
+            example: 10,
+          }),
+        }),
+      ),
+      itemDecisions: z.array(
+        z.object({
+          itemId: z.uuid().meta({
+            description: "Item ID (UUID)",
+            example: "123e4567-e89b-12d3-a456-426614174000",
+          }),
+          status: z.enum(["approved", "rejected"]).meta({
+            description: "Status of the item",
+            example: "approved",
+          }),
+          adminNote: z.string().optional().meta({
+            description: "Admin note for the item",
+            example: "Item is approved",
+          }),
+        }),
+      ),
+    })
+    .meta({
+      id: "ManageMismatch",
+      description: "Payload for manage mismatch data (body)",
     });
 }
 

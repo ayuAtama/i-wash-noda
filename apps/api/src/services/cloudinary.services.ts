@@ -1,40 +1,52 @@
+// apps/api/src/services/cloudinary.services.ts
 import cloudinary from "@/utils/cloudinary";
-import {
-  CloudinaryUploadResponse,
-  SignatureResponse,
-} from "@/types/cloudinary";
 import { getUnixTime } from "date-fns/getUnixTime";
+import { CloudinarySignatureServiceDto } from "@/validations/cloudinary.validation";
+
+type CloudinaryInstance = typeof cloudinary;
 
 export class CloudinaryService {
-  async getSignature(userId: string, folder: string) {
+  private readonly cloudinary: CloudinaryInstance;
+
+  constructor(cloudinaryClient: CloudinaryInstance = cloudinary) {
+    this.cloudinary = cloudinaryClient;
+  }
+
+  public async getSignature(
+    userId: CloudinarySignatureServiceDto["userId"],
+    folder: CloudinarySignatureServiceDto["folder"],
+    params?: CloudinarySignatureServiceDto["params"],
+    unique?: CloudinarySignatureServiceDto["unique"],
+  ) {
     try {
-      // getUnixTime automatically gets the current time in seconds,
-      // eliminating the need for division or rounding!
       const timestamp = getUnixTime(new Date());
 
-      // the parameters that need to be signed
       const paramsToSign = {
         timestamp: timestamp,
-        public_id: `avatar_${userId}`,
-        folder: folder, // /profile
-        overwrite: true, // for prevent user make a same upload flood the cloudinary.
-        allowed_formats: ["jpg", "png", "jpeg"],
+        public_id: `${folder}_${userId}${params ? `_${params}` : ""}${unique ? `_${timestamp}` : ""}`,
+        overwrite: true,
+        folder: `/${folder}`,
+        allowed_formats: ["jpg", "png", "jpeg", "pdf"],
       };
 
-      // sign the parameters
-      const signature = cloudinary.utils.api_sign_request(
+      const signature = this.cloudinary.utils.api_sign_request(
         paramsToSign,
         process.env.CLOUDINARY_API_SECRET! as string,
       );
 
-      // return the signature to controller
       return {
-        public_id: paramsToSign.public_id,
-        timestamp,
-        signature,
-        folder: "/profile",
-        cloudName: process.env.CLOUDINARY_CLOUD_NAME! as string,
-        apiKey: process.env.CLOUDINARY_API_KEY! as string,
+        success: true,
+        message: `Signature for ${folder}_${userId}${params ? `_${params}` : ""}${unique ? `_${timestamp}` : ""} generated successfully`,
+        data: {
+          public_id: paramsToSign.public_id,
+          timestamp,
+          signature,
+          folder: `/${folder}`,
+          overwrite: true,
+          allowed_formats: ["jpg", "png", "jpeg", "pdf"],
+          cloudName: process.env.CLOUDINARY_CLOUD_NAME! as string,
+          apiKey: process.env.CLOUDINARY_API_KEY! as string,
+        },
       };
     } catch (error) {
       throw error;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
@@ -11,44 +11,49 @@ import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { loadSnapScript, openSnapEmbed } from "@/lib/midtrans";
 
 const statusSteps = [
+  "waiting_for_driver_pickup",
+  "out_for_pickup",
+  "in_transit_to_outlet",
   "arrived_at_outlet",
   "washing_in_progress",
-  "washing_completed",
   "ironing_in_progress",
-  "ironing_completed",
   "packing_in_progress",
-  "packed",
-  "ready_for_pickup",
+  "waiting_for_payment",
+  "waiting_for_driver_deliver",
   "out_for_delivery",
   "delivered",
+  "finished",
 ];
 
 const statusLabels: Record<string, string> = {
+  waiting_for_driver_pickup: "Waiting for Driver Pickup",
+  out_for_pickup: "Out for Pickup",
+  in_transit_to_outlet: "In Transit to Outlet",
   arrived_at_outlet: "Arrived at Outlet",
   washing_in_progress: "Washing",
-  washing_completed: "Washing Completed",
   ironing_in_progress: "Ironing",
-  ironing_completed: "Ironing Completed",
   packing_in_progress: "Packing",
-  packed: "Packed",
-  ready_for_pickup: "Ready for Pickup",
+  waiting_for_payment: "Waiting for Payment",
+  waiting_for_driver_deliver: "Waiting for Driver Delivery",
   out_for_delivery: "Out for Delivery",
   delivered: "Delivered",
+  finished: "Finished",
 };
 
 export default function OrderDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [embedOpen, setEmbedOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer-orders"],
-    queryFn: () => api.get("/api/").then((r) => r.data),
+    queryFn: () => api.get("/api/orders").then((r) => r.data),
     retry: false,
   });
 
@@ -57,7 +62,7 @@ export default function OrderDetailPage() {
   const uploadMutation = useMutation({
     mutationFn: (file: File) => {
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("proof", file);
       return api.post(`/api/orders/${params.id}/payment-proof`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -83,6 +88,68 @@ export default function OrderDetailPage() {
       setUploading(false);
     }
   };
+
+  const syncMutation = useMutation({
+    mutationFn: () => api.post(`/api/orders/${params.id}/payment-sync`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+    },
+  });
+
+  const payMutation = useMutation({
+    mutationFn: () => api.post(`/api/orders/${params.id}/pay`),
+    onSuccess: async (res) => {
+      const data = res.data?.data;
+      const snapToken = data?.snap_token;
+      if (data?.already_paid) {
+        addToast({ type: "success", title: "Payment already settled" });
+        syncMutation.mutate();
+        return;
+      }
+      if (!snapToken) {
+        addToast({
+          type: "error",
+          title: "Pay failed",
+          message: "No snap token returned",
+        });
+        return;
+      }
+      try {
+        await loadSnapScript();
+        setEmbedOpen(true);
+        openSnapEmbed(snapToken, "snap-embed-container", {
+          onSuccess: () => {
+            addToast({ type: "success", title: "Payment successful" });
+            syncMutation.mutate();
+          },
+          onPending: () => {
+            addToast({ type: "info", title: "Payment pending" });
+            syncMutation.mutate();
+          },
+          onError: () => {
+            addToast({ type: "error", title: "Payment failed" });
+          },
+          onClose: () => {
+            setEmbedOpen(false);
+            syncMutation.mutate();
+          },
+        });
+      } catch (err: any) {
+        setEmbedOpen(false);
+        addToast({ type: "error", title: "Pay failed", message: err.message });
+      }
+    },
+    onError: (err: any) => {
+      addToast({
+        type: "error",
+        title: "Pay failed",
+        message: err.response?.data?.message,
+      });
+    },
+  });
 
   if (isLoading) return <PageSpinner />;
   if (!order)
@@ -148,8 +215,6 @@ export default function OrderDetailPage() {
                   <tr className="border-b border-gray-200 text-left text-gray-500">
                     <th className="pb-2 font-medium">Item</th>
                     <th className="pb-2 font-medium text-center">Qty</th>
-                    <th className="pb-2 font-medium text-right">Price</th>
-                    <th className="pb-2 font-medium text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -158,28 +223,20 @@ export default function OrderDetailPage() {
                       key={item.id}
                       className="border-b border-gray-50 last:border-0"
                     >
-                      <td className="py-2">
-                        {item.item?.name || item.item_id}
-                      </td>
+                      <td className="py-2">{item.name || item.item_id}</td>
                       <td className="py-2 text-center">
                         {item.quantity_initial}
-                      </td>
-                      <td className="py-2 text-right">
-                        {formatCurrency(item.price)}
-                      </td>
-                      <td className="py-2 text-right font-medium">
-                        {formatCurrency(item.subtotal)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200">
-                    <td colSpan={3} className="py-2 font-semibold text-right">
+                    <td colSpan={1} className="py-2 font-semibold text-right">
                       Total
                     </td>
                     <td className="py-2 text-right font-bold">
-                      {formatCurrency(order.total_price || 0)}
+                      {formatCurrency(order.total_amount || 0)}
                     </td>
                   </tr>
                 </tfoot>
@@ -200,16 +257,36 @@ export default function OrderDetailPage() {
               onChange={handleUpload}
               className="hidden"
             />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              loading={uploading || uploadMutation.isPending}
-            >
-              Upload Payment Proof
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              {order.status === "waiting_for_payment" && (
+                <Button
+                  onClick={() => {
+                    setEmbedOpen(true);
+                    payMutation.mutate();
+                  }}
+                  loading={payMutation.isPending}
+                >
+                  Pay with Midtrans
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                loading={uploading || uploadMutation.isPending}
+              >
+                Upload Payment Proof
+              </Button>
+            </div>
             <p className="text-xs text-gray-500 mt-2">
-              Upload a screenshot of your payment confirmation
+              Upload a screenshot of your payment confirmation, or pay online
+              via Midtrans Snap
             </p>
+            {embedOpen && (
+              <div
+                id="snap-embed-container"
+                className="mt-4 relative w-full inset-0 rounded-lg border border-gray-200"
+              />
+            )}
           </Card>
         </div>
       </div>

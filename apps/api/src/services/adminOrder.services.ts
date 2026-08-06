@@ -1,14 +1,19 @@
 // src/services/adminOrder.services.ts
-import { prisma } from "@/config/prisma";
+import { prisma as defaultPrisma, prisma, PrismaWrapper } from "@/config/prisma";
+import { OrderStatus } from "@/generated/prisma/enums";
 import { HttpError } from "@/utils/httpError";
 import {
+  ActionOfPaymentProofValidationDTO,
   AdminOrderInputDTO,
   CheckWalkInCustomerValidationDTO,
+  CustomerComplaintPayloadDTO,
   DeletePayloadDTO,
   IDParamSchemaDTO,
   ManualOrderInputDTO,
   ManualOrderPayloadValidationDTO,
   OutletIdParamsSchemaDTO,
+  outletIDSchemaDTO,
+  OutletIDValidationDTO,
   UpdateOrderItemInputDTO,
   UpdateOrderItemPayloadValidationDTO,
   UpdatePayloadDTO,
@@ -21,13 +26,15 @@ import {
 } from "@/validations/adminOrder.validation";
 
 export class AdminOrderService {
+  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+
   async createNewWalkInCustomer(data: WalkInCustomerPayloadDTO) {
     try {
       // destructing the data
       const { name, phone, admin_id, outlet_id } = data;
 
       // create the user
-      const customer = await prisma.walkInCustomer.create({
+      const customer = await this.prisma.walkInCustomer.create({
         data: {
           name,
           phone,
@@ -35,7 +42,7 @@ export class AdminOrderService {
           outlet_id: outlet_id,
         },
       });
-      // const customer = await prisma.walkInCustomer.create({
+      // const customer = await this.prisma.walkInCustomer.create({
       //   data,
       // });
       if (!customer) {
@@ -64,7 +71,7 @@ export class AdminOrderService {
       if (!keyword.trim()) throw new HttpError(400, "Invalid keyword");
 
       // check if the keyword valid
-      const customer = await prisma.walkInCustomer.findMany({
+      const customer = await this.prisma.walkInCustomer.findMany({
         where: {
           outlet_id,
           OR: [
@@ -80,6 +87,9 @@ export class AdminOrderService {
               },
             },
           ],
+        },
+        orderBy: {
+          created_at: "desc",
         },
       });
 
@@ -105,7 +115,7 @@ export class AdminOrderService {
       // strip the id
       const { id, outlet_id, ...rest } = data;
       // update the data of the Walkin Customer
-      const update = await prisma.walkInCustomer.update({
+      const update = await this.prisma.walkInCustomer.update({
         where: {
           id,
           outlet_id,
@@ -129,7 +139,7 @@ export class AdminOrderService {
       const { id, outlet_id } = payload;
 
       // delete the account of the Walkin Customer
-      const query = await prisma.walkInCustomer.findUnique({
+      const query = await this.prisma.walkInCustomer.findUnique({
         where: {
           id,
           outlet_id,
@@ -138,7 +148,7 @@ export class AdminOrderService {
 
       if (!query) throw new HttpError(404, "Walkin Customer not found");
 
-      const deleted = await prisma.walkInCustomer.delete({
+      const deleted = await this.prisma.walkInCustomer.delete({
         where: {
           id: query.id,
         },
@@ -162,11 +172,17 @@ export class AdminOrderService {
   async manualCreateOrderWalkIn(data: ManualOrderPayloadValidationDTO) {
     try {
       // destructure the data
-      const { outlet_id, total_kilo, walkin_customer_id, paid, source, items } =
-        data;
+      const {
+        outlet_id,
+        total_kilo,
+        id: walkin_customer_id,
+        paid,
+        source,
+        items,
+      } = data;
 
       // make prisma transaction
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async (tx) => {
         // get the data price of the laundry from the outlet
         const { price_per_kg } = await tx.outlet.findFirstOrThrow({
           where: { id: outlet_id },
@@ -394,6 +410,7 @@ export class AdminOrderService {
               select: {
                 address: true,
               },
+
             },
             pickupDriver: {
               select: {
@@ -463,6 +480,7 @@ export class AdminOrderService {
       });
 
       return updated;
+
     } catch (error) {
       throw error;
     }
@@ -471,16 +489,24 @@ export class AdminOrderService {
   async updateItemOfOrder(data: UpdateOrderItemPayloadValidationDTO) {
     try {
       // destructure the data
-      const { outlet_id, orderId: order_id, items } = data;
+      const {
+        outlet_id,
+        orderId: order_id,
+        items,
+        totalWeights: total_kilo,
+      } = data;
 
       // not allowed the order that doesn't match with the order_outlet's outlet_admin
-      const order = await prisma.order.findUnique({
+      const order = await this.prisma.order.findUnique({
         where: {
           id: order_id,
           outlet_id: outlet_id,
         },
         select: {
           id: true,
+          status: true,
+          pickup_fee: true,
+          delivery_fee: true,
           customer: {
             select: {
               name: true,
@@ -496,8 +522,13 @@ export class AdminOrderService {
         );
       }
 
+      // guard: only allow submission once
+      if (order.status !== "arrived_at_outlet") {
+        throw new HttpError(400, "Order already submitted, cannot modify");
+      }
+
       // make a transaction for safety
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async (tx) => {
         // manage the order items (separate for existing and new items)
 
         // sperate the existing first
@@ -658,26 +689,61 @@ export class AdminOrderService {
           },
         });
 
+        // build order update data
+        const orderUpdateData: {
+          status: OrderStatus;
+          total_kilo?: number;
+          laundry_price?: number;
+          total_amount?: number;
+        } = {
+          status: "washing_in_progress",
+        };
+
+        // if total_kilo provided, recalculate prices
+        if (total_kilo !== undefined) {
+          const { price_per_kg } = await tx.outlet.findFirstOrThrow({
+            where: { id: outlet_id },
+            select: { price_per_kg: true },
+          });
+          const laundryPrice = Math.ceil(total_kilo * price_per_kg);
+          const totalAmount =
+            laundryPrice + order.pickup_fee + order.delivery_fee;
+          orderUpdateData.total_kilo = total_kilo;
+          orderUpdateData.laundry_price = laundryPrice;
+          orderUpdateData.total_amount = totalAmount;
+        }
+
         // update the order's status to the next step
         const updateOrderStatus = await tx.order.update({
           where: {
             id: order_id,
           },
-          data: {
-            status: "washing_in_progress",
-          },
+          data: orderUpdateData,
           select: {
             status: true,
+            total_kilo: true,
+            laundry_price: true,
+            total_amount: true,
           },
         });
 
         // return the result
+        const { customer, ...rest } = order;
         return {
           order: {
-            ...order,
+            ...rest,
+            customer_name: customer?.name,
             status: updateOrderStatus.status,
+            total_kilo: updateOrderStatus.total_kilo,
+            laundry_price: updateOrderStatus.laundry_price,
+            total_amount: updateOrderStatus.total_amount,
           },
-          finalOrderItems,
+          finalOrderItems: finalOrderItems.map((item) => {
+            return {
+              name: item.item.name,
+              quantity: item.quantity_initial,
+            };
+          }),
         };
       });
 
@@ -690,4 +756,328 @@ export class AdminOrderService {
       throw error;
     }
   }
+
+  async checkCustomerPaymentProof(data: outletIDSchemaDTO) {
+    const { outlet_id: outletId } = data;
+
+    const listPaymentProof = await this.prisma.paymentProof.findMany({
+      where: {
+        order: {
+          outlet_id: outletId,
+        },
+        is_deleted: false,
+      },
+      select: {
+        id: true,
+        image_url: true,
+        created_at: true,
+        updated_at: true,
+        is_deleted: true,
+        status: true,
+        order: {
+          select: {
+            id: true,
+            customer: {
+              select: {
+                name: true,
+                image: true,
+              },
+            },
+            total_amount: true,
+          },
+        },
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+    });
+
+    const normalizedData = listPaymentProof.map((item) => {
+      const customer_name = item.order.customer?.name
+        ? item.order.customer.name
+        : null;
+      const customer_image = item.order.customer?.image
+        ? item.order.customer.image
+        : null;
+
+      return {
+        id: item.id,
+        orderId: item.order.id,
+        customerName: customer_name,
+        customerImage: customer_image,
+        approved: item.status,
+        isDeleted: item.is_deleted,
+        imageProofUrl: item.image_url,
+        totalAmount: item.order.total_amount,
+        updatedAt: item.updated_at,
+        createdAt: item.created_at,
+      };
+    });
+
+    return {
+      success: true,
+      message: "Payment proof fetched successfully",
+      data: normalizedData,
+    };
+  }
+
+  async actionOfPaymentProof(data: ActionOfPaymentProofValidationDTO) {
+    const { outlet_id: outletId, id: paymentProofID, action } = data;
+
+    const isPaymentProofExist = await this.prisma.paymentProof.findFirst({
+      where: {
+        id: paymentProofID,
+        order: {
+          outlet_id: outletId,
+        },
+      },
+      select: {
+        id: true,
+        order_id: true,
+        status: true,
+      },
+    });
+
+    if (!isPaymentProofExist)
+      throw new HttpError(404, "Payment proof not found");
+
+    if (isPaymentProofExist.status !== "pending")
+      throw new HttpError(409, "Payment proof already reviewed");
+
+    // reject
+    if (action === "rejected") {
+      const reject = await this.prisma.paymentProof.update({
+        where: {
+          id: paymentProofID,
+          order: {
+            outlet_id: outletId,
+          },
+        },
+        data: {
+          status: "rejected",
+          is_deleted: true,
+        },
+        select: {
+          id: true,
+          image_url: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
+      return {
+        success: true,
+        message: "Payment proof rejected successfully",
+        data: reject,
+      };
+    }
+
+    // approve
+    const transactionResult = await this.prisma.$transaction(async (tx) => {
+      const approve = await tx.paymentProof.update({
+        where: { id: paymentProofID },
+        data: { status: "approved" },
+        select: { order_id: true, status: true },
+      });
+
+      let currentOrder = await tx.order.update({
+        where: {
+          id: approve.order_id,
+          outlet_id: outletId,
+        },
+        data: {
+          paid: true,
+        },
+        select: {
+          id: true,
+          status: true,
+          paid: true,
+          deliveryRequests: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      //happened if change from database (easter egg)
+      if (currentOrder.deliveryRequests.length > 0) {
+        throw new HttpError(409, "Hehe, the dev like a yuris");
+      }
+
+      const deliveryRequest = await tx.deliveryRequest.create({
+        data: {
+          order_id: currentOrder.id,
+          accepted: false,
+        },
+      });
+
+      if (currentOrder.status === "waiting_for_payment") {
+        currentOrder = await tx.order.update({
+          where: {
+            id: currentOrder.id,
+          },
+          data: { status: "waiting_for_driver_deliver" },
+          select: {
+            id: true,
+            status: true,
+            paid: true,
+            deliveryRequests: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        });
+      }
+
+      return {
+        order: currentOrder,
+        paymentProof: approve,
+        deliveryRequest: deliveryRequest,
+      };
+    });
+
+    return {
+      success: true,
+      message: "Payment proof approved successfully",
+      data: transactionResult,
+    };
+  }
+
+  async getAllPendingComplaints(data: OutletIDValidationDTO) {
+    try {
+      const outlet_id = data;
+
+      const complaintLists = await this.prisma.complaint.findMany({
+        where: {
+          order: {
+            outlet_id: outlet_id,
+          },
+          status: "pending",
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!complaintLists) throw new HttpError(404, "Complaint not found");
+
+      const normalized = complaintLists.map((complaint) => {
+        return {
+          id: complaint.id,
+          orderId: complaint.order_id,
+          customerName: complaint.user.name,
+          message: complaint.message,
+          imageUrl: complaint.image_url,
+          status: complaint.status,
+          createdAt: complaint.created_at,
+        };
+      });
+
+      return {
+        success: true,
+        message: "Complaints fetched successfully",
+        data: normalized,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async actionOfCustomerComplaint(data: CustomerComplaintPayloadDTO) {
+    try {
+      const {
+        complaintId,
+        status,
+        adminResponse: admin_response,
+        adminId,
+      } = data;
+
+      const guard = await this.prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: { id: true, status: true },
+      });
+      if (!guard) throw new HttpError(404, "Complaint not found");
+      if (guard.status === "resolved")
+        throw new HttpError(409, "Complaint already resolved");
+      if (guard.status !== "pending")
+        throw new HttpError(409, "Complaint already responded");
+
+      const { update, orderUpdate } = await this.prisma.$transaction(
+        async (tx) => {
+          const update = await tx.complaint.update({
+            where: { id: guard.id },
+            data: {
+              admin_response: admin_response,
+              admin_id: adminId,
+              status: status,
+              resolved_at: status === "resolved" ? new Date() : null,
+            },
+            select: {
+              id: true,
+              order_id: true,
+              user: {
+                select: {
+                  name: true,
+                },
+              },
+              order: {
+                select: {
+                  pickupAddress: {
+                    select: {
+                      address: true,
+                      lat: true,
+                      lng: true,
+                    },
+                  },
+                },
+              },
+              message: true,
+              image_url: true,
+              admin_response: true,
+              status: true,
+              resolved_at: true,
+              updated_at: true,
+              created_at: true,
+            },
+          });
+
+          const orderUpdate = await tx.order.update({
+            where: { id: update.order_id },
+            data: { status: "finished", confirmed_at: new Date() },
+            select: { id: true, status: true },
+          });
+
+          return { update, orderUpdate };
+        },
+      );
+
+      const normalized = {
+        id: update.id,
+        userName: update.user.name,
+        orderStatus: orderUpdate.status,
+        orderAddress: update.order.pickupAddress?.address,
+        orderCoordinates: `${update.order.pickupAddress?.lat},${update.order.pickupAddress?.lng}`,
+        message: update.message,
+        imageUrl: update.image_url,
+        adminResponse: update.admin_response,
+        status: update.status,
+        resolvedAt: update.resolved_at,
+        updatedAt: update.updated_at,
+        createdAt: update.created_at,
+      };
+
+      return {
+        success: true,
+        message: "Complaint updated successfully",
+        data: normalized,
+      };
+    } catch (error) {
+      throw error;
+    }
+  };
 }

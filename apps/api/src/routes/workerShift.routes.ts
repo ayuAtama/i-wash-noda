@@ -1,4 +1,4 @@
-// apps/api/src/routes/workerShift.services.ts
+// apps/api/src/routes/workerShift.routes.ts
 import { Router } from "express";
 import { z } from "zod";
 
@@ -11,6 +11,7 @@ const UnScheduledWorkerPaginationSchema = FetchUnScheduledWorkerSchema.extend({
   page: PaginationSchema.shape.page,
   limit: PaginationSchema.shape.limit,
 });
+
 import { WorkerShiftController } from "@/controllers/workerShift.controller";
 import { WorkerShiftService } from "@/services/workerShift.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
@@ -31,8 +32,8 @@ export class WorkerShiftRoute {
   public router = Router();
   private controller: WorkerShiftController;
 
-  constructor() {
-    this.controller = new WorkerShiftController(new WorkerShiftService());
+  constructor(controller: WorkerShiftController) {
+    this.controller = controller;
     this.createSchedule();
     this.updateSchedule();
     this.fetchUnScheduledWorker();
@@ -42,16 +43,18 @@ export class WorkerShiftRoute {
     this.fetchIroningWorkers();
     this.fetchPackingWorkers();
     this.fetchDrivers();
-    this.getSchedule();
+    this.scheduleSummaryDashboard();
+    this.getScheduleById();
   }
 
   private createSchedule() {
     this.router.post(
-      "/",
+      "/:id",
       authenticationMiddleware,
       authorizationMiddleware("super_admin", "outlet_admin"),
       resolveContext,
       Validator.validate({
+        params: WorkerShiftIdParamsSechema,
         body: CreateWorkerShiftSchema,
       }),
       this.controller.createSchedule,
@@ -140,7 +143,7 @@ export class WorkerShiftRoute {
     );
   }
 
-  private getSchedule() {
+  private getScheduleById() {
     this.router.get(
       "/:id",
       authenticationMiddleware,
@@ -166,6 +169,18 @@ export class WorkerShiftRoute {
       this.controller.fetchUnScheduledWorker,
     );
   }
+
+  private scheduleSummaryDashboard() {
+    this.router.get(
+      "/summary-dashboard",
+      authenticationMiddleware,
+      authorizationMiddleware("outlet_admin", "super_admin"),
+      resolveContext,
+      this.controller.scheduleSummaryDashboard,
+    );
+  }
 }
 
-export default new WorkerShiftRoute().router;
+export default new WorkerShiftRoute(
+  new WorkerShiftController(new WorkerShiftService()),
+).router;

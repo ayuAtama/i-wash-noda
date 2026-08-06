@@ -14,7 +14,7 @@ export class AdminValidation {
           description: "User role",
           example: "driver",
         }),
-      outlet_id: z.uuid().optional().meta({
+      outlet_id: z.uuid().meta({
         description: "Outlet ID (required for driver, outlet_admin)",
         example: "123e4567-e89b-12d3-a456-426614174000",
       }),
@@ -73,6 +73,21 @@ export class AdminValidation {
         userId: "123e4567-e89b-12d3-a456-426614174000",
       },
     });
+
+  static UserIdParamSchema = z
+    .object({
+      userId: z.uuid().meta({
+        description: "UUID of the user",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "UserIdParam",
+      description: "Payload for identifying a user by ID",
+      example: {
+        userId: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
 }
 
 export type RegisterInternalUserDto = z.infer<
@@ -80,3 +95,4 @@ export type RegisterInternalUserDto = z.infer<
 >;
 export type ChangeRoleDto = z.infer<typeof AdminValidation.ChangeRoleSchema>;
 export type RemoveUserDto = z.infer<typeof AdminValidation.RemoveUserSchema>;
+export type UserIdParamDto = z.infer<typeof AdminValidation.UserIdParamSchema>;

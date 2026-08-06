@@ -1,19 +1,29 @@
 // apps/api/src/services/admin.services.ts
-import { prisma } from "@/config/prisma";
-import { Prisma, Role } from "@/generated/prisma/client";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import { sendVerifyEmailbyAdmin } from "@/utils/mail";
 import { validateMXRecord } from "@/utils/mxRecordValidatior";
 import { generate6DigitCode, hashToken } from "@/utils/tokenGenerator";
 import { addHours } from "date-fns";
+import {
+  RegisterInternalUserDto,
+  ChangeRoleDto,
+  UserIdParamDto,
+} from "@/validations/admin.validation";
 
 export class AdminService {
-  async registerInternalUser(data: Prisma.UserCreateInput) {
+  // private readonly prisma: PrismaWrapper;
+
+  // constructor(prismaClient: PrismaWrapper = prisma) {
+  //   this.prisma = prismaClient;
+  // }
+
+  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+
+  async registerInternalUser(data: RegisterInternalUserDto) {
     try {
-      // create the user
       const { result, userId, hashedToken, email, role } =
-        await prisma.$transaction(async (tx) => {
-          // 0. handle register error
+        await this.prisma.$transaction(async (tx) => {
           const existingUserNotCompleted = await tx.user.findUnique({
             where: {
               email: data.email.toLocaleLowerCase().trim(),
@@ -29,7 +39,6 @@ export class AdminService {
             );
           }
 
-          // 0.5. check the email's domain (mx record)
           const validDomain = await validateMXRecord(
             data.email.toLocaleLowerCase().trim(),
           );
@@ -37,12 +46,10 @@ export class AdminService {
             throw new HttpError(422, "Please retry with real email address");
           }
 
-          // create the internal user
           const user = await tx.user.create({
             data,
           });
 
-          // make a random token
           const generateToken = generate6DigitCode();
           const hashedToken = hashToken(generateToken);
 
@@ -75,9 +82,9 @@ export class AdminService {
     }
   }
 
-  async deleteUser(userId: string) {
+  async deleteUser(userId: UserIdParamDto["userId"]) {
     try {
-      return await prisma.user.update({
+      return await this.prisma.user.update({
         where: { id: userId },
         data: { is_deleted: true },
         select: { id: true, name: true, email: true },
@@ -87,9 +94,12 @@ export class AdminService {
     }
   }
 
-  async changeRole(userId: string, role: Role) {
+  async changeRole(
+    userId: ChangeRoleDto["userId"],
+    role: ChangeRoleDto["role"],
+  ) {
     try {
-      return await prisma.user.update({
+      return await this.prisma.user.update({
         where: { id: userId },
         data: { role: role },
         select: { id: true, name: true, email: true, role: true },
@@ -104,7 +114,7 @@ export class AdminService {
       const { skip, take } = { skip: (page - 1) * limit, take: limit };
       const where = { is_deleted: false, emailVerified: true };
       const [users, total] = await Promise.all([
-        prisma.user.findMany({
+        this.prisma.user.findMany({
           where,
           omit: {
             pending_email: true,
@@ -117,12 +127,13 @@ export class AdminService {
           skip,
           take,
         }),
-        prisma.user.count({ where }),
+        this.prisma.user.count({ where }),
       ]);
       return {
         data: users,
         meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
       };
+
     } catch (error) {
       throw error;
     }

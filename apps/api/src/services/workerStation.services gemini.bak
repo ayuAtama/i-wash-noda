@@ -1,0 +1,477 @@
+// /api/src/services/workerStation.services.ts
+import { prisma } from "@/config/prisma";
+import { HttpError } from "@/utils/httpError";
+import {
+  MismatchStatus,
+  OrderStatus,
+  StationName,
+  WorkerStation,
+} from "@/generated/prisma/client";
+import WorkerStationStrategy from "@/types/workerStationStrategy";
+import {
+  AssignJobServiceMethodDTO,
+  AssignJobServiceStrategyDTO,
+  CheckActiveJobsPayloadDTO,
+  checkActiveJobsStrategyDTO,
+  CheckAvailableJobsPayloadDTO,
+  MarkDoneServiceMethodDTO,
+  MarkDoneServiceStrategyDTO,
+  OutletIDPayloadDTO,
+  ReInputServiceMethodPayloadDTO,
+  ReInputServiceStrategyPayloadDTO,
+} from "@/validations/workerStation.validation";
+import isEqual from "lodash/isEqual";
+
+export class WorkerStationService {
+  private strategies: Record<WorkerStation, WorkerStationStrategy> = {
+    washing: new WashingService(),
+    ironing: new IroningService(),
+    packing: new PackingService(),
+  };
+
+  async checkAvailableJobs(data: CheckAvailableJobsPayloadDTO) {
+    try {
+      const { worker_station, outlet_id } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.checkAvailableJobs(outlet_id);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async checkActiveJobs(data: CheckActiveJobsPayloadDTO) {
+    try {
+      const { worker_station, outlet_id, worker_id } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.checkActiveJobs({
+        outletId: outlet_id,
+        workerId: worker_id,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async assignJob(data: AssignJobServiceStrategyDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.assignJob(rest);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async reInputItem(data: ReInputServiceStrategyPayloadDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.reInputItem(rest);
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async markDone(data: MarkDoneServiceStrategyDTO) {
+    try {
+      const { workerStation: worker_station, ...rest } = data;
+
+      const strategy = this.strategies[worker_station as WorkerStation];
+      if (!strategy) {
+        throw new HttpError(400, "Invalid worker station");
+      }
+
+      return await strategy.markDone(rest);
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  BASE STRATEGY (DRY IMPLEMENTATION)
+// ---------------------------------------------------------------------------
+abstract class BaseWorkerStationStrategy implements WorkerStationStrategy {
+  constructor(
+    protected station: StationName,
+    protected inProgressStatus: OrderStatus,
+    protected workerIdField: string,
+    protected completedAtField: string,
+    protected prerequisiteFields: string[],
+    protected uncompletedFields: string[],
+    protected nextStatus: OrderStatus,
+    protected nextWorkerIdField: string | null,
+    protected prevStationForValidation: StationName | null
+  ) {}
+
+  private normalizeJobs(jobs: any[]) {
+    return jobs.map(({ customer, walkInCustomer, ...rest }) => {
+      const customer_name = customer?.name ?? walkInCustomer?.name;
+      if (!customer_name) {
+        throw new HttpError(400, "Customer name not found");
+      }
+      return {
+        ...rest,
+        customer_name,
+      };
+    });
+  }
+
+  protected async getReferenceItems(orderId: string) {
+    if (!this.prevStationForValidation) {
+      const items = await prisma.orderItem.findMany({
+        where: { order_id: orderId },
+        select: { item_id: true, quantity_initial: true },
+      });
+      return items.map((i) => ({ item_id: i.item_id, quantity: i.quantity_initial }));
+    } else {
+      const items = await prisma.stationSummary.findMany({
+        where: { order_id: orderId, station: this.prevStationForValidation },
+        select: { item_id: true, latest_quantity: true },
+      });
+      return items.map((i) => ({ item_id: i.item_id, quantity: i.latest_quantity }));
+    }
+  }
+
+  async checkAvailableJobs(outletId: OutletIDPayloadDTO["outlet_id"]) {
+    try {
+      const prerequisites = this.prerequisiteFields.reduce((acc, field) => {
+        acc[field] = { not: null };
+        return acc;
+      }, {} as Record<string, any>);
+
+      const availableJobs = await prisma.order.findMany({
+        where: {
+          outlet_id: outletId,
+          status: this.inProgressStatus,
+          [this.workerIdField]: null,
+          ...prerequisites,
+          OR: [{ customer_id: { not: null } }, { walkin_customer_id: { not: null } }],
+        },
+        select: {
+          id: true,
+          status: true,
+          source: true,
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
+        },
+      });
+
+      return {
+        success: true,
+        message: "Available jobs fetched successfully",
+        data: this.normalizeJobs(availableJobs),
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async checkActiveJobs(data: checkActiveJobsStrategyDTO) {
+    try {
+      const { outletId, workerId } = data;
+
+      const prerequisites = this.prerequisiteFields.reduce((acc, field) => {
+        acc[field] = { not: null };
+        return acc;
+      }, {} as Record<string, any>);
+
+      const uncompleted = this.uncompletedFields.reduce((acc, field) => {
+        acc[field] = null;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const activeJobs = await prisma.order.findMany({
+        where: {
+          outlet_id: outletId,
+          status: this.inProgressStatus,
+          [this.workerIdField]: workerId,
+          ...prerequisites,
+          ...uncompleted,
+          OR: [{ customer_id: { not: null } }, { walkin_customer_id: { not: null } }],
+        },
+        select: {
+          id: true,
+          status: true,
+          source: true,
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
+        },
+      });
+
+      return {
+        success: true,
+        message: "Active jobs fetched successfully",
+        data: this.normalizeJobs(activeJobs),
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async assignJob(data: AssignJobServiceMethodDTO) {
+    try {
+      const { userId, outletId, orderId } = data;
+
+      const prerequisites = this.prerequisiteFields.reduce((acc, field) => {
+        acc[field] = { not: null };
+        return acc;
+      }, {} as Record<string, any>);
+
+      const assignedJob = await prisma.order.updateMany({
+        where: {
+          id: orderId,
+          outlet_id: outletId,
+          status: this.inProgressStatus,
+          [this.workerIdField]: null,
+          ...prerequisites,
+        },
+        data: {
+          [this.workerIdField]: userId,
+        },
+      });
+
+      if (assignedJob.count === 0) {
+        throw new HttpError(409, "This job already assigned to another worker or unavailable.");
+      }
+
+      return {
+        success: true,
+        message: "Job assigned successfully",
+        data: `Order ID: ${orderId}`,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async reInputItem(data: ReInputServiceMethodPayloadDTO) {
+    try {
+      const { orderId: order_id, userId: worker_id, items } = data;
+
+      const referenceItems = await this.getReferenceItems(order_id);
+
+      const correctItems = items.filter((payload) =>
+        referenceItems.some((dbItem) => dbItem.item_id === payload.itemId && dbItem.quantity === payload.itemQuantity)
+      );
+
+      const incorrectItems = items.filter((payload) => {
+        const dbItem = referenceItems.find((db) => db.item_id === payload.itemId);
+        return dbItem ? dbItem.quantity !== payload.itemQuantity : false;
+      });
+
+      const notExistItems = items.filter((payload) => {
+        const dbItem = referenceItems.find((db) => db.item_id === payload.itemId);
+        return !dbItem;
+      });
+
+      if (correctItems.length === referenceItems.length) {
+        const dataStationSummary = correctItems.map((item) => ({
+          order_id,
+          item_id: item.itemId,
+          latest_quantity: item.itemQuantity,
+          station: this.station,
+        }));
+
+        const dataStationLog = dataStationSummary.map((item) => ({
+          order_id: item.order_id,
+          item_id: item.item_id,
+          station: item.station,
+          worker_id: worker_id,
+          quantity_input: item.latest_quantity,
+          status: "approved" as MismatchStatus,
+          admin_note: "Auto Approved because the item match!",
+        }));
+
+        const result = await prisma.$transaction(async (tx) => {
+          const stationLog = await tx.orderStationLog.createManyAndReturn({ data: dataStationLog });
+          const stationSummary = await tx.stationSummary.createManyAndReturn({ data: dataStationSummary });
+          return { stationLog, stationSummary };
+        });
+
+        return {
+          success: true,
+          message: "Item re-input successfully",
+          data: { stationLog: result.stationLog, stationSummary: result.stationSummary },
+        };
+      } else {
+        const normalize = (itemsArr: Array<{ itemId: string; itemQuantity: number }>) =>
+          itemsArr.map((i) => ({
+            order_id: order_id as string,
+            item_id: i.itemId,
+            station: this.station,
+            worker_id: worker_id as string,
+            quantity_input: i.itemQuantity,
+            status: "pending" as MismatchStatus,
+          }));
+
+        const result = await prisma.$transaction([
+          prisma.orderStationLog.createManyAndReturn({ data: normalize(correctItems) }),
+          prisma.orderStationLog.createManyAndReturn({ data: normalize(incorrectItems) }),
+          prisma.orderStationLog.createManyAndReturn({ data: normalize(notExistItems) }),
+        ]);
+
+        return {
+          success: false,
+          message: "Item re-input failed waiting for admin approval",
+          data: result,
+        };
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async markDone(data: MarkDoneServiceMethodDTO) {
+    try {
+      const { orderId, userId: workerId, outletId } = data;
+
+      const pending = await prisma.orderStationLog.findMany({
+        where: {
+          order_id: orderId,
+          worker_id: workerId,
+          station: this.station,
+          status: "pending" as MismatchStatus,
+        },
+      });
+
+      if (pending.length > 0) {
+        throw new HttpError(400, "Failed to mark completed, there are pending item re-input waiting for admin approval");
+      }
+
+      const referenceItems = await this.getReferenceItems(orderId);
+      const currentItemsRaw = await prisma.stationSummary.findMany({
+        where: { order_id: orderId, station: this.station },
+        select: { item_id: true, latest_quantity: true },
+      });
+      
+      const currentItems = currentItemsRaw.map((i) => ({ item_id: i.item_id, quantity: i.latest_quantity }));
+
+      // Sorting to ensure consistent lodash/isEqual matching independent of db return order
+      const sortById = (a: { item_id: string }, b: { item_id: string }) => a.item_id.localeCompare(b.item_id);
+      referenceItems.sort(sortById);
+      currentItems.sort(sortById);
+
+      if (!isEqual(referenceItems, currentItems)) {
+        let errMsg = "Failed to mark completed, there are pending item re-input waiting for admin approval";
+        if (this.station === "ironing") errMsg = "Failed to mark completed, ironing summary does not match washing summary";
+        if (this.station === "packing") errMsg = "Failed to mark completed, packing summary does not match ironing summary";
+        
+        throw new HttpError(400, errMsg);
+      }
+
+      const updateData: any = {
+        [this.completedAtField]: new Date(),
+        status: this.nextStatus,
+      };
+
+      if (this.nextWorkerIdField) {
+        updateData[this.nextWorkerIdField] = null;
+      }
+
+      const complete = await prisma.order.update({
+        where: {
+          id: orderId,
+          outlet_id: outletId,
+          [this.workerIdField]: workerId,
+        },
+        data: updateData,
+        select: {
+          id: true,
+          status: true,
+          source: true,
+          customer: { select: { name: true } },
+          walkInCustomer: { select: { name: true } },
+        },
+      });
+
+      const { customer, walkInCustomer, ...rest } = complete;
+      const customerName = customer?.name ?? walkInCustomer?.name;
+      if (!customerName) {
+        throw new HttpError(400, "Customer name not found");
+      }
+
+      return {
+        success: true,
+        message: `${this.station.charAt(0).toUpperCase() + this.station.slice(1)} job completed`,
+        data: {
+          ...rest,
+          customer_name: customerName,
+        },
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  CONCRETE STRATEGIES
+// ---------------------------------------------------------------------------
+class WashingService extends BaseWorkerStationStrategy {
+  constructor() {
+    super(
+      "washing",
+      "washing_in_progress",
+      "washing_worker_id",
+      "washing_completed_at",
+      [], // Prerequisites
+      ["washing_completed_at", "ironing_completed_at", "packing_completed_at"], // Fields to check as incomplete
+      "ironing_in_progress",
+      "ironing_worker_id",
+      null // Validates against OrderItem
+    );
+  }
+}
+
+class IroningService extends BaseWorkerStationStrategy {
+  constructor() {
+    super(
+      "ironing",
+      "ironing_in_progress",
+      "ironing_worker_id",
+      "ironing_completed_at",
+      ["washing_completed_at"], // Prerequisites
+      ["ironing_completed_at", "packing_completed_at"], // Fields to check as incomplete
+      "packing_in_progress",
+      "packing_worker_id",
+      "washing" // Validates against Washing StationSummary
+    );
+  }
+}
+
+class PackingService extends BaseWorkerStationStrategy {
+  constructor() {
+    super(
+      "packing",
+      "packing_in_progress",
+      "packing_worker_id",
+      "packing_completed_at",
+      ["washing_completed_at", "ironing_completed_at"], // Prerequisites
+      ["packing_completed_at"], // Fields to check as incomplete
+      "waiting_for_payment",
+      null,
+      "ironing" // Validates against Ironing StationSummary
+    );
+  }
+}

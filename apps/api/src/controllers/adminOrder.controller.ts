@@ -13,8 +13,12 @@ import {
   IDParamSchemaDTO,
   WalkInCustomerPayloadDTO,
   CheckWalkInCustomerValidationDTO,
+  WalkInCustomerIdParamsSchemaDTO,
   UpdatePayloadDTO,
   DeletePayloadDTO,
+  PaymentParamsDTO,
+  ComplaintParamsValidationDTO,
+  ComplaintBodyValidationDTO,
 } from "@/validations/adminOrder.validation";
 import { PaginationDTO } from "@/validations/pagination.validation";
 
@@ -198,13 +202,14 @@ export class AdminOrderController {
         throw new HttpError(400, "Missing order data");
       }
       const body = req.validated.body as ManualOrderInputDTO;
+      const { id } = req.validated.params as WalkInCustomerIdParamsSchemaDTO;
       const context = req.context;
       if (!context) {
         throw new HttpError(401, "Outlet id not found");
       }
       const outletId = context.outlet_id;
 
-      const data = { ...body, outlet_id: outletId };
+      const data = { ...body, id, outlet_id: outletId };
       //console.log(outletId, worker_station);
 
       const result = await this.adminOrderService.manualCreateOrderWalkIn(data);
@@ -299,6 +304,104 @@ export class AdminOrderController {
         message: result.message,
         data: result.data,
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  checkCustomerPaymentProof = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (!req.context)
+        throw new HttpError(
+          500,
+          "The Developer forget to use the resolveContext middleware",
+        );
+      const outlet_id = req.context.outlet_id;
+
+      const result = await this.adminOrderService.checkCustomerPaymentProof({
+        outlet_id,
+      });
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  actionOfPaymentProof = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (!req.validated)
+        throw new HttpError(
+          500,
+          "The developer made a mistake, and forgot to use the validate middleware",
+        );
+      if (!req.context)
+        throw new HttpError(
+          500,
+          "The Devs secretly likes you (resolveContext )",
+        );
+      const { outlet_id } = req.context;
+      const { id, action } = req.validated.params as PaymentParamsDTO;
+      const result = await this.adminOrderService.actionOfPaymentProof({
+        outlet_id,
+        id,
+        action,
+      });
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getAllPendingComplaints = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      if (!req.context)
+        throw new HttpError(
+          500,
+          "The developer forget to use the resolveContext middleware",
+        );
+      const outletId = req.context.outlet_id;
+
+      const result =
+        await this.adminOrderService.getAllPendingComplaints(outletId);
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  actionOfCustomerComplaint = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { complaintId, status } = req.validated!
+        .params as ComplaintParamsValidationDTO;
+      const { adminResponse } = req.validated!
+        .body as ComplaintBodyValidationDTO;
+      if (!req.access_token) throw new HttpError(401, "Invalid token");
+      const { sub: adminId } = req.access_token;
+      if (!adminId) throw new HttpError(401, "Invalid admin id");
+
+      const result = await this.adminOrderService.actionOfCustomerComplaint({
+        complaintId,
+        status,
+        adminId,
+        adminResponse,
+      });
+      res.status(200).json(result);
     } catch (error) {
       next(error);
     }

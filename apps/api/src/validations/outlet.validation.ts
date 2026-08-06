@@ -122,6 +122,11 @@ export class OutletValidation {
         max_distance_km: 10,
       },
     });
+
+  static userId = z.uuid().meta({
+    description: "User ID (UUID)",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  });
 }
 
 export type CreateOutletDto = z.infer<
@@ -139,3 +144,5 @@ export type OutletIdParamDto = z.infer<
 export type OutletCoverageQueryDto = z.infer<
   typeof OutletValidation.OutletCoverageQuerySchema
 >;
+
+export type UserIdDto = z.infer<typeof OutletValidation.userId>;

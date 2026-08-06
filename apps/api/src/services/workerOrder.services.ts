@@ -180,7 +180,7 @@ export class WorkerOrderService {
         nextStatus = "ironing_in_progress";
         updateData.ironingWorker = { connect: { id: workerId } };
       } else if (worker.worker_station === "packing") {
-        nextStatus = "packing_in_progrees";
+        nextStatus = "packing_in_progress";
         updateData.packingWorker = { connect: { id: workerId } };
       }
 

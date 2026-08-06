@@ -1,20 +1,21 @@
 // apps/api/src/routes/pickupOrder.routes.ts
 import { Router } from "express";
 import { PickupOrderController } from "@/controllers/pickupOrder.controller";
+import { PickupOrderService } from "@/services/pickupOrder.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { resolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { PickupOrderValidation } from "@/validations/pickupOrder.validation";
-import { PickupOrderService } from "@/services/pickupOrder.services";
 import { PaginationSchema } from "@/validations/pagination.validation";
+
 
 export class PickupOrderRoute {
   public router = Router();
   private controller: PickupOrderController;
 
-  constructor() {
-    this.controller = new PickupOrderController(new PickupOrderService());
+  constructor(controller: PickupOrderController) {
+    this.controller = controller;
     this.getAllPickupOrders();
     this.acceptPickupRequest();
     this.listJobs();
@@ -24,7 +25,7 @@ export class PickupOrderRoute {
 
   private getAllPickupOrders() {
     this.router.get(
-      "/pickup-requests",
+      "/",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
@@ -35,7 +36,7 @@ export class PickupOrderRoute {
 
   private acceptPickupRequest() {
     this.router.post(
-      "/pickup-requests/:id/accept",
+      "/:id/accept",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
@@ -48,7 +49,7 @@ export class PickupOrderRoute {
 
   private listJobs() {
     this.router.get(
-      "/pickup-requests/accepted",
+      "/accepted",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
@@ -59,7 +60,7 @@ export class PickupOrderRoute {
 
   private updateStatus() {
     this.router.patch(
-      "/pickup-requests/:id/next",
+      "/:id/next",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
@@ -73,7 +74,7 @@ export class PickupOrderRoute {
 
   private getAllAlreadyPickedUpJob() {
     this.router.get(
-      "/pickup-requests/already-picked-up",
+      "/already-picked-up",
       authenticationMiddleware,
       authorizationMiddleware("driver"),
       resolveContext,
@@ -83,4 +84,6 @@ export class PickupOrderRoute {
   }
 }
 
-export default new PickupOrderRoute().router;
+export default new PickupOrderRoute(
+  new PickupOrderController(new PickupOrderService()),
+).router;

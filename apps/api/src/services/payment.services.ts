@@ -1,6 +1,7 @@
 // src/services/payment.services.ts
 import { prisma } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
+import { finalizePaidOrder } from "@/services/midtrans.services";
 
 export class PaymentService {
   async uploadPaymentProof(orderId: string, userId: string, imageUrl: string) {
@@ -78,14 +79,7 @@ export class PaymentService {
       }
 
       const result = await prisma.$transaction(async (tx) => {
-        const updatedOrder = await tx.order.update({
-          where: { id: orderId },
-          data: {
-            paid: true,
-            confirmed_at: new Date(),
-          },
-          select: { id: true, status: true, paid: true, source: true },
-        });
+        await finalizePaidOrder(tx, orderId);
 
         await tx.paymentTransaction.create({
           data: {
@@ -95,18 +89,10 @@ export class PaymentService {
           },
         });
 
-        if (order.source === "customer_app" && order.customer_id) {
-          await tx.deliveryRequest.create({
-            data: { order_id: orderId },
-          });
-
-          await tx.order.update({
-            where: { id: orderId },
-            data: { status: "waiting_for_driver_deliver" },
-          });
-        }
-
-        return updatedOrder;
+        return tx.order.findUniqueOrThrow({
+          where: { id: orderId },
+          select: { id: true, status: true, paid: true, source: true },
+        });
       });
 
       return result;

@@ -108,6 +108,29 @@
 
 ---
 
+## Admin Schedule Management
+
+- [x] Also add a little info (total worker, total driver, total schedule, and on duty today) when fetching the list of worker schedule by outlet admin (outlet_id) (`/api/admin/schedule`)
+- [x] Use filter to fetch the list of worker schedule by outlet admin (`/api/admin/schedule?query=xxx`)
+- [x] New endpoint to fetch workers with no schedule and support filtering (debounce used on front end) by admin outlet. Custom query to get all workers with no schedule.
+- [x] Change the soft delete to permanently delete the shift because too much data and not really important
+- [x] Rework the payload of worker schedule update endpoint (`/api/admin/schedule/:id`)
+- [x] Edit the schema so the schedule can also be used for the driver, not only for workers (by making worker station optional)
+
+---
+
+## Utilities
+
+- [x] Make a utility to change local time (hours) to full UTC time format for saving to DB (Prisma)
+
+---
+
+## Middleware
+
+- [x] Middleware to check if the worker and driver are on shift or not
+
+---
+
 ## Avatar Upload (From AI Playground)
 
 Implementation Summary
@@ -171,6 +194,41 @@ Implementation Summary
 
 ## TODO
 
+- [] detailed history using the order id
+- [] endpoint to mark finished for walk-in customers order (outlet_admin) when the customer take the order and paid
+- [] fetched data into descending order by date
+- [] add a support for pagination on endpoint (/api/admin/schedule)
+- [] Do all to endpoint that return data to be paginated
+- [] Add a support for filtering for certain endpoints
+- [x] make a cronjob to mark the status label `delivered` to `completed` after 24 hours (every 12 hours)
+- [x] endpoint to upload payment proofs (customer)
+- [x] endpoint to check the payment proofs (outlet_admin)
+- [x] endpoint to approve the payment proofs (outlet_admin) and automatically make a delivery request to the driver (only for customer_app)
+- [x] endpoint to fetch all delivery requests (driver)
+- [x] endpoint to accept the delivery request jobs (driver)
+- [x] endpoint to check all active delivery requests (driver) (accepted jobs)
+- [x] endpoint to check all completed delivery requests (driver) (completed jobs)
+- [x] endpoint to mark done for delivery request (driver) and change the order status into `delivered`
+
+- [x] endpoint to check order status for customers
+- [x] endpoint to check completed order status for customers
+- [x] history of completed jobs for each worker
+- [x] crucial total kilos missing on endpoint to update the order
+- [x] endpoint "/api/pickup-request/already-picked-up" it fetch other driver's already picked up jobs (pls fix)
+- [x] customer name on endpoint "{{baseURL}}/api/admin/orders/"
+- [x] inconsistent path on endpoint and driver endpoint "{{baseURL}}/api/workers/accept/:orderId"
+- [x] too much data "{{baseURL}}/api/workers/reinput/b9834647-c0b4-466a-b05f-5152373b959e" or send comment based on category, so on frontend pretier
+- [x] naming body payload on "{{baseURL}}/api/admin/mismatch/48b5d7a6-9dfa-4c4e-a427-a368a94981a0/washing"
+- [x] guard the endpoint "{{baseURL}}/api/admin/orders/" (only allow outlet admin once submit)
+- [x] sort the "{{baseURL}}/api/admin/mismatch" into descending order by date
+- [x] api response for endpoint "{{baseURL}}/api/admin/mismatch/79ec41f2-d22e-49a0-b76e-3328d0fe07f7/washing"
+- [x] api response fpr endpoint "{{baseURL}}/api/workers/reinput/79ec41f2-d22e-49a0-b76e-3328d0fe07f7"
+
+- [x] ownership of the job for each worker station
+- [x] change the user id in the request body into params (/api/admin/walk-in-customer/orders/:id)
+
+---
+
 ### Worker Schedule
 
 - [x] use filter to fetch the list of worker schedule by outlet admin(/api/admin/schedule?query=xxx)
@@ -201,9 +259,14 @@ Implementation Summary
 
 - [x] Customer app: upload payment proof (transfer screenshot) — POST /api/orders/:id/payment-proof
 - [x] Admin: confirm/reject payment proof — PATCH /api/admin/orders/:id/payment-confirm
-- [x] Payment gateway integration (Midtrans/Xendit) — POST /api/orders/:id/pay
+- [x] Payment gateway integration (Midtrans Snap) — POST /api/orders/:id/pay (raw HTTP, SHA512 signature verification, no SDK)
+- [x] Payment webhook/callback endpoint — POST /api/payments/midtrans/notification (settlement/capture → paid; deny/cancel → cancelled; expire → expired)
+- [x] Payment status endpoint — GET /api/orders/:id/payment-status (customer)
+- [x] Both payment methods coexist for `customer_app` (Midtrans Snap + manual proof); `walk_in` keeps proof-only
+- [x] Web: embedded Midtrans Snap popup (`window.snap.pay`) on customer order detail page
+- [x] Midtrans config via env — MIDTRANS_SERVER_KEY / MIDTRANS_CLIENT_KEY / MIDTRANS_IS_PRODUCTION
+- [x] Shared `finalizePaidOrder` helper reused by manual confirm and Midtrans settlement
 - [x] When payment confirmed: set `order.paid = true`, `order.status` transitions from `waiting_for_payment` to `waiting_for_driver_deliver` (for customer_app) or stays for admin to mark delivered (for walk_in)
-- [x] Payment webhook/callback endpoint for gateway notifications
 
 ### Delivery (Customer App Orders)
 
@@ -237,7 +300,8 @@ Implementation Summary
 
 ### Notes
 
-- - Login required
+- \* login required
+
 - \*\* Specified role required
 
 ### Order Lifecycle Reference

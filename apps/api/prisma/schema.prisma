@@ -32,11 +32,12 @@ enum OrderStatus {
   arrived_at_outlet
   washing_in_progress
   ironing_in_progress
-  packing_in_progrees
+  packing_in_progress
   waiting_for_payment
   waiting_for_driver_deliver
   out_for_delivery
   delivered
+  complaint_received
   cancelled
   finished
 }
@@ -48,6 +49,12 @@ enum StationName {
 }
 
 enum MismatchStatus {
+  pending
+  approved
+  rejected
+}
+
+enum PaymentProofStatus {
   pending
   approved
   rejected
@@ -82,6 +89,12 @@ enum OrderSource {
   walk_in
 }
 
+enum ComplaintStatus {
+  pending
+  resolved
+  rejected
+}
+
 // -----------------------
 //  USERS
 // -----------------------
@@ -113,7 +126,8 @@ model User {
   workerShifts   WorkerShift[]
   approvedLogs   OrderStationLog[]    @relation("ApprovedByRelation")
   driverJobs     DriverJobStatus[]
-  complaints     Complaint[]
+  complaints     Complaint[]          @relation("CustomerComplaints")
+  adminMessages  Complaint[]          @relation("AdminMessages")
   pickupOrders   Order[]              @relation("PickupDriver")
   deliveryOrders Order[]              @relation("DeliveryDriver")
   washingOrders  Order[]              @relation("WashingWorker")
@@ -292,13 +306,13 @@ model Order {
   washing_completed_at DateTime?
   ironing_completed_at DateTime?
   packing_completed_at DateTime?
+  delivered_at         DateTime?
   pickup_fee           Int
   delivery_fee         Int
   laundry_price        Int
   total_amount         Int
   total_kilo           Decimal     @db.Decimal(5, 2)
   confirmed_at         DateTime?
-  delivered_at         DateTime?
   status               OrderStatus
   paid                 Boolean     @default(false)
   created_at           DateTime    @default(now())
@@ -353,7 +367,8 @@ model StationSummary {
   item_id         String      @db.Uuid
   station         StationName
   latest_quantity Int
-  updated_at      DateTime    @default(now())
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
 
   order Order @relation(fields: [order_id], references: [id])
   item  Item  @relation(fields: [item_id], references: [id])
@@ -428,10 +443,13 @@ model DeliveryRequest {
 // -----------------------
 
 model PaymentProof {
-  id         String   @id @default(uuid()) @db.Uuid
-  order_id   String   @unique @db.Uuid
+  id         String             @id @default(uuid()) @db.Uuid
+  order_id   String             @unique @db.Uuid
   image_url  String
-  created_at DateTime @default(now())
+  status     PaymentProofStatus @default(pending)
+  updated_at DateTime           @updatedAt
+  created_at DateTime           @default(now())
+  is_deleted Boolean            @default(false)
 
   order Order @relation(fields: [order_id], references: [id])
 
@@ -445,7 +463,12 @@ model PaymentProof {
 model PaymentTransaction {
   id                      String               @id @default(uuid()) @db.Uuid
   order_id                String               @db.Uuid
-  provider_transaction_id String?              @db.Uuid
+  provider_transaction_id String?
+  provider_order_id       String?              @unique
+  payment_type            String?
+  snap_token              String?
+  fraud_status            String?
+  transaction_time        DateTime?
   amount                  Int
   status                  PaymentGatewayStatus
   raw_response            Json?
@@ -467,7 +490,8 @@ model DriverJobStatus {
   pickup_request_id   String?             @db.Uuid
   delivery_request_id String?             @db.Uuid
   status              DriverJobStatusEnum
-  updated_at          DateTime            @default(now())
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
 
   driver          User             @relation(fields: [driver_id], references: [id])
   pickupRequest   PickupRequest?   @relation(fields: [pickup_request_id], references: [id])
@@ -483,15 +507,21 @@ model DriverJobStatus {
 // -----------------------
 
 model Complaint {
-  id         String   @id @default(uuid()) @db.Uuid
-  order_id   String   @db.Uuid
-  user_id    String   @db.Uuid
-  message    String
-  image_url  String?
-  created_at DateTime @default(now())
+  id             String          @id @default(uuid()) @db.Uuid
+  order_id       String          @db.Uuid
+  user_id        String          @db.Uuid
+  admin_id       String?         @db.Uuid
+  status         ComplaintStatus
+  message        String
+  image_url      String?
+  admin_response String?
+  resolved_at    DateTime?
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
 
   order Order @relation(fields: [order_id], references: [id])
-  user  User  @relation(fields: [user_id], references: [id])
+  user  User  @relation("CustomerComplaints", fields: [user_id], references: [id])
+  admin User? @relation("AdminMessages", fields: [admin_id], references: [id])
 
   @@map("complaints")
 }

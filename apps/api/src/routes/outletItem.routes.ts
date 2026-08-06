@@ -1,18 +1,19 @@
 import { Router } from "express";
 import { OutletItemController } from "@/controllers/outletItem.controller";
+import { OutletItemService } from "@/services/outletItem.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { authorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { OutletValidation } from "@/validations/outlet.validation";
-import { OutletItemService } from "@/services/outletItem.services";
 import { PaginationSchema } from "@/validations/pagination.validation";
+
 
 export class OutletItemRoute {
   public router = Router();
   private controller: OutletItemController;
 
-  constructor() {
-    this.controller = new OutletItemController(new OutletItemService());
+  constructor(controller: OutletItemController) {
+    this.controller = controller;
     this.getCoveragedOutlet();
     this.getAllOutlets();
     this.createOutlet();
@@ -108,4 +109,6 @@ export class OutletItemRoute {
   }
 }
 
-export default new OutletItemRoute().router;
+export default new OutletItemRoute(
+  new OutletItemController(new OutletItemService()),
+).router;
