@@ -1,4 +1,5 @@
 import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
+import midtrans, { MidtransClients } from "@/utils/midtrans";
 import { HttpError } from "@/utils/httpError";
 import {
   complainPayloadDTO,
@@ -6,9 +7,13 @@ import {
   uploadPaymentDTO,
   UserIdDTO,
 } from "@/validations/customerOrder.validation";
+import dayjs from "dayjs";
 
 export class CustomerOrderService {
-  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+  constructor(
+    private readonly prisma: PrismaWrapper = defaultPrisma,
+    private readonly midtransInstance: MidtransClients = midtrans,
+  ) {}
 
   async checkActiveOrderStatus(userId: UserIdDTO) {
     try {
@@ -150,6 +155,118 @@ export class CustomerOrderService {
         success: true,
         message: "Payment proof uploaded successfully",
         data: uploadProof,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async payWithPaymentGateway(data: any) {
+    try {
+      const { orderId, userId } = data;
+
+      // guard
+      // is the order id real
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId, customer_id: userId },
+        select: {
+          id: true,
+          status: true,
+          paid: true,
+          total_kilo: true,
+          laundry_price: true,
+          pickup_fee: true,
+          delivery_fee: true,
+          total_amount: true,
+          outlet: {
+            select: {
+              price_per_kg: true,
+              price_per_km: true,
+            },
+          },
+          customer: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+          pickupAddress: {
+            select: {
+              address: true,
+            },
+          },
+        },
+      });
+      if (!order) throw new HttpError(404, "Order not found");
+      if (
+        order.status === "waiting_for_driver_pickup" ||
+        order.status === "out_for_pickup" ||
+        order.status === "in_transit_to_outlet" ||
+        order.status === "arrived_at_outlet"
+      ) {
+        throw new HttpError(
+          409,
+          "You've not allowed to pay for this order yet",
+        );
+      }
+      if (order.status === "finished")
+        throw new HttpError(
+          409,
+          "You've already marked this order as finished",
+        );
+      if (order.paid === true)
+        throw new HttpError(409, "You've already paid for this order");
+
+      // make a payload for sending it to midtrans
+      const parameter = {
+        transaction_details: {
+          order_id: `UWU-${order.id}-${Date.now()}`,
+          gross_amount: order.total_amount,
+        },
+        item_details: [
+          {
+            id: "laundry cost",
+            price: order.outlet.price_per_kg,
+            quantity: Number(order.total_kilo),
+            name: `Laundry Cost : ${order.outlet.price_per_kg} IDR / Kilogram`,
+          },
+          {
+            id: "pickup fee",
+            price: order.pickup_fee,
+            quantity: order.pickup_fee / order.outlet.price_per_km,
+            name: `Pickup Fee : ${order.outlet.price_per_km} IDR / Kilometer`,
+          },
+          {
+            id: "delivery fee",
+            price: order.delivery_fee,
+            quantity: order.delivery_fee / order.outlet.price_per_km,
+            name: `Delivery Fee : ${order.outlet.price_per_km} IDR / Kilometer`,
+          },
+        ],
+        customer_details: {
+          first_name: order.customer?.name?.split(" ")[0],
+          last_name: order.customer?.name?.split(" ")[1],
+          email: order.customer?.email,
+          shipping_address: {
+            address: order.pickupAddress?.address,
+          },
+        },
+        expiry: {
+          start_time: dayjs().format("YYYY-MM-DD HH:mm:ss ZZ"),
+          unit: "hours" as const,
+          duration: 1 as const,
+        },
+      };
+
+      // make a token if not available
+      const snapToken = await this.midtransInstance.create(parameter);
+
+      // store the token into database
+
+      return {
+        success: true,
+        message: "Payment gateway token created successfully",
+        data: snapToken,
       };
     } catch (error) {
       throw error;
