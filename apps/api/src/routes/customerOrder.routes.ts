@@ -45,6 +45,16 @@ class CustomerOrderRoute {
       }),
       this.controller.uploadPaymentProof,
     );
+
+    this.router.get(
+      "/:orderId/payment-gateway",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      Validator.validate({
+        params: CustomerOrderValidation.OrderIdParamsSchema,
+      }),
+      //this.controller.getPaymentGateway,
+    );
   }
 
   private markDone() {

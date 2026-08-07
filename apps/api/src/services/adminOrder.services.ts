@@ -474,13 +474,19 @@ export class AdminOrderService {
               name: true,
             },
           },
+          outlet: {
+            select: {
+              price_per_kg: true,
+              price_per_km: true,
+            },
+          },
         },
       });
 
       if (!order) {
         throw new HttpError(
           404,
-          "Please don't manage order that belong to your outlet",
+          "Not Found: Order not found or not belong to this outlet",
         );
       }
 
@@ -651,36 +657,20 @@ export class AdminOrderService {
           },
         });
 
-        // build order update data
-        const orderUpdateData: {
-          status: OrderStatus;
-          total_kilo?: number;
-          laundry_price?: number;
-          total_amount?: number;
-        } = {
-          status: "washing_in_progress",
-        };
-
-        // if total_kilo provided, recalculate prices
-        if (total_kilo !== undefined) {
-          const { price_per_kg } = await tx.outlet.findFirstOrThrow({
-            where: { id: outlet_id },
-            select: { price_per_kg: true },
-          });
-          const laundryPrice = Math.ceil(total_kilo * price_per_kg);
-          const totalAmount =
-            laundryPrice + order.pickup_fee + order.delivery_fee;
-          orderUpdateData.total_kilo = total_kilo;
-          orderUpdateData.laundry_price = laundryPrice;
-          orderUpdateData.total_amount = totalAmount;
-        }
-
         // update the order's status to the next step
         const updateOrderStatus = await tx.order.update({
           where: {
             id: order_id,
           },
-          data: orderUpdateData,
+          data: {
+            status: "washing_in_progress" as OrderStatus,
+            total_kilo: total_kilo,
+            laundry_price: Math.ceil(total_kilo * order.outlet.price_per_kg),
+            total_amount:
+              Math.ceil(total_kilo * order.outlet.price_per_kg) +
+              order.pickup_fee +
+              order.delivery_fee,
+          },
           select: {
             status: true,
             total_kilo: true,
@@ -1041,5 +1031,5 @@ export class AdminOrderService {
     } catch (error) {
       throw error;
     }
-  };
+  }
 }
