@@ -60,14 +60,6 @@ enum PaymentProofStatus {
   rejected
 }
 
-enum PaymentGatewayStatus {
-  pending
-  paid
-  failed
-  expired
-  cancelled
-}
-
 enum DriverJobStatusEnum {
   in_transit
   on_delivery
