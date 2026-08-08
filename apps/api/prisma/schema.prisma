@@ -304,6 +304,7 @@ model Order {
   laundry_price        Int
   total_amount         Int
   total_kilo           Decimal     @db.Decimal(5, 2)
+  total_km             Decimal?    @db.Decimal(5, 2)
   confirmed_at         DateTime?
   status               OrderStatus
   paid                 Boolean     @default(false)
@@ -455,7 +456,7 @@ model PaymentProof {
 model PaymentGatewayTransaction {
   id                      String  @id @default(uuid()) @db.Uuid
   order_id                String  @db.Uuid
-  provider_transaction_id String? @db.Uuid
+  provider_transaction_id String?
 
   raw_response Json?
   token        String? // untuk snap
