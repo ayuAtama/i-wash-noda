@@ -163,12 +163,13 @@ export class PickupRequestService {
           "Outlet not found or perhaps you're the little hacker?",
         );
 
-      const distance = calculateDistance(
+      let distance = calculateDistance(
         Number(address.lat),
         Number(address.lng),
         Number(outlet.lat),
         Number(outlet.lng),
       );
+      distance = Math.ceil(distance);
 
       if (distance > Number(outlet.max_distance_km))
         throw new HttpError(400, "Outlet is not within coverage");
