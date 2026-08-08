@@ -266,10 +266,16 @@ export class CustomerOrderService {
         };
       }
 
+      // create the basket to received data from midtrans
+      const newToken = await this.prisma.paymentGatewayTransaction.create({
+        data: { order_id: order.id },
+        select: { id: true, order_id: true },
+      });
+
       // make a payload for sending it to midtrans
       const parameter = {
         transaction_details: {
-          order_id: `UWU-${Date.now()}`,
+          order_id: order.id,
           gross_amount: order.total_amount,
         },
         item_details: [
@@ -305,6 +311,7 @@ export class CustomerOrderService {
           unit: "hours" as const,
           duration: 1 as const,
         },
+        custom_field1: newToken.id,
       };
 
       // make a token if not available (outside transaction to avoid prisma transaction timeout (5secs))
@@ -314,12 +321,9 @@ export class CustomerOrderService {
 
       const saveTokenToDB = await this.prisma.$transaction(async (tx) => {
         // store the token into database
-        const { token } = await tx.paymentGatewayTransaction.create({
-          data: {
-            order_id: order.id,
-            token: snapToken.token,
-            provider_transaction_id: parameter.transaction_details.order_id,
-          },
+        const { token } = await tx.paymentGatewayTransaction.update({
+          where: { id: newToken.id, order_id: newToken.order_id },
+          data: { token: snapToken.token },
           select: { token: true },
         });
 

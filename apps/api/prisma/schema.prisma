@@ -460,7 +460,7 @@ model PaymentGatewayTransaction {
 
   raw_response Json?
   token        String? // untuk snap
-  gross_amount Int?
+  gross_amount String?
   payment_type String?
   currency     String  @default("IDR")
 
@@ -468,12 +468,11 @@ model PaymentGatewayTransaction {
   status_code        String?
   fraud_status       String?
 
-  transaction_time DateTime?
-  settlement_time  DateTime?
+  transaction_time String?
+  settlement_time  String?
 
   // BANK / VA
-  bank      String?
-  va_number String?
+  bank String?
 
   // untuk Qris
   issuer   String?

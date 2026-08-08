@@ -31,6 +31,7 @@ import deliveryOrderRoutes from "./routes/deliveryOrder.routes";
 
 // infrastructure
 import cloudinaryRoutes from "./routes/cloudinary.routes";
+import midtransRoutes from "./routes/midtrans.routes";
 
 export class Server {
   private app: App;
@@ -55,7 +56,8 @@ export class Server {
       .register("/api/pickup-requests", pickupOrderRoutes)
       .register("/api/workers", workerStationRoutes)
       .register("/api/driver/delivery-requests", deliveryOrderRoutes)
-      .register("/api/signature", cloudinaryRoutes);
+      .register("/api/signature", cloudinaryRoutes)
+      .register("/api/midtrans", midtransRoutes);
 
     this.app = new App(registry);
   }
