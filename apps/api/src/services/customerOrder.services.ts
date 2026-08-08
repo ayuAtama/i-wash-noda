@@ -168,7 +168,10 @@ export class CustomerOrderService {
       // guard
       // is the order id real
       const order = await this.prisma.order.findUnique({
-        where: { id: orderId, customer_id: userId },
+        where: {
+          id: orderId,
+          customer_id: userId,
+        },
         select: {
           id: true,
           status: true,
@@ -178,6 +181,7 @@ export class CustomerOrderService {
           pickup_fee: true,
           delivery_fee: true,
           total_amount: true,
+          total_km: true,
           outlet: {
             select: {
               price_per_kg: true,
@@ -195,9 +199,25 @@ export class CustomerOrderService {
               address: true,
             },
           },
+          // query the token from table payment_gateway_transaction
+          paymentGatewayTransactions: {
+            where: {
+              OR: [
+                { transaction_status: "pending" },
+                { transaction_status: null },
+              ],
+            },
+            orderBy: { created_at: "desc" },
+            take: 1,
+            select: { token: true },
+          },
         },
       });
-      if (!order) throw new HttpError(404, "Order not found");
+      if (!order)
+        throw new HttpError(
+          404,
+          "Order not found, and not allowed to pay another customer's order",
+        );
       if (
         order.status === "waiting_for_driver_pickup" ||
         order.status === "out_for_pickup" ||
@@ -214,13 +234,42 @@ export class CustomerOrderService {
           409,
           "You've already marked this order as finished",
         );
+      if (order.status === "cancelled")
+        throw new HttpError(409, "Order cancelled");
       if (order.paid === true)
         throw new HttpError(409, "You've already paid for this order");
+
+      // get the token if already made
+      // const midtransToken =
+      //   await this.prisma.paymentGatewayTransaction.findFirst({
+      //     where: {
+      //       order_id: order.id,
+      //       OR: [
+      //         { transaction_status: "pending" },
+      //         { transaction_status: null },
+      //       ],
+      //     },
+      //     orderBy: { created_at: "desc" },
+      //     select: {
+      //       token: true,
+      //     },
+      //   });
+
+      // return the old token instead of making new one
+      if (order.paymentGatewayTransactions.length > 0) {
+        return {
+          success: true,
+          message: "Payment gateway token fetched successfully",
+          data: {
+            token: order.paymentGatewayTransactions[0].token,
+          },
+        };
+      }
 
       // make a payload for sending it to midtrans
       const parameter = {
         transaction_details: {
-          order_id: `UWU-${order.id}-${Date.now()}`,
+          order_id: `UWU-${Date.now()}`,
           gross_amount: order.total_amount,
         },
         item_details: [
@@ -232,14 +281,14 @@ export class CustomerOrderService {
           },
           {
             id: "pickup fee",
-            price: order.pickup_fee,
-            quantity: order.pickup_fee / order.outlet.price_per_km,
+            price: order.outlet.price_per_km,
+            quantity: Number(order.total_km),
             name: `Pickup Fee : ${order.outlet.price_per_km} IDR / Kilometer`,
           },
           {
             id: "delivery fee",
-            price: order.delivery_fee,
-            quantity: order.delivery_fee / order.outlet.price_per_km,
+            price: order.outlet.price_per_km,
+            quantity: Number(order.total_km),
             name: `Delivery Fee : ${order.outlet.price_per_km} IDR / Kilometer`,
           },
         ],
@@ -258,15 +307,32 @@ export class CustomerOrderService {
         },
       };
 
-      // make a token if not available
+      // make a token if not available (outside transaction to avoid prisma transaction timeout (5secs))
       const snapToken = await this.midtransInstance.create(parameter);
+      if (!snapToken)
+        throw new HttpError(500, "Failed to create payment gateway token");
 
-      // store the token into database
+      const saveTokenToDB = await this.prisma.$transaction(async (tx) => {
+        // store the token into database
+        const { token } = await tx.paymentGatewayTransaction.create({
+          data: {
+            order_id: order.id,
+            token: snapToken.token,
+            provider_transaction_id: parameter.transaction_details.order_id,
+          },
+          select: { token: true },
+        });
+
+        return token;
+      });
 
       return {
         success: true,
         message: "Payment gateway token created successfully",
-        data: snapToken,
+        data: {
+          token: saveTokenToDB,
+          redirect_url: snapToken.redirect_url,
+        },
       };
     } catch (error) {
       throw error;

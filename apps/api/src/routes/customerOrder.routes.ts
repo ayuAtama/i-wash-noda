@@ -53,7 +53,7 @@ class CustomerOrderRoute {
       Validator.validate({
         params: CustomerOrderValidation.OrderIdParamsSchema,
       }),
-      //this.controller.getPaymentGateway,
+      this.controller.payWithPaymentGateway,
     );
   }
 

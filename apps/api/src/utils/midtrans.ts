@@ -113,6 +113,9 @@ export class MidtransClients extends midtransClient.Snap {
 const midtrans = new MidtransClients();
 export default midtrans;
 
+const cancel = await midtrans.cancel("UWU-1786163723353");
+console.log(cancel);
+
 // const uwu = await midtrans.create({
 //   transaction_details: {
 //     order_id: "Customer-6912345678",
