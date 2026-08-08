@@ -86,11 +86,10 @@ export class MidtransClients extends midtransClient.Snap {
       const hashSha512 = crypto
         .createHash("sha512")
         .update(`${order_id}${status_code}${gross_amount}${serverKey}`)
-        .digest("base64");
+        .digest("hex");
       if (hashSha512 !== signature_key) {
         throw new HttpError(400, "Invalid signature key");
       }
-      
       return true;
 
       // const serverKey = process.env.MIDTRANS_SERVER_KEY!;
@@ -113,12 +112,70 @@ export class MidtransClients extends midtransClient.Snap {
 const midtrans = new MidtransClients();
 export default midtrans;
 
-const cancel = await midtrans.cancel("UWU-1786163723353");
-console.log(cancel);
+// test midtrans signature key validation
+const isValid = await midtrans.verifyResponse({
+  order_id: "63f36c78-e716-4fc2-8273-479710989cdf",
+  status_code: "201",
+  gross_amount: "80162.00",
+  signature_key:
+    "5cf579069041bed0a48996763c5e7e523172e05b02b5527cdaa1c7a8a08e9ed1c5d17a22488b0fedd26e61330ebd33f890f864f0252796dea6cfae75e0b0e45b",
+});
+console.log(isValid);
+
+// const rawSnap = new midtransClient.Snap({
+//   isProduction: false,
+//   serverKey: process.env.MIDTRANS_SERVER_KEY!,
+//   clientKey: process.env.MIDTRANS_CLIENT_KEY!,
+// });
+
+// const webhook = {
+//   transaction_type: "off-us",
+//   transaction_time: "2026-08-08 12:10:04",
+//   transaction_status: "expire",
+//   transaction_id: "363c38ca-f9f4-4091-ab1c-0f11494f9545",
+//   status_message: "midtrans payment notification",
+//   status_code: "202",
+//   payment_type: "qris",
+//   order_id: "UWU-1786165763331",
+//   metadata: {
+//     extra_info: {
+//       gross_amount_info: {
+//         original_amount: "79600",
+//         gross_amount: "80162",
+//         customer_imposed_payment_fee: "562",
+//         customer_imposed_fee_percentage: "100.00",
+//       },
+//     },
+//   },
+//   merchant_id: "M535975489",
+//   gross_amount: "80162.00",
+//   fraud_status: "accept",
+//   expiry_time: "2026-08-08 13:09:23",
+//   customer_details: { full_name: "Jolo Komlo", email: "joko.vtuber@gmail.com" },
+//   currency: "IDR",
+// };
+
+// // test notification
+// midtrans.transaction.notification(webhook).then((statusResponse: any) => {
+//   let orderId = statusResponse.order_id;
+//   let transactionStatus = statusResponse.transaction_status;
+//   let fraudStatus = statusResponse.fraud_status;
+
+//   console.log(
+//     `Transaction notification received. Order ID: ${orderId}. Transaction status: ${transactionStatus}. Fraud status: ${fraudStatus}`,
+//   );
+// });
+
+// canell
+// const cancel = await rawSnap.transaction.cancel("Customer-69123456789");
+// console.log(cancel);
+
+// const cancel = await midtrans.cancel("Customer-6912345678");
+// console.log(cancel);
 
 // const uwu = await midtrans.create({
 //   transaction_details: {
-//     order_id: "Customer-6912345678",
+//     order_id: "Customer-69123456789",
 //     gross_amount: 50000,
 //   },
 //   item_details: [
