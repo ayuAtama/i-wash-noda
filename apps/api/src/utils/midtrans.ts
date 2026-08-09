@@ -7,9 +7,13 @@ import {
 import dayjs from "dayjs";
 import { HttpError } from "./httpError";
 import * as crypto from "crypto";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 
 export class MidtransClients extends midtransClient.Snap {
-  constructor(options: Partial<midtransClient.MidtransClientOptions> = {}) {
+  constructor(
+    options: Partial<midtransClient.MidtransClientOptions> = {},
+    private readonly prisma: PrismaWrapper = defaultPrisma,
+  ) {
     super({
       isProduction: process.env.NODE_ENV! === "production",
       serverKey: process.env.MIDTRANS_SERVER_KEY!,
@@ -30,6 +34,16 @@ export class MidtransClients extends midtransClient.Snap {
       return transaction;
     } catch (error) {
       const err = error as MidtransError;
+      if (
+        err.httpStatusCode === 400 ||
+        err.message.includes("transaction_details.order_id sudah digunakan")
+      ) {
+        await this.prisma.paymentGatewayTransaction.deleteMany({
+          where: {
+            token: null,
+          },
+        });
+      }
       throw new HttpError(err.httpStatusCode || 400, err.message);
     }
   }
@@ -112,15 +126,18 @@ export class MidtransClients extends midtransClient.Snap {
 const midtrans = new MidtransClients();
 export default midtrans;
 
-// test midtrans signature key validation
-const isValid = await midtrans.verifyResponse({
-  order_id: "63f36c78-e716-4fc2-8273-479710989cdf",
-  status_code: "201",
-  gross_amount: "80162.00",
-  signature_key:
-    "5cf579069041bed0a48996763c5e7e523172e05b02b5527cdaa1c7a8a08e9ed1c5d17a22488b0fedd26e61330ebd33f890f864f0252796dea6cfae75e0b0e45b",
-});
-console.log(isValid);
+// create
+// const create = await midtrans.createTransaction({
+//   transaction_details: {
+//     order_id: "alamakteser",
+//     gross_amount: 50000,
+//   },
+// });
+// console.log(create);
+
+/// cancel
+// const cancel = await midtrans.cancel("dc6497dd-7bc1-42af-aadf-165f48e22cf8");
+// console.log(cancel);
 
 // const rawSnap = new midtransClient.Snap({
 //   isProduction: false,

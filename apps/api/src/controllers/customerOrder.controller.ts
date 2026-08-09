@@ -92,6 +92,21 @@ export class CustomerOrderController {
     }
   };
 
+  cancelPayment = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const { orderId } = req.validated!.params as OrderIdParamsDTO;
+      if (!orderId) throw new HttpError(400, "Invalid orderId");
+      const result = await this.CustomerOrderService.cancelPayment({
+        orderId,
+        userId,
+      });
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   markDone = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.access_token?.sub ?? req.user?.id;
