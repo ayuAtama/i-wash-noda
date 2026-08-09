@@ -13,8 +13,7 @@ class CustomerOrderRoute {
   constructor(controller: CustomerOrderController) {
     this.controller = controller;
     this.customerOrder();
-    this.uploadPaymentProof();
-    this.markDone();
+    this.paymentEndpoints();
     this.complaint();
   }
 
@@ -34,7 +33,7 @@ class CustomerOrderRoute {
     );
   }
 
-  private uploadPaymentProof() {
+  private paymentEndpoints() {
     this.router.post(
       "/:orderId/payment",
       authenticationMiddleware,
@@ -54,6 +53,16 @@ class CustomerOrderRoute {
         params: CustomerOrderValidation.OrderIdParamsSchema,
       }),
       this.controller.payWithPaymentGateway,
+    );
+
+    this.router.post(
+      "/:orderId/payment-gateway/cancel",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      Validator.validate({
+        params: CustomerOrderValidation.OrderIdParamsSchema,
+      }),
+      this.controller.cancelPayment,
     );
   }
 

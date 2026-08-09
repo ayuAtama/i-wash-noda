@@ -343,6 +343,59 @@ export class CustomerOrderService {
     }
   }
 
+  async cancelPayment(data: any) {
+    try {
+      const { orderId, userId } = data;
+
+      // guard
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId, customer_id: userId },
+        select: {
+          id: true,
+          status: true,
+          paid: true,
+          paymentGatewayTransactions: {
+            where: {
+              OR: [
+                { transaction_status: "pending" },
+                { transaction_status: null },
+              ],
+            },
+            take: 1,
+            select: { id: true, token: true },
+          },
+        },
+      });
+
+      if (!order)
+        throw new HttpError(
+          404,
+          "Order not found, and don't change another payment",
+        );
+      if (order.paid === true)
+        throw new HttpError(409, "You've already paid for this order");
+      if (order.paymentGatewayTransactions.length === 0)
+        throw new HttpError(409, "Transaction error, please try again");
+      console.log(order.paymentGatewayTransactions?.[0]?.token);
+
+      const cancelPayment = await this.midtransInstance.cancel(orderId);
+
+      if (cancelPayment.status_code !== 200)
+        throw new HttpError(
+          Number(cancelPayment.status_code),
+          cancelPayment.status_message,
+        );
+
+      return {
+        success: true,
+        message: "Payment cancelled successfully",
+        data: cancelPayment,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async markDone(data: markDoneDTO) {
     try {
       const { orderId, userId } = data;
