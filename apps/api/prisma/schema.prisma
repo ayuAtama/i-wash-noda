@@ -87,6 +87,11 @@ enum ComplaintStatus {
   rejected
 }
 
+enum PaymentMethod {
+  manual
+  payment_gateway
+}
+
 // -----------------------
 //  USERS
 // -----------------------
@@ -284,17 +289,17 @@ model Item {
 // -----------------------
 
 model Order {
-  id                   String      @id @default(uuid()) @db.Uuid
-  customer_id          String?     @db.Uuid
-  walkin_customer_id   String?     @db.Uuid
-  pickup_address_id    String?     @db.Uuid
-  source               OrderSource @default(customer_app)
-  outlet_id            String      @db.Uuid
-  driver_pickup_id     String?     @db.Uuid
-  driver_delivery_id   String?     @db.Uuid
-  washing_worker_id    String?     @db.Uuid
-  ironing_worker_id    String?     @db.Uuid
-  packing_worker_id    String?     @db.Uuid
+  id                   String         @id @default(uuid()) @db.Uuid
+  customer_id          String?        @db.Uuid
+  walkin_customer_id   String?        @db.Uuid
+  pickup_address_id    String?        @db.Uuid
+  source               OrderSource    @default(customer_app)
+  outlet_id            String         @db.Uuid
+  driver_pickup_id     String?        @db.Uuid
+  driver_delivery_id   String?        @db.Uuid
+  washing_worker_id    String?        @db.Uuid
+  ironing_worker_id    String?        @db.Uuid
+  packing_worker_id    String?        @db.Uuid
   washing_completed_at DateTime?
   ironing_completed_at DateTime?
   packing_completed_at DateTime?
@@ -303,13 +308,14 @@ model Order {
   delivery_fee         Int
   laundry_price        Int
   total_amount         Int
-  total_kilo           Decimal     @db.Decimal(5, 2)
-  total_km             Decimal?    @db.Decimal(5, 2)
+  total_kilo           Decimal        @db.Decimal(5, 2)
+  total_km             Decimal?       @db.Decimal(5, 2)
   confirmed_at         DateTime?
   status               OrderStatus
-  paid                 Boolean     @default(false)
-  created_at           DateTime    @default(now())
-  updated_at           DateTime    @updatedAt
+  payment_method       PaymentMethod?
+  paid                 Boolean        @default(false)
+  created_at           DateTime       @default(now())
+  updated_at           DateTime       @updatedAt
 
   //relation
   customer                   User?                       @relation("CustomerOrders", fields: [customer_id], references: [id])
@@ -324,9 +330,9 @@ model Order {
   items                      OrderItem[]
   summary                    StationSummary[]
   stationLogs                OrderStationLog[]
-  paymentProof               PaymentProof?
   pickupRequests             PickupRequest[]
   deliveryRequests           DeliveryRequest[]
+  paymentProof               PaymentProof[]
   paymentGatewayTransactions PaymentGatewayTransaction[] @relation("PaymentGatewayTransactions")
   complaints                 Complaint[]
 

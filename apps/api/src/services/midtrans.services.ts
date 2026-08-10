@@ -106,6 +106,20 @@ export class MidtransService {
           return { storedWebhook, updateOrderStatus };
         }
 
+        // if cancled expired and etc
+        if (
+          storedWebhook.transaction_status === "cancel" ||
+          storedWebhook.transaction_status === "deny" ||
+          storedWebhook.transaction_status === "expire"
+        ) {
+          const cancelPayment = await tx.order.update({
+            where: { id: storedWebhook.order_id },
+            data: { payment_method: null },
+            select: { id: true, payment_method: true },
+          });
+          return cancelPayment;
+        }
+
         return storedWebhook;
       });
 

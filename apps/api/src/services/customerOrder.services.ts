@@ -2,8 +2,11 @@ import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import midtrans, { MidtransClients } from "@/utils/midtrans";
 import { HttpError } from "@/utils/httpError";
 import {
+  CancelPaymentDTO,
   complainPayloadDTO,
   markDoneDTO,
+  PayPaymentGatewayDTO,
+  SetPaymentMethodDTO,
   uploadPaymentDTO,
   UserIdDTO,
 } from "@/validations/customerOrder.validation";
@@ -62,7 +65,6 @@ export class CustomerOrderService {
     }
   }
 
-  //check all completed orders
   async checkCompletedOrderStatus(userId: UserIdDTO) {
     try {
       // check if the user is valid
@@ -109,6 +111,60 @@ export class CustomerOrderService {
     }
   }
 
+  // set the payment method manual checking or auto checking
+  async setPaymentMethod(data: SetPaymentMethodDTO) {
+    try {
+      const { orderId, userId, paymentMethod } = data;
+
+      // guard rail
+      const guard = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        select: {
+          id: true,
+          customer_id: true,
+          paid: true,
+          payment_method: true,
+        },
+      });
+      if (!guard)
+        throw new HttpError(
+          404,
+          "Order not found, and don't be a little hacker",
+        );
+      if (guard.customer_id !== userId)
+        throw new HttpError(403, "You're not allowed to do this");
+      if (guard.paid === true)
+        throw new HttpError(409, "You've already paid for this order");
+      if (guard.payment_method)
+        throw new HttpError(
+          409,
+          "To change your payment method please cancel the payment first",
+        );
+
+      const setPaymentMethod = await this.prisma.order.update({
+        where: { id: guard.id, customer_id: guard.customer_id },
+        data: { payment_method: paymentMethod },
+        select: {
+          id: true,
+          payment_method: true,
+        },
+      });
+      if (!setPaymentMethod.payment_method)
+        throw new HttpError(
+          404,
+          "Order not found, and don't be a little hacker",
+        );
+
+      return {
+        success: true,
+        message: "Payment method updated successfully",
+        data: setPaymentMethod,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async uploadPaymentProof(data: uploadPaymentDTO) {
     try {
       const { orderId, userId, urlProof } = data;
@@ -120,8 +176,22 @@ export class CustomerOrderService {
         },
         select: {
           id: true,
+          status: true,
+          paid: true,
+          payment_method: true,
           paymentProof: {
             where: { is_deleted: false },
+            select: { id: true },
+          },
+          paymentGatewayTransactions: {
+            where: {
+              OR: [
+                { transaction_status: "pending" },
+                { transaction_status: null },
+              ],
+            },
+            orderBy: { created_at: "desc" },
+            take: 1,
             select: { id: true },
           },
         },
@@ -132,11 +202,42 @@ export class CustomerOrderService {
           404,
           "Order not found, and don't be a little hacker",
         );
-      if (orderData.paymentProof)
+      if (orderData.paid === true)
+        throw new HttpError(409, "You've already paid for this order");
+      if (
+        orderData.status === "waiting_for_driver_pickup" ||
+        orderData.status === "out_for_pickup" ||
+        orderData.status === "in_transit_to_outlet" ||
+        orderData.status === "arrived_at_outlet"
+      ) {
+        throw new HttpError(409, "You've not allowed to upload proof yet");
+      }
+      if (orderData.status === "complaint_received")
+        throw new HttpError(409, "The order has been paid already");
+      if (orderData.status === "finished")
+        throw new HttpError(
+          409,
+          "The order has been paid already,Please dont be a little hacker",
+        );
+      if (orderData.status === "cancelled")
+        throw new HttpError(
+          409,
+          "The order has been cancelled,Please dont be a little hacker",
+        );
+      if (orderData.paymentProof.length > 0)
         throw new HttpError(
           409,
           "Proof already uploaded, waiting for admin approval",
         );
+      if (
+        orderData.paymentGatewayTransactions.length > 0 ||
+        orderData.payment_method === "payment_gateway"
+      ) {
+        throw new HttpError(
+          409,
+          "Manual payment is not available. Please complete your payment through the selected payment gateway.",
+        );
+      }
 
       const uploadProof = await this.prisma.paymentProof.create({
         data: {
@@ -161,7 +262,7 @@ export class CustomerOrderService {
     }
   }
 
-  async payWithPaymentGateway(data: any) {
+  async payWithPaymentGateway(data: PayPaymentGatewayDTO) {
     try {
       const { orderId, userId } = data;
 
@@ -182,6 +283,7 @@ export class CustomerOrderService {
           delivery_fee: true,
           total_amount: true,
           total_km: true,
+          payment_method: true,
           outlet: {
             select: {
               price_per_kg: true,
@@ -211,6 +313,10 @@ export class CustomerOrderService {
             take: 1,
             select: { token: true },
           },
+          paymentProof: {
+            where: { is_deleted: false },
+            select: { id: true },
+          },
         },
       });
       if (!order)
@@ -238,6 +344,11 @@ export class CustomerOrderService {
         throw new HttpError(409, "Order cancelled");
       if (order.paid === true)
         throw new HttpError(409, "You've already paid for this order");
+      if (order.paymentProof.length > 0 || order.payment_method === "manual")
+        throw new HttpError(
+          409,
+          "Auto check payment is not available. Please complete your maual transfer and upload the payment proof.",
+        );
 
       // get the token if already made
       // const midtransToken =
@@ -323,7 +434,14 @@ export class CustomerOrderService {
         // store the token into database
         const { token } = await tx.paymentGatewayTransaction.update({
           where: { id: newToken.id, order_id: newToken.order_id },
-          data: { token: snapToken.token },
+          data: {
+            token: snapToken.token,
+            order: {
+              update: {
+                payment_method: "payment_gateway",
+              },
+            },
+          },
           select: { token: true },
         });
 
@@ -343,7 +461,7 @@ export class CustomerOrderService {
     }
   }
 
-  async cancelPayment(data: any) {
+  async cancelPayment(data: CancelPaymentDTO) {
     try {
       const { orderId, userId } = data;
 
@@ -354,6 +472,7 @@ export class CustomerOrderService {
           id: true,
           status: true,
           paid: true,
+          payment_method: true,
           paymentGatewayTransactions: {
             where: {
               OR: [
@@ -363,6 +482,10 @@ export class CustomerOrderService {
             },
             take: 1,
             select: { id: true, token: true },
+          },
+          paymentProof: {
+            where: { is_deleted: false },
+            select: { id: true },
           },
         },
       });
@@ -374,17 +497,46 @@ export class CustomerOrderService {
         );
       if (order.paid === true)
         throw new HttpError(409, "You've already paid for this order");
-      if (order.paymentGatewayTransactions.length === 0)
-        throw new HttpError(409, "Transaction error, please try again");
-      console.log(order.paymentGatewayTransactions?.[0]?.token);
-
-      const cancelPayment = await this.midtransInstance.cancel(orderId);
-
-      if (cancelPayment.status_code !== 200)
+      if (order.payment_method === null)
         throw new HttpError(
-          Number(cancelPayment.status_code),
-          cancelPayment.status_message,
+          409,
+          "No payment method selected, please select payment method first",
         );
+      if (order.paymentProof.length > 0)
+        throw new HttpError(
+          409,
+          "You can't cancel payment if you've uploaded proof of payment",
+        );
+
+      // cancel the payment midtrans
+      if (order.payment_method === "payment_gateway") {
+        if (order.paymentGatewayTransactions.length === 0)
+          throw new HttpError(409, "Transaction error, please try again");
+
+        const cancelPayment = await this.midtransInstance.cancel(orderId);
+
+        if (cancelPayment.status_code != 407)
+          throw new HttpError(
+            Number(cancelPayment.status_code),
+            `${cancelPayment.status_message} Please select payment method first before canceling payment`,
+          );
+
+        return {
+          success: true,
+          message: "Payment cancelled successfully",
+          data: cancelPayment,
+        };
+      }
+
+      // cancel the manua upload proof payment
+      const cancelPayment = await this.prisma.order.update({
+        where: { id: order.id },
+        data: { payment_method: null },
+        select: {
+          id: true,
+          payment_method: true,
+        },
+      });
 
       return {
         success: true,
@@ -416,7 +568,10 @@ export class CustomerOrderService {
         throw new HttpError(409, "Please wait for admin response");
 
       if (order.status !== "delivered")
-        throw new HttpError(409, "Please dont be a little hacker");
+        throw new HttpError(
+          409,
+          "Order not delivered yet, Please dont be a little hacker",
+        );
 
       const markDone = await this.prisma.order.update({
         where: { id: order.id },

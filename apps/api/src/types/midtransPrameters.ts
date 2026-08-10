@@ -38,6 +38,7 @@ export class MidtransParameter {
           .optional(),
       })
       .optional(),
+    custom_field1: z.string().optional(),
   });
 
   static orderId = z.uuid();
