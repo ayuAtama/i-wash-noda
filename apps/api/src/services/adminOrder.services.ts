@@ -808,6 +808,12 @@ export class AdminOrderService {
         data: {
           status: "rejected",
           is_deleted: true,
+          order: {
+            update: {
+              payment_method: null,
+              paid: false,
+            },
+          },
         },
         select: {
           id: true,

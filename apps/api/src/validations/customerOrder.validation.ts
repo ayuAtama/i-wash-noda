@@ -78,6 +78,21 @@ export class CustomerOrderValidation {
         complaintImage: "https://example.com/complain.jpg",
       },
     });
+
+  static PaymentMethod = z.object({
+    paymentMethod: z.enum(["payment_gateway", "manual"]).meta({
+      description: "Payment method",
+      example: "midtrans",
+    }),
+  });
+
+  static setPaymentMethodParams =
+    CustomerOrderValidation.OrderIdParamsSchema.merge(
+      CustomerOrderValidation.PaymentMethod,
+    ).meta({
+      id: "SetPaymentMethodParams",
+      description: "Combined params for setting payment method",
+    });
 }
 
 export type UserIdDTO = z.infer<typeof CustomerOrderValidation.UserIdSchema>;
@@ -91,8 +106,18 @@ export type UserIDDTO = z.infer<typeof CustomerOrderValidation.UserID>;
 export type complainDTO = z.infer<
   typeof CustomerOrderValidation.ComplainSchema
 >;
+export type PaymentMethodDTO = z.infer<
+  typeof CustomerOrderValidation.PaymentMethod
+>;
+export type SetPaymentMethodParamsDTO = z.infer<
+  typeof CustomerOrderValidation.setPaymentMethodParams
+>;
 
 export type uploadPaymentDTO = UserIDDTO & OrderIdParamsDTO & PaymentProofDTO;
 export type complainPayloadDTO = UserIDDTO & complainDTO & OrderIdParamsDTO;
 export type markDoneDTO = UserIDDTO & OrderIdParamsDTO;
-
+export type PayPaymentGatewayDTO = UserIDDTO & OrderIdParamsDTO;
+export type CancelPaymentDTO = UserIDDTO & OrderIdParamsDTO;
+export type SetPaymentMethodDTO = UserIDDTO &
+  OrderIdParamsDTO &
+  PaymentMethodDTO;

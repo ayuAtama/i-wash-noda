@@ -13,8 +13,9 @@ class CustomerOrderRoute {
   constructor(controller: CustomerOrderController) {
     this.controller = controller;
     this.customerOrder();
-    this.paymentEndpoints();
     this.complaint();
+    this.markDone();
+    this.paymentEndpoints();
   }
 
   private customerOrder() {
@@ -45,6 +46,16 @@ class CustomerOrderRoute {
       this.controller.uploadPaymentProof,
     );
 
+    this.router.post(
+      "/:orderId/payment/cancel",
+      authenticationMiddleware,
+      authorizationMiddleware("customer"),
+      Validator.validate({
+        params: CustomerOrderValidation.OrderIdParamsSchema,
+      }),
+      this.controller.cancelPayment,
+    );
+
     this.router.get(
       "/:orderId/payment-gateway",
       authenticationMiddleware,
@@ -56,13 +67,13 @@ class CustomerOrderRoute {
     );
 
     this.router.post(
-      "/:orderId/payment-gateway/cancel",
+      "/:orderId/payment/:paymentMethod",
       authenticationMiddleware,
       authorizationMiddleware("customer"),
       Validator.validate({
-        params: CustomerOrderValidation.OrderIdParamsSchema,
+        params: CustomerOrderValidation.setPaymentMethodParams,
       }),
-      this.controller.cancelPayment,
+      this.controller.setPaymentMethod,
     );
   }
 

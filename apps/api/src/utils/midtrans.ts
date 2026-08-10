@@ -2,6 +2,7 @@ import midtransClient from "midtrans-client";
 import "dotenv/config";
 import {
   MidtransParameterType,
+  MidtransSignatureCheckType,
   MidtransUUIDType,
 } from "@/types/midtransPrameters";
 import dayjs from "dayjs";
@@ -50,10 +51,14 @@ export class MidtransClients extends midtransClient.Snap {
 
   async cancel(transactionId: MidtransUUIDType) {
     try {
+      const isProduction = process.env.NODE_ENV === "production";
+      let url = `https://api.sandbox.midtrans.com/v2/${transactionId}/expire`;
+      if (isProduction) {
+        url = `https://api.midtrans.com/v2/${transactionId}/expire`;
+      }
       const serverKey = Buffer.from(
         `${process.env.MIDTRANS_SERVER_KEY}:`,
       ).toString("base64");
-      const url = `https://api.sandbox.midtrans.com/v2/${transactionId}/expire`;
 
       const res = await fetch(url, {
         method: "POST",
@@ -72,10 +77,14 @@ export class MidtransClients extends midtransClient.Snap {
 
   async checkStatus(transactionId: MidtransUUIDType) {
     try {
+      const isProduction = process.env.NODE_ENV === "production";
+      let url = `https://api.sandbox.midtrans.com/v2/${transactionId}/status`;
+      if (isProduction) {
+        url = `https://api.midtrans.com/v2/${transactionId}/status`;
+      }
       const serverKey = Buffer.from(
         `${process.env.MIDTRANS_SERVER_KEY}:`,
       ).toString("base64");
-      const url = `https://api.sandbox.midtrans.com/v2/${transactionId}/status`;
 
       const res = await fetch(url, {
         method: "GET",
@@ -92,7 +101,7 @@ export class MidtransClients extends midtransClient.Snap {
     }
   }
 
-  async verifyResponse(params: any) {
+  async verifyResponse(params: MidtransSignatureCheckType) {
     try {
       const { order_id, status_code, gross_amount, signature_key } = params;
 
@@ -105,19 +114,6 @@ export class MidtransClients extends midtransClient.Snap {
         throw new HttpError(400, "Invalid signature key");
       }
       return true;
-
-      // const serverKey = process.env.MIDTRANS_SERVER_KEY!;
-
-      // // Create raw string combination
-      // const rawData = order_id + status_code + gross_amount + serverKey;
-
-      // // Generate SHA-512 hash
-      // const computedSignature = crypto
-      //   .createHash("sha512")
-      //   .update(rawData)
-      //   .digest("hex");
-
-      // return computedSignature === signature_key;
     } catch (error) {
       throw error;
     }
