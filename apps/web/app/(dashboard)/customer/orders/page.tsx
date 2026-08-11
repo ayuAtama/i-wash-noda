@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResponse } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -30,17 +31,37 @@ const statusOptions = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
+interface CustomerOrderItem {
+  id: string;
+  name: string;
+  quantity_initial: number;
+}
+
+interface CustomerOrder {
+  id: string;
+  status: string;
+  paid: boolean;
+  total_amount: number | null;
+  total_price: number | null;
+  created_at: string;
+  updated_at: string;
+  items: CustomerOrderItem[];
+}
+
 export default function CustomerOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer-orders"],
-    queryFn: () => api.get("/api/orders").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/orders")
+        .then((r) => r.data as ApiResponse<CustomerOrder[]>),
     retry: false,
   });
 
   const orders = (data?.data ?? []).filter(
-    (o: any) => !statusFilter || o.status === statusFilter,
+    (o) => !statusFilter || o.status === statusFilter,
   );
 
   if (isLoading) return <PageSpinner />;
@@ -85,7 +106,7 @@ export default function CustomerOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order: any) => (
+              {orders.map((order) => (
                 <tr
                   key={order.id}
                   className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"

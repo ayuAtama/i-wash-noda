@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export default function RegisterPage() {
       setUserId(data.data?.id || data.userId || "");
       setStep("verify");
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       setError(err.response?.data?.message || "Registration failed");
     },
   });
@@ -51,7 +52,7 @@ export default function RegisterPage() {
     onSuccess: () => {
       setStep("complete");
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       setError(err.response?.data?.message || "Verification failed");
     },
   });
@@ -66,7 +67,7 @@ export default function RegisterPage() {
     onSuccess: () => {
       router.push("/login");
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       setError(err.response?.data?.message || "Completion failed");
     },
   });

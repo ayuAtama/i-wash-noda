@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiResponse, DeliveryRequest } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -21,12 +23,15 @@ export default function DriverDeliveriesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["driver-deliveries"],
-    queryFn: () => api.get("/api/delivery-requests").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/delivery-requests")
+        .then((r) => r.data as ApiResponse<DeliveryRequest[]>),
     retry: false,
   });
 
   const deliveries = data?.data ?? [];
-  const filtered = deliveries.filter((d: any) => {
+  const filtered = deliveries.filter((d) => {
     if (tab === "available") return d.status === "pending";
     if (tab === "accepted") return d.status === "accepted";
     return d.status === "completed";
@@ -38,7 +43,7 @@ export default function DriverDeliveriesPage() {
       addToast({ type: "success", title: "Delivery accepted" });
       queryClient.invalidateQueries({ queryKey: ["driver-deliveries"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -54,7 +59,7 @@ export default function DriverDeliveriesPage() {
       addToast({ type: "success", title: "Delivery completed" });
       queryClient.invalidateQueries({ queryKey: ["driver-deliveries"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -69,17 +74,17 @@ export default function DriverDeliveriesPage() {
     {
       key: "available",
       label: "Available",
-      count: deliveries.filter((d: any) => d.status === "pending").length,
+      count: deliveries.filter((d) => d.status === "pending").length,
     },
     {
       key: "accepted",
       label: "In Progress",
-      count: deliveries.filter((d: any) => d.status === "accepted").length,
+      count: deliveries.filter((d) => d.status === "accepted").length,
     },
     {
       key: "completed",
       label: "Completed",
-      count: deliveries.filter((d: any) => d.status === "completed").length,
+      count: deliveries.filter((d) => d.status === "completed").length,
     },
   ];
 
@@ -111,7 +116,7 @@ export default function DriverDeliveriesPage() {
         />
       ) : (
         <div className="space-y-4">
-          {filtered.map((delivery: any) => (
+          {filtered.map((delivery) => (
             <Card key={delivery.id}>
               <div className="flex items-center justify-between">
                 <div>

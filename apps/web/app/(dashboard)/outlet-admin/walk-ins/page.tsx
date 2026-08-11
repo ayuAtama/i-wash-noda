@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import type { WalkInCustomer } from "@/types";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
-import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import EmptyState from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/utils";
@@ -17,7 +17,7 @@ export default function WalkInsPage() {
     retry: false,
   });
 
-  const customers = data?.data ?? [];
+  const customers = (data?.data ?? []) as WalkInCustomer[];
 
   if (isLoading) return <PageSpinner />;
 
@@ -56,7 +56,7 @@ export default function WalkInsPage() {
               </tr>
             </thead>
             <tbody>
-              {customers.map((c: any) => (
+              {customers.map((c) => (
                 <tr
                   key={c.id}
                   className="border-b border-gray-50 last:border-0 hover:bg-gray-50"

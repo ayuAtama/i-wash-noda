@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResponse, DeliveryRequest, PickupRequest } from "@/types";
 import api from "@/lib/api";
 import StatCard from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
@@ -11,22 +12,26 @@ import { PageSpinner } from "@/components/ui/spinner";
 export default function DriverDashboard() {
   const { data: pickupsData, isLoading } = useQuery({
     queryKey: ["driver-pickups"],
-    queryFn: () => api.get("/api/pickup-requests").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/pickup-requests")
+        .then((r) => r.data as ApiResponse<PickupRequest[]>),
     retry: false,
   });
 
   const { data: deliveriesData } = useQuery({
     queryKey: ["driver-deliveries"],
-    queryFn: () => api.get("/api/delivery-requests").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/delivery-requests")
+        .then((r) => r.data as ApiResponse<DeliveryRequest[]>),
     retry: false,
   });
 
   const pickups = pickupsData?.data ?? [];
   const deliveries = deliveriesData?.data ?? [];
-  const pendingPickups = pickups.filter((p: any) => p.status === "pending");
-  const pendingDeliveries = deliveries.filter(
-    (d: any) => d.status === "pending",
-  );
+  const pendingPickups = pickups.filter((p) => p.status === "pending");
+  const pendingDeliveries = deliveries.filter((d) => d.status === "pending");
 
   if (isLoading) return <PageSpinner />;
 
@@ -73,11 +78,11 @@ export default function DriverDashboard() {
           </h2>
           <div className="p-4 bg-gray-50 rounded-lg">
             <p className="font-mono text-sm text-gray-600">
-              {pendingPickups[0].id?.slice(0, 8)}...
+              {pendingPickups[0]!.id?.slice(0, 8)}...
             </p>
             <p className="text-sm text-gray-500 mt-1">
               Outlet:{" "}
-              {pendingPickups[0].outlet?.name || pendingPickups[0].outlet_id}
+              {pendingPickups[0]!.outlet?.name || pendingPickups[0]!.outlet_id}
             </p>
             <Link
               href="/driver/pickups"

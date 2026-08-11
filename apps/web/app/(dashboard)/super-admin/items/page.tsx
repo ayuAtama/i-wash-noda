@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import PageHeader from "@/components/ui/page-header";
-import { Card, CardHeader } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import EmptyState from "@/components/ui/empty-state";
 import Modal from "@/components/ui/modal";
@@ -16,6 +16,16 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import Badge from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
+
+interface Item {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  unit: string;
+  category?: string | null;
+  is_active?: boolean;
+}
 
 export default function ItemsPage() {
   const queryClient = useQueryClient();
@@ -43,7 +53,7 @@ export default function ItemsPage() {
     retry: false,
   });
 
-  const items = data?.data ?? [];
+  const items = (data?.data ?? []) as Item[];
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -66,7 +76,7 @@ export default function ItemsPage() {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ["admin-items"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -93,7 +103,7 @@ export default function ItemsPage() {
     setEditingId(null);
   };
 
-  const openEdit = (item: any) => {
+  const openEdit = (item: Item) => {
     setEditingId(item.id);
     setFormName(item.name);
     setFormDesc(item.description || "");
@@ -150,7 +160,7 @@ export default function ItemsPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item: any) => (
+              {items.map((item) => (
                 <tr
                   key={item.id}
                   className="border-b border-gray-50 last:border-0 hover:bg-gray-50"

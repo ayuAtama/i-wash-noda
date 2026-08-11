@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export default function ProfilePage() {
       // Refresh the "me" query so the sidebar/header show the new name
       queryClient.invalidateQueries({ queryKey: ["me"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",

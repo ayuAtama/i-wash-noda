@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import type { Order } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import Select from "@/components/ui/select";
@@ -34,8 +35,8 @@ export default function AdminOrdersPage() {
     retry: false,
   });
 
-  const orders = (data?.data ?? []).filter(
-    (o: any) => !statusFilter || o.status === statusFilter,
+  const orders = ((data?.data ?? []) as Order[]).filter(
+    (o) => !statusFilter || o.status === statusFilter,
   );
 
   if (isLoading) return <PageSpinner />;
@@ -74,7 +75,7 @@ export default function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order: any) => (
+              {orders.map((order) => (
                 <tr
                   key={order.id}
                   className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"

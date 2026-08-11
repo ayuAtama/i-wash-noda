@@ -1,17 +1,28 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResponse } from "@/types";
 import api from "@/lib/api";
 import PageHeader from "@/components/ui/page-header";
-import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import EmptyState from "@/components/ui/empty-state";
 import { formatDateTime } from "@/lib/utils";
 
+interface WorkerOrder {
+  id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  items?: { id: string }[];
+}
+
 export default function WorkerHistoryPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["worker-history"],
-    queryFn: () => api.get("/api/worker/orders/history").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/worker/orders/history")
+        .then((r) => r.data as ApiResponse<WorkerOrder[]>),
     retry: false,
   });
 
@@ -40,7 +51,7 @@ export default function WorkerHistoryPage() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order: any) => (
+              {orders.map((order) => (
                 <tr
                   key={order.id}
                   className="border-b border-gray-50 last:border-0 hover:bg-gray-50"

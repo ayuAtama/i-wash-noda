@@ -144,7 +144,7 @@ export function CreatableItemOrder() {
                           onClick={handleCreateNewItem}
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          Create "{searchQuery}"
+                          Create &quot;{searchQuery}&quot;
                         </Button>
                       </CommandEmpty>
 

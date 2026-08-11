@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResponse } from "@/types";
 import { useAuth } from "@/lib/auth-context";
 import api from "@/lib/api";
 import StatCard from "@/components/ui/stat-card";
@@ -11,18 +12,28 @@ import { PageSpinner } from "@/components/ui/spinner";
 import { Card } from "@/components/ui/card";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
+interface CustomerOrder {
+  id: string;
+  status: string;
+  total_amount: number | null;
+  created_at: string;
+}
+
 export default function CustomerDashboard() {
   const { user } = useAuth();
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["customer-orders"],
-    queryFn: () => api.get("/api/orders").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/orders")
+        .then((r) => r.data as ApiResponse<CustomerOrder[]>),
     retry: false,
   });
 
   const orderList = orders?.data ?? [];
   const activeOrders = orderList.filter(
-    (o: any) => !["delivered", "cancelled"].includes(o.status),
+    (o) => !["delivered", "cancelled"].includes(o.status),
   );
   const recentOrders = orderList.slice(0, 5);
 
@@ -53,10 +64,7 @@ export default function CustomerDashboard() {
         <StatCard
           label="Total Spent"
           value={formatCurrency(
-            orderList.reduce(
-              (s: number, o: any) => s + (o.total_amount || 0),
-              0,
-            ),
+            orderList.reduce((s, o) => s + (o.total_amount || 0), 0),
           )}
           icon={<span className="text-xl">💰</span>}
         />
@@ -91,7 +99,7 @@ export default function CustomerDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map((order: any) => (
+                {recentOrders.map((order) => (
                   <tr
                     key={order.id}
                     className="border-b border-gray-50 last:border-0"

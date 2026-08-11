@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiResponse } from "@/types";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
@@ -11,6 +13,15 @@ import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { formatDateTime } from "@/lib/utils";
 
+interface WorkerOrder {
+  id: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  items?: { id: string; item_id: string; quantity_initial: number }[];
+}
+
 export default function WorkerAvailablePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -18,7 +29,10 @@ export default function WorkerAvailablePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["worker-available"],
-    queryFn: () => api.get("/api/worker/orders/available").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/worker/orders/available")
+        .then((r) => r.data as ApiResponse<WorkerOrder[]>),
     retry: false,
   });
 
@@ -33,7 +47,7 @@ export default function WorkerAvailablePage() {
       queryClient.invalidateQueries({ queryKey: ["worker-in-progress"] });
       router.push("/worker/in-progress");
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed to accept",
@@ -59,7 +73,7 @@ export default function WorkerAvailablePage() {
         />
       ) : (
         <div className="space-y-4">
-          {orders.map((order: any) => (
+          {orders.map((order) => (
             <Card key={order.id}>
               <div className="flex items-center justify-between">
                 <div>

@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { Item } from "@/types";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Select from "@/components/ui/select";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import PageHeader from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 
@@ -28,7 +30,7 @@ export default function NewWalkInPage() {
     queryFn: () => api.get("/api/items").then((r) => r.data),
     retry: false,
   });
-  const availableItems = itemsData?.data ?? [];
+  const availableItems = (itemsData?.data ?? []) as Item[];
 
   const createCustomer = useMutation({
     mutationFn: () =>
@@ -43,7 +45,7 @@ export default function NewWalkInPage() {
       setCustomerId(data.data?.id || data.id);
       setStep("items");
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -64,7 +66,7 @@ export default function NewWalkInPage() {
       addToast({ type: "success", title: "Walk-in order created" });
       router.push("/outlet-admin/orders");
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -76,9 +78,17 @@ export default function NewWalkInPage() {
   const addItem = () => setItems([...items, { itemId: "", quantity: 1 }]);
   const removeItem = (index: number) =>
     setItems(items.filter((_, i) => i !== index));
-  const updateItem = (index: number, field: string, value: any) => {
-    const updated = [...items];
-    (updated[index] as any)[field] = value;
+  const updateItem = (
+    index: number,
+    field: "itemId" | "quantity",
+    value: string | number,
+  ) => {
+    const updated = items.map((entry, i) => {
+      if (i !== index) return entry;
+      return field === "itemId"
+        ? { ...entry, itemId: value as string }
+        : { ...entry, quantity: value as number };
+    });
     setItems(updated);
   };
 
@@ -161,7 +171,7 @@ export default function NewWalkInPage() {
                     <Select
                       value={entry.itemId}
                       onChange={(e) => updateItem(i, "itemId", e.target.value)}
-                      options={availableItems.map((it: any) => ({
+                      options={availableItems.map((it) => ({
                         value: it.id,
                         label: `${it.name} - ${it.unit}`,
                       }))}

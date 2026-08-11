@@ -7,6 +7,19 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import Badge from "@/components/ui/badge";
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface Outlet {
+  id: number;
+  name: string;
+  address: string;
+}
+
 export default function SuperAdminDashboard() {
   const { data: usersData, isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -26,11 +39,11 @@ export default function SuperAdminDashboard() {
     retry: false,
   });
 
-  const users = usersData?.data ?? [];
-  const outlets = outletsData?.data ?? [];
-  const items = itemsData?.data ?? [];
+  const users = (usersData?.data ?? []) as User[];
+  const outlets = (outletsData?.data ?? []) as Outlet[];
+  const items = (itemsData?.data ?? []) as unknown[];
 
-  const roleBreakdown = users.reduce((acc: Record<string, number>, u: any) => {
+  const roleBreakdown = users.reduce((acc: Record<string, number>, u: User) => {
     acc[u.role] = (acc[u.role] || 0) + 1;
     return acc;
   }, {});
@@ -91,7 +104,7 @@ export default function SuperAdminDashboard() {
         <Card>
           <CardHeader>Recent Users</CardHeader>
           <div className="space-y-2">
-            {users.slice(0, 5).map((user: any) => (
+            {users.slice(0, 5).map((user) => (
               <div
                 key={user.id}
                 className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
@@ -111,7 +124,7 @@ export default function SuperAdminDashboard() {
         <Card>
           <CardHeader>Outlets</CardHeader>
           <div className="space-y-2">
-            {outlets.slice(0, 5).map((outlet: any) => (
+            {outlets.slice(0, 5).map((outlet) => (
               <div
                 key={outlet.id}
                 className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"

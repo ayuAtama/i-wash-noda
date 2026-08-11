@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { Mismatch } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +31,7 @@ export default function MismatchesPage() {
     retry: false,
   });
 
-  const mismatches = data?.data ?? [];
+  const mismatches = (data?.data ?? []) as Mismatch[];
 
   const resolveMutation = useMutation({
     mutationFn: ({
@@ -55,7 +57,7 @@ export default function MismatchesPage() {
       setNote("");
       queryClient.invalidateQueries({ queryKey: ["admin-mismatches"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -81,7 +83,7 @@ export default function MismatchesPage() {
         />
       ) : (
         <div className="space-y-4">
-          {mismatches.map((m: any) => (
+          {mismatches.map((m) => (
             <Card key={m.id}>
               <div className="flex items-center justify-between">
                 <div>

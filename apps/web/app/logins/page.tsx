@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import api from "@/lib/api";
 
 export default function LoginPage() {
@@ -71,8 +72,8 @@ export default function LoginPage() {
             }}
           >
             {JSON.stringify(
-              (mutation.error as any)?.response?.data ||
-                mutation.error?.message,
+              (mutation.error as AxiosError<{ message?: string }>)?.response
+                ?.data || mutation.error?.message,
               null,
               2,
             )}

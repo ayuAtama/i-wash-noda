@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { Order } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ export default function AdminOrderDetailPage() {
     retry: false,
   });
 
-  const order = (data?.data ?? []).find((o: any) => o.id === params.id);
+  const order = ((data?.data ?? []) as Order[]).find((o) => o.id === params.id);
 
   const deliverMutation = useMutation({
     mutationFn: () => api.patch(`/api/orders/${params.id}/deliver`),
@@ -33,7 +34,7 @@ export default function AdminOrderDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       router.push("/outlet-admin/orders");
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -100,7 +101,7 @@ export default function AdminOrderDetailPage() {
 
         <Card>
           <CardHeader>Items</CardHeader>
-          {order.items?.length > 0 ? (
+          {order.items && order.items.length > 0 ? (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-gray-500">
@@ -110,7 +111,7 @@ export default function AdminOrderDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {order.items.map((item: any) => (
+                {order.items.map((item) => (
                   <tr
                     key={item.id}
                     className="border-b border-gray-50 last:border-0"

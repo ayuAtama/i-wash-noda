@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import api from "@/lib/api";
 
 import {
@@ -180,7 +181,8 @@ export function WorkerShiftForm({ initialValues, submitLabel }: Props) {
       <br />{" "}
       {mutation.isError && (
         <p style={{ color: "red" }}>
-          {(mutation.error as any)?.response?.data?.message ||
+          {(mutation.error as AxiosError<{ message?: string }>)?.response?.data
+            ?.message ||
             mutation.error?.message ||
             "Failed"}
         </p>

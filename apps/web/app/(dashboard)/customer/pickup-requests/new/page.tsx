@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiResponse, Outlet, Item } from "@/types";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,13 +32,15 @@ export default function NewPickupRequestPage() {
 
   const { data: outletsData } = useQuery({
     queryKey: ["outlets"],
-    queryFn: () => api.get("/api/outlets").then((r) => r.data),
+    queryFn: () =>
+      api.get("/api/outlets").then((r) => r.data as ApiResponse<Outlet[]>),
     retry: false,
   });
 
   const { data: itemsData } = useQuery({
     queryKey: ["items"],
-    queryFn: () => api.get("/api/items").then((r) => r.data),
+    queryFn: () =>
+      api.get("/api/items").then((r) => r.data as ApiResponse<Item[]>),
     retry: false,
   });
 
@@ -61,7 +65,7 @@ export default function NewPickupRequestPage() {
       addToast({ type: "success", title: "Pickup request created" });
       router.push("/customer/pickup-requests");
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -73,10 +77,16 @@ export default function NewPickupRequestPage() {
   const addItem = () => setItems([...items, { itemId: "", quantity: 1 }]);
   const removeItem = (index: number) =>
     setItems(items.filter((_, i) => i !== index));
-  const updateItem = (index: number, field: keyof ItemEntry, value: any) => {
-    const updated = [...items];
-    (updated[index] as any)[field] = value;
-    setItems(updated);
+  const updateItem = (
+    index: number,
+    field: keyof ItemEntry,
+    value: string | number,
+  ) => {
+    setItems(
+      items.map((entry, i) =>
+        i === index ? { ...entry, [field]: value } : entry,
+      ),
+    );
   };
 
   return (
@@ -102,7 +112,7 @@ export default function NewPickupRequestPage() {
             label="Outlet"
             value={outletId}
             onChange={(e) => setOutletId(e.target.value)}
-            options={outlets.map((o: any) => ({
+            options={outlets.map((o) => ({
               value: String(o.id),
               label: o.name,
             }))}
@@ -143,7 +153,7 @@ export default function NewPickupRequestPage() {
                     <Select
                       value={entry.itemId}
                       onChange={(e) => updateItem(i, "itemId", e.target.value)}
-                      options={availableItems.map((it: any) => ({
+                      options={availableItems.map((it) => ({
                         value: it.id,
                         label: `${it.name} - ${it.unit}`,
                       }))}

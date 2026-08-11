@@ -8,7 +8,8 @@
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "env": ["RAJAONGKIR_API_KEY", "OPENCAGE_API_KEY"]
     },
     "check-types": {
       "dependsOn": ["^check-types"]

@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiResponse } from "@/types";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
@@ -10,6 +12,22 @@ import { PageSpinner } from "@/components/ui/spinner";
 import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 
+interface WorkerOrderItem {
+  id: string;
+  item_id: string;
+  quantity_initial: number;
+  item?: { name?: string };
+}
+
+interface WorkerOrder {
+  id: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  items?: WorkerOrderItem[];
+}
+
 export default function WorkerInProgressPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -17,23 +35,27 @@ export default function WorkerInProgressPage() {
 
   const { data: availableData, isLoading } = useQuery({
     queryKey: ["worker-available"],
-    queryFn: () => api.get("/api/worker/orders/available").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/worker/orders/available")
+        .then((r) => r.data as ApiResponse<WorkerOrder[]>),
     retry: false,
   });
 
   const { data: historyData } = useQuery({
     queryKey: ["worker-history"],
-    queryFn: () => api.get("/api/worker/orders/history").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/worker/orders/history")
+        .then((r) => r.data as ApiResponse<WorkerOrder[]>),
     retry: false,
   });
 
   const available = availableData?.data ?? [];
   const history = historyData?.data ?? [];
 
-  const completedIds = new Set(history.map((h: any) => h.id));
-  const inProgressOrders = available.filter(
-    (o: any) => !completedIds.has(o.id),
-  );
+  const completedIds = new Set(history.map((h) => h.id));
+  const inProgressOrders = available.filter((o) => !completedIds.has(o.id));
 
   const completeMutation = useMutation({
     mutationFn: (orderId: string) =>
@@ -43,7 +65,7 @@ export default function WorkerInProgressPage() {
       queryClient.invalidateQueries({ queryKey: ["worker-available"] });
       queryClient.invalidateQueries({ queryKey: ["worker-history"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -74,7 +96,7 @@ export default function WorkerInProgressPage() {
         />
       ) : (
         <div className="space-y-4">
-          {inProgressOrders.map((order: any) => (
+          {inProgressOrders.map((order) => (
             <Card key={order.id}>
               <CardHeader>Order {order.id.slice(0, 8)}...</CardHeader>
               <div className="space-y-3">
@@ -82,9 +104,9 @@ export default function WorkerInProgressPage() {
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Items:
                   </p>
-                  {order.items?.length > 0 ? (
+                  {order.items && order.items.length > 0 ? (
                     <ul className="space-y-1">
-                      {order.items.map((item: any, i: number) => (
+                      {order.items.map((item, i) => (
                         <li
                           key={i}
                           className="text-sm text-gray-600 flex justify-between"

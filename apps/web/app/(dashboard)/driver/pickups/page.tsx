@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiResponse, PickupRequest } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -21,12 +23,15 @@ export default function DriverPickupsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["driver-pickups"],
-    queryFn: () => api.get("/api/pickup-requests").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/pickup-requests")
+        .then((r) => r.data as ApiResponse<PickupRequest[]>),
     retry: false,
   });
 
   const pickups = data?.data ?? [];
-  const filtered = pickups.filter((p: any) => {
+  const filtered = pickups.filter((p) => {
     if (tab === "available") return p.status === "pending";
     if (tab === "accepted") return p.status === "accepted";
     return p.status === "picked_up";
@@ -38,7 +43,7 @@ export default function DriverPickupsPage() {
       addToast({ type: "success", title: "Pickup accepted" });
       queryClient.invalidateQueries({ queryKey: ["driver-pickups"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -53,7 +58,7 @@ export default function DriverPickupsPage() {
       addToast({ type: "success", title: "Marked as picked up" });
       queryClient.invalidateQueries({ queryKey: ["driver-pickups"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -68,17 +73,17 @@ export default function DriverPickupsPage() {
     {
       key: "available",
       label: "Available",
-      count: pickups.filter((p: any) => p.status === "pending").length,
+      count: pickups.filter((p) => p.status === "pending").length,
     },
     {
       key: "accepted",
       label: "In Progress",
-      count: pickups.filter((p: any) => p.status === "accepted").length,
+      count: pickups.filter((p) => p.status === "accepted").length,
     },
     {
       key: "completed",
       label: "Completed",
-      count: pickups.filter((p: any) => p.status === "picked_up").length,
+      count: pickups.filter((p) => p.status === "picked_up").length,
     },
   ];
 
@@ -110,7 +115,7 @@ export default function DriverPickupsPage() {
         />
       ) : (
         <div className="space-y-4">
-          {filtered.map((pickup: any) => (
+          {filtered.map((pickup) => (
             <Card key={pickup.id}>
               <div className="flex items-center justify-between">
                 <div>
@@ -125,7 +130,10 @@ export default function DriverPickupsPage() {
                   </p>
                   {pickup.address && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Address: {pickup.address.address || pickup.address}
+                      Address:{" "}
+                      {typeof pickup.address === "string"
+                        ? pickup.address
+                        : pickup.address.address}
                     </p>
                   )}
                   {pickup.pickup_date && (

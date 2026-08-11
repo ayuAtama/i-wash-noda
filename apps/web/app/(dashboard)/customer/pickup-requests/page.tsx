@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResponse, PickupRequest } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,10 @@ import { formatDate } from "@/lib/utils";
 export default function PickupRequestsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["pickup-requests"],
-    queryFn: () => api.get("/api/pickup-requests/status").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/pickup-requests/status")
+        .then((r) => r.data as ApiResponse<PickupRequest[]>),
     retry: false,
   });
 
@@ -47,7 +51,7 @@ export default function PickupRequestsPage() {
         />
       ) : (
         <div className="space-y-4">
-          {requests.map((req: any) => (
+          {requests.map((req) => (
             <Card key={req.id}>
               <div className="flex items-center justify-between">
                 <div>

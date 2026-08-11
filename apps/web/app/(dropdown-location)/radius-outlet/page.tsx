@@ -4,7 +4,6 @@ import {
   GoogleMap,
   Marker,
   Circle,
-  InfoWindow,
   useJsApiLoader,
   OverlayView,
 } from "@react-google-maps/api";

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface UserData {
   name: string;
@@ -116,7 +117,7 @@ export default function ProfilePage() {
         <h1 style={{ fontSize: 24, fontWeight: 600 }}>Profile</h1>
 
         {user?.image && (
-          <img
+          <Image
             src={user.image}
             alt="avatar"
             width={80}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import type { Order, Mismatch } from "@/types";
 import api from "@/lib/api";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
@@ -23,11 +24,9 @@ export default function OutletAdminDashboard() {
     retry: false,
   });
 
-  const orders = ordersData?.data ?? [];
-  const mismatches = mismatchData?.data ?? [];
-  const pendingMismatches = mismatches.filter(
-    (m: any) => m.status === "pending",
-  );
+  const orders = (ordersData?.data ?? []) as Order[];
+  const mismatches = (mismatchData?.data ?? []) as Mismatch[];
+  const pendingMismatches = mismatches.filter((m) => m.status === "pending");
 
   if (isLoading) return <PageSpinner />;
 
@@ -53,15 +52,13 @@ export default function OutletAdminDashboard() {
         />
         <StatCard
           label="Ready for Delivery"
-          value={
-            orders.filter((o: any) => o.status === "ready_for_pickup").length
-          }
+          value={orders.filter((o) => o.status === "ready_for_pickup").length}
           icon={<span className="text-xl">✅</span>}
         />
         <StatCard
           label="Revenue"
           value={formatCurrency(
-            orders.reduce((s: number, o: any) => s + (o.total_price || 0), 0),
+            orders.reduce((s: number, o: Order) => s + (o.total_price || 0), 0),
           )}
           icon={<span className="text-xl">💰</span>}
         />
@@ -95,7 +92,7 @@ export default function OutletAdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {orders.slice(0, 10).map((order: any) => (
+              {orders.slice(0, 10).map((order) => (
                 <tr
                   key={order.id}
                   className="border-b border-gray-50 last:border-0"

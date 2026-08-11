@@ -81,10 +81,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "baseUrl": "./src",
-    "ignoreDeprecations": "5.0",
+    "types": ["node"],
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["./src/*"]
     },
     "typeRoots": ["./src/types", "./node_modules/@types"]
   },

@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import PageHeader from "@/components/ui/page-header";
-import { Card } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import EmptyState from "@/components/ui/empty-state";
 import Modal from "@/components/ui/modal";
@@ -15,6 +15,20 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import Badge from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  outlet_id?: number | null;
+  created_at: string;
+}
+
+interface Outlet {
+  id: number;
+  name: string;
+}
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
@@ -41,10 +55,10 @@ export default function UsersPage() {
     retry: false,
   });
 
-  const users = (usersData?.data ?? []).filter(
-    (u: any) => !roleFilter || u.role === roleFilter,
+  const users = ((usersData?.data ?? []) as User[]).filter(
+    (u) => !roleFilter || u.role === roleFilter,
   );
-  const outlets = outletsData?.data ?? [];
+  const outlets = (outletsData?.data ?? []) as Outlet[];
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -61,7 +75,7 @@ export default function UsersPage() {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -142,7 +156,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user: any) => (
+              {users.map((user) => (
                 <tr
                   key={user.id}
                   className="border-b border-gray-50 last:border-0 hover:bg-gray-50"
@@ -235,7 +249,7 @@ export default function UsersPage() {
               label="Outlet"
               value={formOutletId}
               onChange={(e) => setFormOutletId(e.target.value)}
-              options={outlets.map((o: any) => ({
+              options={outlets.map((o) => ({
                 value: String(o.id),
                 label: o.name,
               }))}

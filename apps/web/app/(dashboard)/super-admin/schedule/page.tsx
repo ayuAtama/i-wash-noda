@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,28 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
 import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
-import { formatDate } from "@/lib/utils";
+
+interface Outlet {
+  id: number;
+  name: string;
+}
+
+interface Worker {
+  id: string;
+  name?: string | null;
+  email: string;
+}
+
+interface Schedule {
+  id: string;
+  worker_id: string;
+  worker?: { name: string } | null;
+  outlet_id: number;
+  outlet?: { name: string } | null;
+  station: string;
+  shift_start: string;
+  shift_end: string;
+}
 
 export default function SchedulePage() {
   const queryClient = useQueryClient();
@@ -55,10 +77,10 @@ export default function SchedulePage() {
     retry: false,
   });
 
-  const schedules = scheduleData?.data ?? [];
-  const outlets = outletsData?.data ?? [];
-  const workers = workersData?.data ?? [];
-  const noShiftWorkers = noShiftData?.data ?? [];
+  const schedules = (scheduleData?.data ?? []) as Schedule[];
+  const outlets = (outletsData?.data ?? []) as Outlet[];
+  const workers = (workersData?.data ?? []) as Worker[];
+  const noShiftWorkers = (noShiftData?.data ?? []) as Worker[];
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -74,7 +96,7 @@ export default function SchedulePage() {
       addToast({ type: "success", title: "Shift created" });
       queryClient.invalidateQueries({ queryKey: ["admin-schedule"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -114,7 +136,7 @@ export default function SchedulePage() {
               label="Outlet"
               value={outletId}
               onChange={(e) => setOutletId(e.target.value)}
-              options={outlets.map((o: any) => ({
+              options={outlets.map((o) => ({
                 value: String(o.id),
                 label: o.name,
               }))}
@@ -135,7 +157,7 @@ export default function SchedulePage() {
               label="Worker"
               value={workerId}
               onChange={(e) => setWorkerId(e.target.value)}
-              options={workers.map((w: any) => ({
+              options={workers.map((w) => ({
                 value: w.id,
                 label: w.name || w.email,
               }))}
@@ -187,7 +209,7 @@ export default function SchedulePage() {
               />
             ) : (
               <div className="space-y-2">
-                {schedules.map((s: any) => (
+                {schedules.map((s) => (
                   <div
                     key={s.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -213,7 +235,7 @@ export default function SchedulePage() {
             <Card>
               <CardHeader>Workers Without Shifts</CardHeader>
               <div className="space-y-2">
-                {noShiftWorkers.map((w: any) => (
+                {noShiftWorkers.map((w) => (
                   <div
                     key={w.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"

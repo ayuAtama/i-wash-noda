@@ -3,6 +3,8 @@
 import { useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiResponse } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,23 @@ const statusLabels: Record<string, string> = {
   finished: "Finished",
 };
 
+interface CustomerOrderItem {
+  id: string;
+  name: string;
+  quantity_initial: number;
+}
+
+interface CustomerOrder {
+  id: string;
+  status: string;
+  paid: boolean;
+  total_amount: number | null;
+  total_price: number | null;
+  created_at: string;
+  updated_at: string;
+  items: CustomerOrderItem[];
+}
+
 export default function OrderDetailPage() {
   const params = useParams();
   const queryClient = useQueryClient();
@@ -53,11 +72,14 @@ export default function OrderDetailPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer-orders"],
-    queryFn: () => api.get("/api/orders").then((r) => r.data),
+    queryFn: () =>
+      api
+        .get("/api/orders")
+        .then((r) => r.data as ApiResponse<CustomerOrder[]>),
     retry: false,
   });
 
-  const order = (data?.data ?? []).find((o: any) => o.id === params.id);
+  const order = (data?.data ?? []).find((o) => o.id === params.id);
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => {
@@ -71,7 +93,7 @@ export default function OrderDetailPage() {
       addToast({ type: "success", title: "Payment proof uploaded" });
       queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Upload failed",
@@ -137,12 +159,16 @@ export default function OrderDetailPage() {
             syncMutation.mutate();
           },
         });
-      } catch (err: any) {
+      } catch (err) {
         setEmbedOpen(false);
-        addToast({ type: "error", title: "Pay failed", message: err.message });
+        addToast({
+          type: "error",
+          title: "Pay failed",
+          message: err instanceof Error ? err.message : "Unexpected error",
+        });
       }
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Pay failed",
@@ -218,12 +244,12 @@ export default function OrderDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {order.items.map((item: any) => (
+                  {order.items.map((item) => (
                     <tr
                       key={item.id}
                       className="border-b border-gray-50 last:border-0"
                     >
-                      <td className="py-2">{item.name || item.item_id}</td>
+                      <td className="py-2">{item.name}</td>
                       <td className="py-2 text-center">
                         {item.quantity_initial}
                       </td>

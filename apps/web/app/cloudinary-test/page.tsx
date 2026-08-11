@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import api from "@/lib/api";
 
 interface MeResponse {
@@ -93,12 +94,12 @@ export default function CloudinaryTestPage() {
         {isFetching ? (
           <p style={{ color: "#9ca3af" }}>Loading...</p>
         ) : avatarUrl ? (
-          <img
+          <Image
             src={avatarUrl}
             alt="Avatar"
+            width={128}
+            height={128}
             style={{
-              width: 128,
-              height: 128,
               borderRadius: "50%",
               objectFit: "cover",
               border: "2px solid #e5e7eb",

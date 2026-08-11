@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -36,7 +37,7 @@ export default function LoginPage() {
     onSuccess: () => {
       window.location.href = "/customer";
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       setError(err.response?.data?.message || err.message || "Login failed");
     },
   });

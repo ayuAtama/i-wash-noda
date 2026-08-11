@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { PaymentProof, User, WalkInCustomer } from "@/types";
 import api from "@/lib/api";
 import StatusBadge from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,15 @@ import Modal from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
+
+interface PaymentOrder {
+  id: string;
+  status: string;
+  created_at: string;
+  user?: User;
+  walk_in_customer?: WalkInCustomer;
+  payment_proof?: PaymentProof | null;
+}
 
 export default function PaymentsPage() {
   const queryClient = useQueryClient();
@@ -26,8 +37,8 @@ export default function PaymentsPage() {
     retry: false,
   });
 
-  const orders = (data?.data ?? []).filter(
-    (o: any) => o.payment_proof || o.status === "pending_payment",
+  const orders = ((data?.data ?? []) as PaymentOrder[]).filter(
+    (o) => o.payment_proof || o.status === "pending_payment",
   );
 
   const confirmMutation = useMutation({
@@ -37,7 +48,7 @@ export default function PaymentsPage() {
       addToast({ type: "success", title: "Payment confirmed" });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -74,7 +85,7 @@ export default function PaymentsPage() {
         />
       ) : (
         <div className="space-y-4">
-          {orders.map((order: any) => (
+          {orders.map((order) => (
             <Card key={order.id}>
               <div className="flex items-center justify-between">
                 <div>

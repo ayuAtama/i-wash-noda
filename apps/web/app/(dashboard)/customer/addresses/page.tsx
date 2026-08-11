@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,15 @@ import Modal from "@/components/ui/modal";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import Avatar from "@/components/ui/avatar";
+
+interface Address {
+  id: string;
+  label: string;
+  address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  is_default?: boolean;
+}
 
 export default function AddressesPage() {
   const queryClient = useQueryClient();
@@ -31,7 +41,7 @@ export default function AddressesPage() {
     retry: false,
   });
 
-  const addresses = data?.data ?? [];
+  const addresses = (data?.data ?? []) as Address[];
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -53,7 +63,7 @@ export default function AddressesPage() {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ["addresses"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -87,7 +97,7 @@ export default function AddressesPage() {
     setEditingId(null);
   };
 
-  const openEdit = (addr: any) => {
+  const openEdit = (addr: Address) => {
     setEditingId(addr.id);
     setLabel(addr.label);
     setAddress(addr.address);
@@ -123,7 +133,7 @@ export default function AddressesPage() {
         />
       ) : (
         <div className="space-y-4">
-          {addresses.map((addr: any) => (
+          {addresses.map((addr) => (
             <Card key={addr.id}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">

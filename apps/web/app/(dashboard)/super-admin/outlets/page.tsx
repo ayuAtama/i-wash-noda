@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import PageHeader from "@/components/ui/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageSpinner } from "@/components/ui/spinner";
@@ -13,6 +13,16 @@ import EmptyState from "@/components/ui/empty-state";
 import Modal from "@/components/ui/modal";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+
+interface Outlet {
+  id: number;
+  name: string;
+  address: string;
+  phone?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  coverage_radius_km?: number | null;
+}
 
 export default function OutletsPage() {
   const queryClient = useQueryClient();
@@ -34,7 +44,7 @@ export default function OutletsPage() {
     retry: false,
   });
 
-  const outlets = data?.data ?? [];
+  const outlets = (data?.data ?? []) as Outlet[];
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -58,7 +68,7 @@ export default function OutletsPage() {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ["admin-outlets"] });
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ message?: string }>) => {
       addToast({
         type: "error",
         title: "Failed",
@@ -86,11 +96,11 @@ export default function OutletsPage() {
     setEditingId(null);
   };
 
-  const openEdit = (outlet: any) => {
+  const openEdit = (outlet: Outlet) => {
     setEditingId(outlet.id);
     setFormName(outlet.name);
     setFormAddress(outlet.address);
-    setFormPhone(outlet.phone);
+    setFormPhone(outlet.phone || "");
     setFormLat(String(outlet.latitude || ""));
     setFormLng(String(outlet.longitude || ""));
     setFormRadius(String(outlet.coverage_radius_km || ""));
@@ -134,7 +144,7 @@ export default function OutletsPage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {outlets.map((outlet: any) => (
+          {outlets.map((outlet) => (
             <Card key={outlet.id}>
               <CardHeader>{outlet.name}</CardHeader>
               <div className="space-y-2 text-sm">

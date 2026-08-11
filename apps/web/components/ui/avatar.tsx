@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 interface AvatarProps {
   src?: string | null;
   name?: string;
@@ -28,9 +30,11 @@ export default function Avatar({
 
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt={name || "Avatar"}
+        width={56}
+        height={56}
         className={`${sizes[size]} rounded-full object-cover ${className}`}
       />
     );
