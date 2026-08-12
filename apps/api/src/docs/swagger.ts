@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { createDocument } from "zod-openapi";
 import { z } from "zod";
 
@@ -17,6 +18,7 @@ import { DeliveryOrderValidation } from "../validations/deliveryOder.validation"
 import { WorkerStationValidation } from "../validations/workerStation.validation";
 import { AdminMismatchValidation } from "../validations/adminMismatch.validation";
 import { SetupValidation } from "../validations/setup.validation";
+import { MidtransValidation } from "../validations/midtrans.validation";
 import {
   WalkInCustomerValidation,
   ManualOrderValidation,
@@ -29,63 +31,63 @@ import {
 // ── Shared Path Params ──────────────────────────────────────────
 
 const UserIdParam = z.object({
-  id: z.string().uuid().meta({
+  id: z.uuid().meta({
     description: "User ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
 const AddressIdParam = z.object({
-  id: z.string().uuid().meta({
+  id: z.uuid().meta({
     description: "Address ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
 const OutletIdParam = z.object({
-  id: z.string().uuid().meta({
+  id: z.uuid().meta({
     description: "Outlet ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
 const WorkerIdParam = z.object({
-  id: z.string().uuid().meta({
+  id: z.uuid().meta({
     description: "Worker ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
 const PickupRequestIdParam = z.object({
-  id: z.string().uuid().meta({
+  id: z.uuid().meta({
     description: "Pickup Request ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
 const ItemIdParam = z.object({
-  id: z.string().uuid().meta({
+  id: z.uuid().meta({
     description: "Item ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
 const OrderIdParam = z.object({
-  orderId: z.string().uuid().meta({
+  orderId: z.uuid().meta({
     description: "Order ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
 const UserIdPathParam = z.object({
-  userId: z.string().uuid().meta({
+  userId: z.uuid().meta({
     description: "User ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
 const DeliveryIdParam = z.object({
-  deliveryId: z.string().uuid().meta({
+  deliveryId: z.uuid().meta({
     description: "Delivery Request ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
@@ -99,7 +101,7 @@ const StationNamePathParam = z.object({
 });
 
 const ComplaintIdPathParam = z.object({
-  complaintId: z.string().uuid().meta({
+  complaintId: z.uuid().meta({
     description: "Complaint ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
@@ -113,7 +115,7 @@ const ComplaintStatusPathParam = z.object({
 });
 
 const PaymentProofIdActionParam = z.object({
-  id: z.string().uuid().meta({
+  id: z.uuid().meta({
     description: "Payment Proof ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
@@ -154,6 +156,13 @@ export const openApiDocument = createDocument({
     },
   },
   servers: [
+    {
+      url: process.env.API_URL || "http://localhost:3000",
+      description:
+        process.env.NODE_ENV === "production"
+          ? "Production server"
+          : "Current API server",
+    },
     {
       url: "http://localhost:3000",
       description: "Development server",
@@ -247,6 +256,11 @@ export const openApiDocument = createDocument({
     {
       name: "Cloudinary",
       description: "Cloudinary upload signature generation for file uploads",
+    },
+    {
+      name: "Midtrans",
+      description:
+        "Midtrans payment gateway integration: Snap token generation, payment status webhook notifications",
     },
   ],
   paths: {
@@ -2147,6 +2161,129 @@ export const openApiDocument = createDocument({
         },
       },
     },
+    "/api/orders/{orderId}/payment/cancel": {
+      post: {
+        summary: "Cancel selected payment method",
+        tags: ["Customer Orders"],
+        security: [{ CookieAuth: [] }],
+        description:
+          "Cancels the selected payment method for an order. For manual payments it " +
+          "clears the payment method so a new one can be chosen. For payment gateway " +
+          "it expires the pending Midtrans transaction. Requires customer role.",
+        requestParams: { path: OrderIdParam },
+        responses: {
+          "200": {
+            description: "Payment cancelled",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Payment cancelled successfully",
+                  data: { id: "uuid", payment_method: null },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid orderId" },
+          "401": { description: "Not authenticated" },
+          "403": {
+            description: "Not allowed to change another customer's payment",
+          },
+          "404": { description: "Order not found" },
+          "409": {
+            description:
+              "Order already paid, no payment method selected, or payment proof already uploaded",
+          },
+        },
+      },
+    },
+    "/api/orders/{orderId}/payment-gateway": {
+      get: {
+        summary: "Generate Midtrans Snap token",
+        tags: ["Customer Orders"],
+        security: [{ CookieAuth: [] }],
+        description:
+          "Creates a Midtrans Snap transaction for the order and returns the Snap " +
+          "token plus redirect URL. Reuses an existing pending token if one exists. " +
+          "Requires customer role.",
+        requestParams: { path: OrderIdParam },
+        responses: {
+          "200": {
+            description: "Snap token created or fetched",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Payment gateway token created successfully",
+                  data: {
+                    token: "snap-token-abc123",
+                    redirect_url:
+                      "https://app.sandbox.midtrans.com/snap/v3/transactions/abc123",
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid orderId" },
+          "401": { description: "Not authenticated" },
+          "404": { description: "Order not found" },
+          "409": {
+            description:
+              "Order not eligible for payment yet, already paid, or manual payment selected",
+          },
+          "500": { description: "Failed to create payment gateway token" },
+        },
+      },
+    },
+    "/api/orders/{orderId}/payment/{paymentMethod}": {
+      post: {
+        summary: "Set order payment method",
+        tags: ["Customer Orders"],
+        security: [{ CookieAuth: [] }],
+        description:
+          "Sets the payment method (payment_gateway or manual) for an order. " +
+          "The payment method can only be changed after cancelling the current one. " +
+          "Requires customer role.",
+        parameters: [
+          {
+            name: "orderId",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+            description: "Order ID (UUID)",
+          },
+          {
+            name: "paymentMethod",
+            in: "path",
+            required: true,
+            schema: { type: "string", enum: ["payment_gateway", "manual"] },
+            description: "Payment method to select",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Payment method updated",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Payment method updated successfully",
+                  data: { id: "uuid", payment_method: "payment_gateway" },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid orderId or paymentMethod" },
+          "401": { description: "Not authenticated" },
+          "403": { description: "Not allowed to pay another customer's order" },
+          "404": { description: "Order not found" },
+          "409": {
+            description:
+              "Order already paid or payment method already set (cancel first)",
+          },
+        },
+      },
+    },
     "/api/orders/{orderId}/complete": {
       post: {
         summary: "Mark order as done by customer",
@@ -2804,7 +2941,7 @@ export const openApiDocument = createDocument({
         requestParams: {
           path: z
             .object({
-              complaintId: z.string().uuid().meta({
+              complaintId: z.uuid().meta({
                 description: "Complaint ID (UUID)",
                 example: "123e4567-e89b-12d3-a456-426614174000",
               }),
@@ -3174,6 +3311,54 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Invalid input" },
           "401": { description: "Not authenticated" },
+        },
+      },
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // Midtrans Payment Gateway
+    // ═══════════════════════════════════════════════════════════════
+    "/api/midtrans/notification": {
+      post: {
+        summary: "Midtrans payment notification webhook",
+        tags: ["Midtrans"],
+        description:
+          "Receives payment status notifications from Midtrans. Verifies the signature " +
+          "key, stores the transaction data, and updates the order status (marks order " +
+          "as paid on capture/settlement, or clears the payment method on cancel/deny/expire). " +
+          "No authentication required (server-to-server webhook).",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: MidtransValidation.MidtransNotificationSchema,
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Webhook processed successfully",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Webhook notification processed successfully",
+                  data: {
+                    storedWebhook: {
+                      id: "uuid",
+                      order_id: "uuid",
+                      transaction_status: "settlement",
+                      fraud_status: "accept",
+                    },
+                    updateOrderStatus: { id: "uuid", paid: true },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid request payload or invalid signature key",
+          },
         },
       },
     },
