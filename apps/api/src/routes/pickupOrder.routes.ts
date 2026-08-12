@@ -3,8 +3,8 @@ import { Router } from "express";
 import { PickupOrderController } from "@/controllers/pickupOrder.controller";
 import { PickupOrderService } from "@/services/pickupOrder.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
-import { resolveContext } from "@/middleware/resolveContext";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
+import { ResolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { PickupOrderValidation } from "@/validations/pickupOrder.validation";
 
@@ -24,9 +24,9 @@ export class PickupOrderRoute {
   private getAllPickupOrders() {
     this.router.get(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       this.controller.getAllPickupRequests,
     );
   }
@@ -34,9 +34,9 @@ export class PickupOrderRoute {
   private acceptPickupRequest() {
     this.router.post(
       "/:id/accept",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       Validator.validate({
         params: PickupOrderValidation.PickupIdParamsSchema,
       }),
@@ -47,9 +47,9 @@ export class PickupOrderRoute {
   private listJobs() {
     this.router.get(
       "/accepted",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       this.controller.getAcceptedPickupRequests,
     );
   }
@@ -57,9 +57,9 @@ export class PickupOrderRoute {
   private updateStatus() {
     this.router.patch(
       "/:id/next",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       Validator.validate({
         // body: PickupOrderValidation.UpdateStatusSchema,
         params: PickupOrderValidation.PickupIdParamsSchema,
@@ -71,9 +71,9 @@ export class PickupOrderRoute {
   private getAllAlreadyPickedUpJob() {
     this.router.get(
       "/already-picked-up",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       this.controller.getAllAlreadyPickedUpJob,
     );
   }

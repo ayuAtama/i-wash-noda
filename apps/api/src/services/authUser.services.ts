@@ -1,21 +1,9 @@
 // apps/api/src/services/authUser.services.ts
 import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { Prisma } from "@/generated/prisma/client";
-import {
-  generate6DigitCode,
-  hashToken,
-  hashPassword,
-  generateSessionId,
-  hashSessionId,
-  comparePassword,
-} from "@/utils/tokenGenerator";
-import {
-  sendEmailChangeVerification,
-  sendPasswordResetEmail,
-  sendVerificationEmail,
-  sendVerifyEmailbyAdmin,
-} from "@/utils/mail";
-import { signToken } from "@/utils/jwt";
+import { TokenGenerator } from "@/utils/tokenGenerator";
+import { Mailer } from "@/utils/mail";
+import { JwtService } from "@/utils/jwt";
 import { HttpError } from "@/utils/httpError";
 import {
   addDays,
@@ -24,7 +12,7 @@ import {
   formatDate,
   formatDistanceStrict,
 } from "date-fns";
-import { validateMXRecord } from "@/utils/mxRecordValidatior";
+import { MXValidator } from "@/utils/mxRecordValidatior";
 import {
   CompleteRegisterDto,
   LoginDto,
@@ -40,7 +28,12 @@ import {
 } from "@/validations/auth.validation";
 
 export class AuthUserService {
-  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+  constructor(
+    private readonly prisma: PrismaWrapper = defaultPrisma,
+    private readonly tokenGenerator: TokenGenerator = TokenGenerator.getInstance(),
+    private readonly mailer: Mailer = Mailer.getInstance(),
+    private readonly jwt: JwtService = JwtService.getInstance(),
+  ) {}
 
   async register(data: RegisterDto) {
     try {
@@ -64,7 +57,7 @@ export class AuthUserService {
           );
         }
 
-        const validDomain = await validateMXRecord(
+        const validDomain = await MXValidator.validate(
           data.email.toLocaleLowerCase().trim(),
         );
         if (!validDomain) {
@@ -75,8 +68,8 @@ export class AuthUserService {
           data: data,
         });
 
-        const token = generate6DigitCode();
-        const hashedToken = hashToken(token);
+        const token = this.tokenGenerator.generate6DigitCode();
+        const hashedToken = this.tokenGenerator.hashToken(token);
 
         await tx.verificationToken.create({
           data: {
@@ -89,7 +82,7 @@ export class AuthUserService {
         return { user, token, hashedToken };
       });
 
-      await sendVerificationEmail(
+      await this.mailer.sendVerificationEmail(
         result.user.email,
         result.token,
         result.hashedToken,
@@ -99,7 +92,7 @@ export class AuthUserService {
         sub: result.user.id,
         email: result.user.email,
       };
-      const accessToken = await signToken(tokenPayload, "365d");
+      const accessToken = await this.jwt.signToken(tokenPayload, "365d");
 
       const finalData = {
         ...result,
@@ -124,7 +117,8 @@ export class AuthUserService {
         throw new HttpError(400, "Invalid token");
       }
 
-      const normalizedToken = token.length > 10 ? token : hashToken(token);
+      const normalizedToken =
+        token.length > 10 ? token : this.tokenGenerator.hashToken(token);
 
       const record = await this.prisma.verificationToken.findFirst({
         where: {
@@ -166,7 +160,7 @@ export class AuthUserService {
         sub: record.user.id,
         email: record.user.email,
       };
-      const accessToken = await signToken(tokenPayload, "365d");
+      const accessToken = await this.jwt.signToken(tokenPayload, "365d");
 
       return {
         success: true,
@@ -226,8 +220,8 @@ export class AuthUserService {
           });
         }
 
-        const rawToken = generate6DigitCode();
-        const hashedToken = hashToken(rawToken);
+        const rawToken = this.tokenGenerator.generate6DigitCode();
+        const hashedToken = this.tokenGenerator.hashToken(rawToken);
 
         const newToken = await this.prisma.verificationToken.create({
           data: {
@@ -238,11 +232,15 @@ export class AuthUserService {
         });
 
         if (user.role === "customer") {
-          await sendVerificationEmail(user.email, rawToken, newToken.token);
+          await this.mailer.sendVerificationEmail(
+            user.email,
+            rawToken,
+            newToken.token,
+          );
         }
 
         if (user.role !== "customer") {
-          await sendVerifyEmailbyAdmin(
+          await this.mailer.sendVerifyEmailbyAdmin(
             user.email,
             user.id,
             newToken.token,
@@ -254,7 +252,7 @@ export class AuthUserService {
           sub: user.id,
           email: user.email,
         };
-        const accessToken = await signToken(tokenPayload, "365d");
+        const accessToken = await this.jwt.signToken(tokenPayload, "365d");
 
         return {
           success: true,
@@ -268,7 +266,7 @@ export class AuthUserService {
           sub: user.id,
           email: user.email,
         };
-        const accessToken = await signToken(tokenPayload, "365d");
+        const accessToken = await this.jwt.signToken(tokenPayload, "365d");
 
         return {
           success: true,
@@ -302,7 +300,7 @@ export class AuthUserService {
       }
 
       const rawPassword = String(data.password);
-      const hashedPassword = hashPassword(rawPassword);
+      const hashedPassword = this.tokenGenerator.hashPassword(rawPassword);
 
       const updatedData = {
         ...data,
@@ -329,8 +327,8 @@ export class AuthUserService {
             data: updatedData as Prisma.UserUpdateInput,
           });
 
-          const sessionId = generateSessionId();
-          const hashedSessionId = hashSessionId(sessionId);
+          const sessionId = this.tokenGenerator.generateSessionId();
+          const hashedSessionId = this.tokenGenerator.hashSessionId(sessionId);
           const uA = userAgent;
           await tx.session.create({
             data: {
@@ -351,14 +349,14 @@ export class AuthUserService {
         role: updatedUser.role,
       };
 
-      const accessToken = await signToken(accessTokenPayload, "15m");
+      const accessToken = await this.jwt.signToken(accessTokenPayload, "15m");
 
       const refreshTokenPayload = {
         sub: updatedUser.id,
         sid: sessionId,
       };
 
-      const refreshToken = await signToken(refreshTokenPayload, "7d");
+      const refreshToken = await this.jwt.signToken(refreshTokenPayload, "7d");
 
       return {
         success: true,
@@ -418,7 +416,7 @@ export class AuthUserService {
         throw new HttpError(400, "Please complete your registration first");
       }
 
-      const isPasswordMatch = comparePassword(
+      const isPasswordMatch = this.tokenGenerator.comparePassword(
         userPassword,
         updateData.password,
       );
@@ -428,8 +426,8 @@ export class AuthUserService {
       }
 
       const { sessionId } = await this.prisma.$transaction(async (tx) => {
-        const sessionId = generateSessionId();
-        const hashedSessionId = hashSessionId(sessionId);
+        const sessionId = this.tokenGenerator.generateSessionId();
+        const hashedSessionId = this.tokenGenerator.hashSessionId(sessionId);
         const uA = userAgent;
 
         await tx.session.create({
@@ -450,13 +448,13 @@ export class AuthUserService {
         email: updateData.email,
         role: updateData.role,
       };
-      const accessToken = await signToken(accessTokenPayload, "15m");
+      const accessToken = await this.jwt.signToken(accessTokenPayload, "15m");
 
       const refreshTokenPayload = {
         sub: updateData.id,
         sid: sessionId,
       };
-      const refreshToken = await signToken(refreshTokenPayload, "7d");
+      const refreshToken = await this.jwt.signToken(refreshTokenPayload, "7d");
 
       return {
         success: true,
@@ -475,7 +473,7 @@ export class AuthUserService {
 
   async refreshAccessToken(sub: UserIdDto, sid: SessionIdDto) {
     try {
-      const hashedSessionId = hashSessionId(sid);
+      const hashedSessionId = this.tokenGenerator.hashSessionId(sid);
 
       const updateData = await this.prisma.user.findUnique({
         where: {
@@ -502,11 +500,12 @@ export class AuthUserService {
         email: updateData.email,
         role: updateData.role,
       };
-      const accessToken = await signToken(accessTokenPayload, "15m");
+      const accessToken = await this.jwt.signToken(accessTokenPayload, "15m");
 
       const { newRefreshToken } = await this.prisma.$transaction(async (tx) => {
-        const newSessionId = generateSessionId();
-        const newHashedSessionId = hashSessionId(newSessionId);
+        const newSessionId = this.tokenGenerator.generateSessionId();
+        const newHashedSessionId =
+          this.tokenGenerator.hashSessionId(newSessionId);
 
         await tx.session.update({
           where: {
@@ -527,7 +526,10 @@ export class AuthUserService {
         sub: updateData.id,
         sid: newRefreshToken,
       };
-      const refreshToken = await signToken(newRefreshTokenPayload, "7d");
+      const refreshToken = await this.jwt.signToken(
+        newRefreshTokenPayload,
+        "7d",
+      );
 
       return {
         success: true,
@@ -555,8 +557,8 @@ export class AuthUserService {
         throw new HttpError(404, "User not found");
       }
 
-      const resetToken = generateSessionId();
-      const hashedResetToken = hashSessionId(resetToken);
+      const resetToken = this.tokenGenerator.generateSessionId();
+      const hashedResetToken = this.tokenGenerator.hashSessionId(resetToken);
 
       const { token } = await this.prisma.passwordResetToken.create({
         data: {
@@ -567,14 +569,14 @@ export class AuthUserService {
         },
       });
 
-      await sendPasswordResetEmail(email, token);
+      await this.mailer.sendPasswordResetEmail(email, token);
 
       const payload = {
         sub: updateData.id,
         email: updateData.email,
       };
 
-      const tempJwt = await signToken(payload);
+      const tempJwt = await this.jwt.signToken(payload);
 
       return {
         success: true,
@@ -638,7 +640,7 @@ export class AuthUserService {
         });
       });
 
-      const hashedPassword = hashPassword(password);
+      const hashedPassword = this.tokenGenerator.hashPassword(password);
 
       await this.prisma.$transaction(async (tx) => {
         await tx.user.update({
@@ -695,7 +697,7 @@ export class AuthUserService {
 
       let hashedPassword = null as string | null;
       if (password) {
-        hashedPassword = hashPassword(password);
+        hashedPassword = this.tokenGenerator.hashPassword(password);
       }
 
       const payload = {
@@ -734,8 +736,9 @@ export class AuthUserService {
       if (!user) throw new HttpError(404, "User not found");
 
       const { token, tempJwt } = await this.prisma.$transaction(async (tx) => {
-        const newEmailToken = generateSessionId();
-        const hashedNewEmailToken = hashSessionId(newEmailToken);
+        const newEmailToken = this.tokenGenerator.generateSessionId();
+        const hashedNewEmailToken =
+          this.tokenGenerator.hashSessionId(newEmailToken);
 
         const userNewEmail = await tx.user.update({
           where: {
@@ -761,12 +764,12 @@ export class AuthUserService {
           email: email,
         };
 
-        const tempJwt = await signToken(tempJwtPayload, "1h");
+        const tempJwt = await this.jwt.signToken(tempJwtPayload, "1h");
 
         return { token: token.token, tempJwt: tempJwt };
       });
 
-      await sendEmailChangeVerification(email, token);
+      await this.mailer.sendEmailChangeVerification(email, token);
 
       return {
         success: true,

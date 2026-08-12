@@ -4,7 +4,7 @@
 // const router = Router();
 
 // // Better Auth handles everything for /api/auth/*
-// router.all(BetterAuthMiddleware.handler());
+// router.all(betterAuthMiddleware.handler());
 
 // // If you want custom endpoints later:
 // // router.get("/profile", AuthController.profile);
@@ -13,11 +13,15 @@
 
 // src/routes/auth.routes.ts
 import { Router } from "express";
-import { BetterAuthMiddleware } from "../utils/betterAuth";
+import { betterAuthMiddleware } from "../utils/betterAuth";
 
-const router = Router();
+export class AuthRoute {
+  public router = Router();
 
-// handle ALL /api/auth/* requests
-router.all("/*splat", BetterAuthMiddleware.handler());
+  constructor() {
+    // handle ALL /api/auth/* requests
+    this.router.all("/*splat", betterAuthMiddleware.handler());
+  }
+}
 
-export default router;
+export default new AuthRoute().router;

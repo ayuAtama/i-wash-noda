@@ -3,44 +3,46 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import "dotenv/config";
 
-const generate6DigitCode = () => {
-  return crypto.randomInt(0, 999999).toString().padStart(6, "0");
-};
+export class TokenGenerator {
+  private static instance: TokenGenerator;
 
-const hashToken = (token: string) => {
-  return crypto.createHash("sha256").update(token).digest("hex");
-};
+  static getInstance(): TokenGenerator {
+    if (!TokenGenerator.instance) {
+      TokenGenerator.instance = new TokenGenerator();
+    }
+    return TokenGenerator.instance;
+  }
 
-// predetermined salt (still reset after restart)
-// const saltRounds: number = Number(process.env.BCRYPT_TOKEN);
-// const salt = bcrypt.genSaltSync(saltRounds);
-// const hashToken = (password: string) => {
-//   return bcrypt.hashSync(password, salt);
-// };
+  generate6DigitCode() {
+    return crypto.randomInt(0, 999999).toString().padStart(6, "0");
+  }
 
-const hashPassword = (token: string) => {
-  const saltRounds = Number(process.env.BCRYPT_TOKEN_PASSWORD);
-  return bcrypt.hashSync(token, saltRounds); // bcrypt generates a new salt automatically
-};
+  hashToken(token: string) {
+    return crypto.createHash("sha256").update(token).digest("hex");
+  }
 
-const comparePassword = (password: string, hashPassword: string): boolean => {
-  const isMatch = bcrypt.compareSync(password, hashPassword);
-  return isMatch;
-};
+  // predetermined salt (still reset after restart)
+  // const saltRounds: number = Number(process.env.BCRYPT_TOKEN);
+  // const salt = bcrypt.genSaltSync(saltRounds);
+  // const hashToken = (password: string) => {
+  //   return bcrypt.hashSync(password, salt);
+  // };
 
-const generateSessionId = (): string => {
-  return crypto.randomBytes(32).toString("hex");
-};
+  hashPassword(token: string) {
+    const saltRounds = Number(process.env.BCRYPT_TOKEN_PASSWORD);
+    return bcrypt.hashSync(token, saltRounds); // bcrypt generates a new salt automatically
+  }
 
-const hashSessionId = (token: string) => {
-  return crypto.createHash("sha256").update(token).digest("hex");
-};
+  comparePassword(password: string, hashPassword: string): boolean {
+    const isMatch = bcrypt.compareSync(password, hashPassword);
+    return isMatch;
+  }
 
-export {
-  generate6DigitCode,
-  generateSessionId,
-  hashToken,
-  hashSessionId,
-  hashPassword,
-  comparePassword,
-};
+  generateSessionId(): string {
+    return crypto.randomBytes(32).toString("hex");
+  }
+
+  hashSessionId(token: string) {
+    return crypto.createHash("sha256").update(token).digest("hex");
+  }
+}

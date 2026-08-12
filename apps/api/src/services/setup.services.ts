@@ -1,11 +1,14 @@
 // apps/api/src/services/setup.services.ts
 import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
-import { hashPassword } from "@/utils/tokenGenerator";
+import { TokenGenerator } from "@/utils/tokenGenerator";
 import { SetupSuperAdminDto } from "@/validations/setup.validation";
 
 export class SetupService {
-  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+  constructor(
+    private readonly prisma: PrismaWrapper = defaultPrisma,
+    private readonly tokenGenerator: TokenGenerator = TokenGenerator.getInstance(),
+  ) {}
 
   async isSetupNeeded() {
     const superAdminCount = await this.prisma.user.count({
@@ -24,7 +27,7 @@ export class SetupService {
       throw new HttpError(409, "Super admin already exists");
     }
 
-    const hashedPassword = hashPassword(data.password);
+    const hashedPassword = this.tokenGenerator.hashPassword(data.password);
 
     const user = await this.prisma.user.create({
       data: {

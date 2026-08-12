@@ -29,84 +29,85 @@ import {
 
 // ── Shared Path Params ──────────────────────────────────────────
 
-const AddressIdParam = z.object({
+export class SwaggerDocument {
+static AddressIdParam = z.object({
   id: z.uuid().meta({
     description: "Address ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const OutletIdParam = z.object({
+static OutletIdParam = z.object({
   id: z.uuid().meta({
     description: "Outlet ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const WorkerIdParam = z.object({
+static WorkerIdParam = z.object({
   id: z.uuid().meta({
     description: "Worker ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const PickupRequestIdParam = z.object({
+static PickupRequestIdParam = z.object({
   id: z.uuid().meta({
     description: "Pickup Request ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const ItemIdParam = z.object({
+static ItemIdParam = z.object({
   id: z.uuid().meta({
     description: "Item ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const OrderIdParam = z.object({
+static OrderIdParam = z.object({
   orderId: z.uuid().meta({
     description: "Order ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const UserIdPathParam = z.object({
+static UserIdPathParam = z.object({
   userId: z.uuid().meta({
     description: "User ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const DeliveryIdParam = z.object({
+static DeliveryIdParam = z.object({
   deliveryId: z.uuid().meta({
     description: "Delivery Request ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const StationNamePathParam = z.object({
+static StationNamePathParam = z.object({
   stationName: z.enum(["washing", "ironing", "packing"]).meta({
     description: "Station name (washing, ironing, or packing)",
     example: "washing",
   }),
 });
 
-const ComplaintIdPathParam = z.object({
+static ComplaintIdPathParam = z.object({
   complaintId: z.uuid().meta({
     description: "Complaint ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const ComplaintStatusPathParam = z.object({
+static ComplaintStatusPathParam = z.object({
   status: z.enum(["resolved", "rejected"]).meta({
     description: "Complaint resolution action",
     example: "resolved",
   }),
 });
 
-const PaymentProofIdActionParam = z.object({
+static PaymentProofIdActionParam = z.object({
   id: z.uuid().meta({
     description: "Payment Proof ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
@@ -117,7 +118,7 @@ const PaymentProofIdActionParam = z.object({
   }),
 });
 
-const CloudinaryFolderParam = z.object({
+static CloudinaryFolderParam = z.object({
   folder: z.enum(["avatars", "payment-proofs", "complaints"]).meta({
     description: "Upload folder name",
     example: "avatars",
@@ -134,7 +135,7 @@ const CloudinaryFolderParam = z.object({
 
 // ── OpenAPI Document ────────────────────────────────────────────
 
-export const openApiDocument = createDocument({
+  static openApiDocument = createDocument({
   openapi: "3.1.0",
   info: {
     title: "I-Wash-Noda API",
@@ -887,7 +888,7 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Update address",
         tags: ["Addresses"],
-        requestParams: { path: AddressIdParam },
+        requestParams: { path: SwaggerDocument.AddressIdParam },
         requestBody: {
           content: {
             "application/json": {
@@ -916,7 +917,7 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Delete address",
         tags: ["Addresses"],
-        requestParams: { path: AddressIdParam },
+        requestParams: { path: SwaggerDocument.AddressIdParam },
         responses: {
           "200": {
             description: "Address deleted",
@@ -938,7 +939,7 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Set address as default",
         tags: ["Addresses"],
-        requestParams: { path: AddressIdParam },
+        requestParams: { path: SwaggerDocument.AddressIdParam },
         responses: {
           "200": {
             description: "Default address updated",
@@ -1080,7 +1081,7 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Update outlet",
         tags: ["Admin Outlets"],
-        requestParams: { path: OutletIdParam },
+        requestParams: { path: SwaggerDocument.OutletIdParam },
         requestBody: {
           content: {
             "application/json": {
@@ -1109,7 +1110,7 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Delete outlet",
         tags: ["Admin Outlets"],
-        requestParams: { path: OutletIdParam },
+        requestParams: { path: SwaggerDocument.OutletIdParam },
         responses: {
           "200": {
             description: "Outlet deleted",
@@ -1214,7 +1215,7 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get item by ID",
         tags: ["Admin Items"],
-        requestParams: { path: ItemIdParam },
+        requestParams: { path: SwaggerDocument.ItemIdParam },
         responses: {
           "200": {
             description: "Returns item details",
@@ -1235,7 +1236,7 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Update item",
         tags: ["Admin Items"],
-        requestParams: { path: ItemIdParam },
+        requestParams: { path: SwaggerDocument.ItemIdParam },
         requestBody: {
           content: {
             "application/json": {
@@ -1265,7 +1266,7 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Delete item",
         tags: ["Admin Items"],
-        requestParams: { path: ItemIdParam },
+        requestParams: { path: SwaggerDocument.ItemIdParam },
         responses: {
           "200": {
             description: "Item deleted",
@@ -1390,7 +1391,7 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Remove user",
         tags: ["Admin"],
-        requestParams: { path: UserIdPathParam },
+        requestParams: { path: SwaggerDocument.UserIdPathParam },
         responses: {
           "200": {
             description: "User removed",
@@ -1527,7 +1528,7 @@ export const openApiDocument = createDocument({
         description:
           "Creates or updates a weekly schedule for a worker. " +
           "Validates for overlapping shifts across the outlet.",
-        requestParams: { path: WorkerIdParam },
+        requestParams: { path: SwaggerDocument.WorkerIdParam },
         requestBody: {
           required: true,
           content: {
@@ -1565,7 +1566,7 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get schedule by worker ID",
         tags: ["Worker Shifts"],
-        requestParams: { path: WorkerIdParam },
+        requestParams: { path: SwaggerDocument.WorkerIdParam },
         responses: {
           "200": {
             description: "Returns worker schedule",
@@ -1714,7 +1715,7 @@ export const openApiDocument = createDocument({
         summary: "Cancel pickup request",
         tags: ["Pickup Requests"],
         description: "Cancels a pending pickup request",
-        requestParams: { path: PickupRequestIdParam },
+        requestParams: { path: SwaggerDocument.PickupRequestIdParam },
         responses: {
           "200": {
             description: "Pickup request cancelled",
@@ -1768,7 +1769,7 @@ export const openApiDocument = createDocument({
         summary: "Accept pickup request (driver)",
         tags: ["Pickup Orders"],
         description: "Driver accepts a pending pickup request",
-        requestParams: { path: PickupRequestIdParam },
+        requestParams: { path: SwaggerDocument.PickupRequestIdParam },
         responses: {
           "200": {
             description: "Request accepted",
@@ -1831,7 +1832,7 @@ export const openApiDocument = createDocument({
         description:
           "Advances the pickup status to the next step. " +
           "Status flow: ACCEPTED -> IN_TRANSIT -> ON_DELIVERY -> DONE",
-        requestParams: { path: PickupRequestIdParam },
+        requestParams: { path: SwaggerDocument.PickupRequestIdParam },
         requestBody: {
           required: true,
           content: {
@@ -1966,7 +1967,7 @@ export const openApiDocument = createDocument({
         description:
           "Uploads a payment proof image URL for a manual transfer order. " +
           "Requires customer role.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         requestBody: {
           required: true,
           content: {
@@ -2007,7 +2008,7 @@ export const openApiDocument = createDocument({
           "Cancels the selected payment method for an order. For manual payments it " +
           "clears the payment method so a new one can be chosen. For payment gateway " +
           "it expires the pending Midtrans transaction. Requires customer role.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         responses: {
           "200": {
             description: "Payment cancelled",
@@ -2042,7 +2043,7 @@ export const openApiDocument = createDocument({
           "Creates a Midtrans Snap transaction for the order and returns the Snap " +
           "token plus redirect URL. Reuses an existing pending token if one exists. " +
           "Requires customer role.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         responses: {
           "200": {
             description: "Snap token created or fetched",
@@ -2126,7 +2127,7 @@ export const openApiDocument = createDocument({
         description:
           "Customer confirms the order has been received and marks it as complete. " +
           "Requires customer role.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         responses: {
           "200": {
             description: "Order marked as complete",
@@ -2152,7 +2153,7 @@ export const openApiDocument = createDocument({
         description:
           "Submits a complaint for an order with a message and optional image. " +
           "Requires customer role.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         requestBody: {
           required: true,
           content: {
@@ -2235,7 +2236,7 @@ export const openApiDocument = createDocument({
         summary: "Accept delivery job",
         tags: ["Delivery Orders"],
         description: "Driver accepts a pending delivery request",
-        requestParams: { path: DeliveryIdParam },
+        requestParams: { path: SwaggerDocument.DeliveryIdParam },
         responses: {
           "200": {
             description: "Delivery accepted",
@@ -2266,7 +2267,7 @@ export const openApiDocument = createDocument({
         description:
           "Advances the delivery status to the next step. " +
           "Status flow: ACCEPTED -> IN_TRANSIT -> DELIVERED",
-        requestParams: { path: DeliveryIdParam },
+        requestParams: { path: SwaggerDocument.DeliveryIdParam },
         responses: {
           "200": {
             description: "Status updated",
@@ -2433,7 +2434,7 @@ export const openApiDocument = createDocument({
         tags: ["Worker Stations"],
         description:
           "Worker accepts/claims an order for processing at their station",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         responses: {
           "200": {
             description: "Job assigned",
@@ -2605,7 +2606,7 @@ export const openApiDocument = createDocument({
         description:
           "Updates the items and total weight of an order that has arrived at the outlet. " +
           "Recalculates pricing based on new weights.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         requestBody: {
           required: true,
           content: {
@@ -2686,7 +2687,7 @@ export const openApiDocument = createDocument({
         description:
           "Approves or rejects a customer's payment proof. " +
           "If approved, the order status advances to the next step.",
-        requestParams: { path: PaymentProofIdActionParam },
+        requestParams: { path: SwaggerDocument.PaymentProofIdActionParam },
         responses: {
           "200": {
             description: "Payment proof action taken",
@@ -3183,7 +3184,7 @@ export const openApiDocument = createDocument({
           "Rate limited to 5 requests per window. " +
           "Folders: avatars, payment-proofs, complaints.",
         requestParams: {
-          path: CloudinaryFolderParam,
+          path: SwaggerDocument.CloudinaryFolderParam,
         },
         responses: {
           "200": {
@@ -3210,3 +3211,4 @@ export const openApiDocument = createDocument({
     },
   },
 });
+}

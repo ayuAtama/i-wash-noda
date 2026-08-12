@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { OutletController } from "@/controllers/outlet.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { OutletValidation } from "@/validations/outlet.validation";
 import { OutletService } from "@/services/outlet.services";
@@ -45,8 +45,8 @@ export class AdminOutletRoute {
   private createOutlet() {
     this.router.post(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       Validator.validate({
         body: OutletValidation.CreateOutletSchema,
       }),
@@ -58,15 +58,15 @@ export class AdminOutletRoute {
     // handle if the user input no outlet id
     this.router.put(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       this.controller.idNotFound,
     );
 
     this.router.put(
       "/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       Validator.validate({
         params: OutletValidation.OutletIdParamSchema,
         body: OutletValidation.UpdateOutletSchema,
@@ -79,15 +79,15 @@ export class AdminOutletRoute {
     // handle if the user input no outlet id
     this.router.delete(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       this.controller.idNotFound,
     );
 
     this.router.delete(
       "/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       Validator.validate({
         params: OutletValidation.OutletIdParamSchema,
       }),

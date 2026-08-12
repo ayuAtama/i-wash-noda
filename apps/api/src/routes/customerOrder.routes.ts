@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { CustomerOrderController } from "@/controllers/customerOrder.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { CustomerOrderValidation } from "@/validations/customerOrder.validation";
 import { CustomerOrderService } from "@/services/customerOrder.services";
@@ -21,15 +21,15 @@ class CustomerOrderRoute {
   private customerOrder() {
     this.router.get(
       "/active",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       this.controller.checkActiveOrderStatus,
     );
 
     this.router.get(
       "/complete",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       this.controller.checkCompletedOrderStatus,
     );
   }
@@ -37,8 +37,8 @@ class CustomerOrderRoute {
   private paymentEndpoints() {
     this.router.post(
       "/:orderId/payment",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: CustomerOrderValidation.OrderIdParamsSchema,
         body: CustomerOrderValidation.PaymentProofSchema,
@@ -48,8 +48,8 @@ class CustomerOrderRoute {
 
     this.router.post(
       "/:orderId/payment/cancel",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: CustomerOrderValidation.OrderIdParamsSchema,
       }),
@@ -58,8 +58,8 @@ class CustomerOrderRoute {
 
     this.router.get(
       "/:orderId/payment-gateway",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: CustomerOrderValidation.OrderIdParamsSchema,
       }),
@@ -68,8 +68,8 @@ class CustomerOrderRoute {
 
     this.router.post(
       "/:orderId/payment/:paymentMethod",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: CustomerOrderValidation.setPaymentMethodParams,
       }),
@@ -80,8 +80,8 @@ class CustomerOrderRoute {
   private markDone() {
     this.router.post(
       "/:orderId/complete",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: CustomerOrderValidation.OrderIdParamsSchema,
       }),
@@ -92,8 +92,8 @@ class CustomerOrderRoute {
   private complaint() {
     this.router.post(
       "/:orderId/complaint",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: CustomerOrderValidation.OrderIdParamsSchema,
         body: CustomerOrderValidation.ComplainSchema,

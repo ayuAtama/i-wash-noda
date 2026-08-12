@@ -1,8 +1,8 @@
 import { Router } from "express";
 import AdminMissmatchController from "@/controllers/adminMismatch.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
-import { resolveContext } from "@/middleware/resolveContext";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
+import { ResolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { AdminMismatchValidation } from "@/validations/adminMismatch.validation";
 import { AdminMissmatchServices } from "@/services/adminMissmatch.services";
@@ -21,9 +21,9 @@ export class AdminMissmatchRoute {
   private getMissmatchID() {
     this.router.get(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         query: AdminMismatchValidation.QueryValidation,
       }),
@@ -34,9 +34,9 @@ export class AdminMissmatchRoute {
   private getDetailMismatchData() {
     this.router.get(
       "/:orderId/:stationName",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: AdminMismatchValidation.DetailMismatchDataParams,
       }),
@@ -47,9 +47,9 @@ export class AdminMissmatchRoute {
   private manageMismatch() {
     this.router.put(
       "/:orderId/:stationName",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: AdminMismatchValidation.OrderIdStationNameParams,
         body: AdminMismatchValidation.ManageMismatchSchema,

@@ -2,12 +2,12 @@
 import express, { Application, Router } from "express";
 import "dotenv/config";
 import swaggerUi from "swagger-ui-express";
-import { openApiDocument } from "@/docs/swagger";
+import { SwaggerDocument } from "@/docs/swagger";
 import cors from "cors";
 import listEndpoints from "express-list-endpoints";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-import { errorHandler } from "@/middleware/error-handler";
+import { ErrorHandler } from "@/middleware/error-handler";
 import { RouteRegistry } from "@/routes";
 
 export class App {
@@ -58,11 +58,15 @@ export class App {
   }
 
   private initializeSwagger() {
-    this.app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
+    this.app.use(
+      "/docs",
+      swaggerUi.serve,
+      swaggerUi.setup(SwaggerDocument.openApiDocument),
+    );
   }
 
   private initializeErrorHandler() {
-    this.app.use(errorHandler);
+    this.app.use(ErrorHandler.handler);
   }
 
   public listen(port: number) {

@@ -3,7 +3,7 @@ import { Router } from "express";
 import { SetupController } from "@/controllers/setup.controller";
 import { SetupService } from "@/services/setup.services";
 import { PrismaWrapper } from "@/config/prisma";
-import rateLimiter from "@/middleware/rateLimitter";
+import { RateLimiter } from "@/middleware/rateLimitter";
 import { Validator } from "@/middleware/validate";
 import { SetupValidation } from "@/validations/setup.validation";
 
@@ -24,7 +24,7 @@ export class SetupRoute {
   private createSuperAdmin() {
     this.router.post(
       "/",
-      rateLimiter(5),
+      RateLimiter.create(5),
       Validator.validate({
         body: SetupValidation.SetupSuperAdminSchema,
       }),

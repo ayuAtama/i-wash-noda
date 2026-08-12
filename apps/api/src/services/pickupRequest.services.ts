@@ -1,7 +1,7 @@
 // src/services/pickupRequest.services.ts
 import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
-import calculateDistance from "@/utils/haversineDistance";
+import { GeoUtils } from "@/utils/haversineDistance";
 import {
   CreatePickupRequestDto,
   PickupRequestIdParamsDto,
@@ -163,7 +163,7 @@ export class PickupRequestService {
           "Outlet not found or perhaps you're the little hacker?",
         );
 
-      let distance = calculateDistance(
+      let distance = GeoUtils.calculateDistance(
         Number(address.lat),
         Number(address.lng),
         Number(outlet.lat),

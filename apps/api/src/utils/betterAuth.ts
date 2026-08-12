@@ -1,11 +1,13 @@
 // src/utils/betterAuth.ts
 import type { Request, Response, NextFunction } from "express";
-import { toNodeHandler } from "better-auth/node";
-import { auth } from "./auth";
+import { BetterAuth } from "./auth";
 
 export class BetterAuthMiddleware {
-  public static handler() {
-    const nodeHandler = toNodeHandler(auth);
+  constructor(private readonly auth: BetterAuth) {}
+
+  public handler() {
+    const { auth } = this;
+    const nodeHandler = auth.getNodeHandler();
 
     return async (req: Request, res: Response, next: NextFunction) => {
       try {
@@ -20,3 +22,7 @@ export class BetterAuthMiddleware {
     };
   }
 }
+
+export const betterAuthMiddleware = new BetterAuthMiddleware(
+  BetterAuth.getInstance(),
+);

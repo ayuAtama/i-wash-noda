@@ -2,15 +2,16 @@ import { z } from "zod";
 import "zod-openapi";
 
 // check if only the folder allowed
-export const CLOUDINARY_FOLDER = [
-  "avatars",
-  "payment-proofs",
-  "complaints",
-] as const;
 export class CloudinaryValidation {
+  static CLOUDINARY_FOLDER = [
+    "avatars",
+    "payment-proofs",
+    "complaints",
+  ] as const;
+
   static RequestSignatureSchema = z
     .object({
-      folder: z.enum(CLOUDINARY_FOLDER).meta({
+      folder: z.enum(CloudinaryValidation.CLOUDINARY_FOLDER).meta({
         description: "Folder name",
         example: "/avatars",
       }),
@@ -37,7 +38,7 @@ export class CloudinaryValidation {
         description: "User ID requesting the signature",
         example: "123e4567-e89b-12d3-a456-426614174000",
       }),
-      folder: z.enum(CLOUDINARY_FOLDER).meta({
+      folder: z.enum(CloudinaryValidation.CLOUDINARY_FOLDER).meta({
         description: "Folder name",
         example: "avatars",
       }),

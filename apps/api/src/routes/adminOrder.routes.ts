@@ -13,9 +13,9 @@ import {
   UpdateWalkInCustomerValidation,
   WalkInCustomerValidation,
 } from "@/validations/adminOrder.validation";
-import { authorizationMiddleware } from "@/middleware/authorization";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { resolveContext } from "@/middleware/resolveContext";
+import { ResolveContext } from "@/middleware/resolveContext";
 
 export class AdminOrderRoute {
   public router = Router();
@@ -32,9 +32,9 @@ export class AdminOrderRoute {
   private getAllOrderOnTheOutlet() {
     this.router.get(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       this.controller.getAllOrderOnOutlet,
     );
   }
@@ -42,9 +42,9 @@ export class AdminOrderRoute {
   private updateItemOfOrder() {
     this.router.patch(
       "/:orderId",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         body: UpdateOrderItemValidation.UpdateOrderItemSchema,
         params: UpdateOrderItemValidation.OrderIdParamsSchema,
@@ -56,17 +56,17 @@ export class AdminOrderRoute {
   private PaymentProof() {
     this.router.get(
       "/payment-proof/",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       this.controller.checkCustomerPaymentProof,
     );
 
     this.router.post(
       "/payment-proof/:id/:action",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: PaymentOrderValidation.PaymentActionParamsSchema,
       }),
@@ -77,17 +77,17 @@ export class AdminOrderRoute {
   private CustomerComplaints() {
     this.router.get(
       "/complaints",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       this.controller.getAllPendingComplaints,
     );
 
     this.router.post(
       "/complaints/:complaintId/:status",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: ComplaintOrderValidation.ComplaintParamsSchema,
         body: ComplaintOrderValidation.ComplaintBodySchema,
@@ -113,9 +113,9 @@ export class AdminWalkInOrderRoute {
   private createWalkinCustomerOrder() {
     this.router.post(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         body: WalkInCustomerValidation.CreateWalkInCustomerSchema,
       }),
@@ -126,9 +126,9 @@ export class AdminWalkInOrderRoute {
   private checkWalkinCustomer() {
     this.router.get(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         query: WalkInCustomerValidation.keywordWalkInCustomerSchema,
       }),
@@ -139,9 +139,9 @@ export class AdminWalkInOrderRoute {
   private updateWalkinCustomer() {
     this.router.patch(
       "/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: UpdateWalkInCustomerValidation.IDParamSchema,
         body: UpdateWalkInCustomerValidation.UpdateWalkInCustomerSchema,
@@ -153,9 +153,9 @@ export class AdminWalkInOrderRoute {
   private deleteWalkinCustomer() {
     this.router.delete(
       "/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: UpdateWalkInCustomerValidation.IDParamSchema,
       }),
@@ -166,9 +166,9 @@ export class AdminWalkInOrderRoute {
   private manualCreateOrderWalkIn() {
     this.router.post(
       "/orders/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: ManualOrderValidation.WalkInCustomerIdParamsSchema,
         body: ManualOrderValidation.CreateManualOrderSchema,

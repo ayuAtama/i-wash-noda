@@ -1,8 +1,7 @@
 // apps/api/src/services/workerShift.services.ts
 import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
-import { validateNoOverlap } from "@/utils/validateNoOverlap";
-import timeToUtcDate from "@/utils/timeToUTCDate";
+import { ShiftValidator } from "@/utils/validateNoOverlap";
 import {
   CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
@@ -13,7 +12,7 @@ import {
   WorkerIdDTO,
 } from "@/validations/workerShift.validation";
 import { Prisma } from "@/generated/prisma/client";
-import { today } from "@/utils/today";
+import { DateUtils } from "@/utils/today";
 
 export class WorkerShiftService {
   constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
@@ -57,7 +56,7 @@ export class WorkerShiftService {
       }
 
       // validate overlap in request
-      validateNoOverlap(schedules);
+      ShiftValidator.validateNoOverlap(schedules);
 
       // IMPORTANT:
       // One transaction = atomic weekly replacement
@@ -77,8 +76,8 @@ export class WorkerShiftService {
             worker_id: workerId,
             station: station.worker_station,
             day_of_week: s.day,
-            start_time: timeToUtcDate(s.start),
-            end_time: timeToUtcDate(s.end),
+            start_time: DateUtils.toUtc(s.start),
+            end_time: DateUtils.toUtc(s.end),
           })),
         });
 
@@ -161,7 +160,10 @@ export class WorkerShiftService {
             by: ["worker_id"],
             where: {
               outlet_id,
-              day_of_week: today(),
+              day_of_week: DateUtils.today(),
+            },
+            orderBy: {
+              worker_id: "asc",
             },
             _count: {
               id: true,
@@ -173,7 +175,7 @@ export class WorkerShiftService {
         totalWorker,
         totalDriver,
         totalOnDuty: totalOnDutyByWorker.length,
-        today: today(),
+        today: DateUtils.today(),
       };
     } catch (error) {
       throw error;

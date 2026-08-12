@@ -2,7 +2,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { AdminService } from "@/services/admin.services";
 import { HttpError } from "@/utils/httpError";
-import { isUserRole } from "@/types/role";
+import { UserRoleValidator } from "@/types/role";
 import {
   ChangeRoleDto,
   RegisterInternalUserDto,
@@ -31,7 +31,7 @@ export class AdminController {
       if (!email || !role) {
         throw new HttpError(400, "Missing email or role");
       }
-      if (!isUserRole(role)) {
+      if (!UserRoleValidator.isUserRole(role)) {
         throw new HttpError(403, "Invalid role");
       }
 
