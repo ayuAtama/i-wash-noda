@@ -16,6 +16,7 @@ import { CustomerOrderValidation } from "../validations/customerOrder.validation
 import { DeliveryOrderValidation } from "../validations/deliveryOder.validation";
 import { WorkerStationValidation } from "../validations/workerStation.validation";
 import { AdminMismatchValidation } from "../validations/adminMismatch.validation";
+import { SetupValidation } from "../validations/setup.validation";
 import {
   WalkInCustomerValidation,
   ManualOrderValidation,
@@ -169,6 +170,11 @@ export const openApiDocument = createDocument({
       description:
         "User authentication endpoints including multi-step registration, login, " +
         "password reset, and profile management",
+    },
+    {
+      name: "Setup",
+      description:
+        "First-time super admin setup. Only accessible before a super admin account exists.",
     },
     {
       name: "Better Auth",
@@ -832,6 +838,92 @@ export const openApiDocument = createDocument({
           },
           "400": { description: "Invalid input" },
           "401": { description: "Invalid or expired token" },
+        },
+      },
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // Setup (first super admin)
+    // ═══════════════════════════════════════════════════════════════
+    "/api/setup/": {
+      get: {
+        summary: "Check if setup is required",
+        tags: ["Setup"],
+        description:
+          "Returns whether the first super admin account still needs to be created. " +
+          "Returns 409 when a super admin already exists.",
+        responses: {
+          "200": {
+            description: "Setup is still required",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Setup required",
+                  data: { setupRequired: true },
+                },
+              },
+            },
+          },
+          "409": {
+            description: "Super admin already exists",
+            content: {
+              "application/json": {
+                example: {
+                  success: false,
+                  message: "Super admin already exists",
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        summary: "Create the first super admin",
+        tags: ["Setup"],
+        description:
+          "Creates the first super admin account with email, name, and password. " +
+          "Only works when no super admin exists yet.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: SetupValidation.SetupSuperAdminSchema,
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Super admin created",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Super admin created successfully",
+                  data: {
+                    id: "uuid",
+                    email: "admin@example.com",
+                    name: "Super Admin",
+                    role: "super_admin",
+                    emailVerified: true,
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid input" },
+          "409": {
+            description: "Super admin already exists",
+            content: {
+              "application/json": {
+                example: {
+                  success: false,
+                  message: "Super admin already exists",
+                },
+              },
+            },
+          },
+          "429": { description: "Rate limit exceeded" },
         },
       },
     },
