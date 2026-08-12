@@ -163,18 +163,19 @@ export class PickupRequestService {
           "Outlet not found or perhaps you're the little hacker?",
         );
 
-      const distance = calculateDistance(
+      let distance = calculateDistance(
         Number(address.lat),
         Number(address.lng),
         Number(outlet.lat),
         Number(outlet.lng),
       );
+      distance = Math.ceil(distance);
 
       if (distance > Number(outlet.max_distance_km))
         throw new HttpError(400, "Outlet is not within coverage");
 
-      const pickupPrice = Math.ceil(distance * (outlet.price_per_km || 0));
-      const deliverPrice = Math.ceil(distance * (outlet.price_per_km || 0));
+      const pickupPrice = Math.ceil(distance * (outlet.price_per_km || 2500));
+      const deliverPrice = Math.ceil(distance * (outlet.price_per_km || 2500));
 
       const order = await this.prisma.$transaction(async (tx) => {
         const checkExisting = await tx.pickupRequest.findFirst({
@@ -203,6 +204,7 @@ export class PickupRequestService {
             delivery_fee: deliverPrice,
             laundry_price: 0,
             total_kilo: 0,
+            total_km: distance,
             total_amount: pickupPrice + deliverPrice,
             status: "waiting_for_driver_pickup",
             paid: false,
