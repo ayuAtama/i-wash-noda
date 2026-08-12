@@ -22,17 +22,16 @@ export class AddressRoute {
   private getAddress() {
     this.router.get(
       "/",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       Validator.validate({ query: PaginationSchema }),
       this.controller.getAll,
     );
-
   }
 
   private createAddress() {
     this.router.post(
       "/",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       Validator.validate({
         body: AddressValidation.CreateAddressSchema,
       }),
@@ -42,11 +41,15 @@ export class AddressRoute {
 
   private updateAddress() {
     //handle if the user input no address id
-    this.router.put("/", authenticationMiddleware, this.controller.idNotFound);
+    this.router.put(
+      "/",
+      authenticationMiddleware.handler,
+      this.controller.idNotFound,
+    );
 
     this.router.put(
       "/:id",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       Validator.validate({
         body: AddressValidation.UpdateAddressSchema,
         params: AddressValidation.ParamsAddressSchema,
@@ -59,13 +62,13 @@ export class AddressRoute {
     //handle if the user input no address id
     this.router.delete(
       "/",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       this.controller.idNotFound,
     );
 
     this.router.delete(
       "/:id",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       Validator.validate({
         params: AddressValidation.ParamsAddressSchema,
       }),
@@ -77,13 +80,13 @@ export class AddressRoute {
     //handle if the user input no address id
     this.router.put(
       "/set-default",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       this.controller.idNotFound,
     );
 
     this.router.put(
       "/:id/set-default",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       Validator.validate({
         params: AddressValidation.ParamsAddressSchema,
       }),

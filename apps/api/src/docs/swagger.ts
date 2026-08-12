@@ -1,7 +1,7 @@
+import "dotenv/config";
 import { createDocument } from "zod-openapi";
 import { z } from "zod";
 
-import { UserValidation } from "../validations/user.validation";
 import { AuthValidation } from "../validations/auth.validation";
 import { AddressValidation } from "../validations/address.validation";
 import { AdminValidation } from "../validations/admin.validation";
@@ -16,6 +16,8 @@ import { CustomerOrderValidation } from "../validations/customerOrder.validation
 import { DeliveryOrderValidation } from "../validations/deliveryOder.validation";
 import { WorkerStationValidation } from "../validations/workerStation.validation";
 import { AdminMismatchValidation } from "../validations/adminMismatch.validation";
+import { SetupValidation } from "../validations/setup.validation";
+import { MidtransValidation } from "../validations/midtrans.validation";
 import {
   WalkInCustomerValidation,
   ManualOrderValidation,
@@ -27,92 +29,86 @@ import {
 
 // ── Shared Path Params ──────────────────────────────────────────
 
-const UserIdParam = z.object({
-  id: z.string().uuid().meta({
-    description: "User ID (UUID)",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-const AddressIdParam = z.object({
-  id: z.string().uuid().meta({
+export class SwaggerDocument {
+static AddressIdParam = z.object({
+  id: z.uuid().meta({
     description: "Address ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const OutletIdParam = z.object({
-  id: z.string().uuid().meta({
+static OutletIdParam = z.object({
+  id: z.uuid().meta({
     description: "Outlet ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const WorkerIdParam = z.object({
-  id: z.string().uuid().meta({
+static WorkerIdParam = z.object({
+  id: z.uuid().meta({
     description: "Worker ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const PickupRequestIdParam = z.object({
-  id: z.string().uuid().meta({
+static PickupRequestIdParam = z.object({
+  id: z.uuid().meta({
     description: "Pickup Request ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const ItemIdParam = z.object({
-  id: z.string().uuid().meta({
+static ItemIdParam = z.object({
+  id: z.uuid().meta({
     description: "Item ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const OrderIdParam = z.object({
-  orderId: z.string().uuid().meta({
+static OrderIdParam = z.object({
+  orderId: z.uuid().meta({
     description: "Order ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const UserIdPathParam = z.object({
-  userId: z.string().uuid().meta({
+static UserIdPathParam = z.object({
+  userId: z.uuid().meta({
     description: "User ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const DeliveryIdParam = z.object({
-  deliveryId: z.string().uuid().meta({
+static DeliveryIdParam = z.object({
+  deliveryId: z.uuid().meta({
     description: "Delivery Request ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const StationNamePathParam = z.object({
+static StationNamePathParam = z.object({
   stationName: z.enum(["washing", "ironing", "packing"]).meta({
     description: "Station name (washing, ironing, or packing)",
     example: "washing",
   }),
 });
 
-const ComplaintIdPathParam = z.object({
-  complaintId: z.string().uuid().meta({
+static ComplaintIdPathParam = z.object({
+  complaintId: z.uuid().meta({
     description: "Complaint ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
 });
 
-const ComplaintStatusPathParam = z.object({
+static ComplaintStatusPathParam = z.object({
   status: z.enum(["resolved", "rejected"]).meta({
     description: "Complaint resolution action",
     example: "resolved",
   }),
 });
 
-const PaymentProofIdActionParam = z.object({
-  id: z.string().uuid().meta({
+static PaymentProofIdActionParam = z.object({
+  id: z.uuid().meta({
     description: "Payment Proof ID (UUID)",
     example: "123e4567-e89b-12d3-a456-426614174000",
   }),
@@ -122,7 +118,7 @@ const PaymentProofIdActionParam = z.object({
   }),
 });
 
-const CloudinaryFolderParam = z.object({
+static CloudinaryFolderParam = z.object({
   folder: z.enum(["avatars", "payment-proofs", "complaints"]).meta({
     description: "Upload folder name",
     example: "avatars",
@@ -139,7 +135,7 @@ const CloudinaryFolderParam = z.object({
 
 // ── OpenAPI Document ────────────────────────────────────────────
 
-export const openApiDocument = createDocument({
+  static openApiDocument = createDocument({
   openapi: "3.1.0",
   info: {
     title: "I-Wash-Noda API",
@@ -154,6 +150,13 @@ export const openApiDocument = createDocument({
   },
   servers: [
     {
+      url: process.env.API_URL || "http://localhost:3000",
+      description:
+        process.env.NODE_ENV === "production"
+          ? "Production server"
+          : "Current API server",
+    },
+    {
       url: "http://localhost:3000",
       description: "Development server",
     },
@@ -161,14 +164,15 @@ export const openApiDocument = createDocument({
   tags: [
     { name: "Health", description: "Health check endpoint" },
     {
-      name: "User Management",
-      description: "User CRUD operations (deprecated - testing only)",
-    },
-    {
       name: "Authentication",
       description:
         "User authentication endpoints including multi-step registration, login, " +
         "password reset, and profile management",
+    },
+    {
+      name: "Setup",
+      description:
+        "First-time super admin setup. Only accessible before a super admin account exists.",
     },
     {
       name: "Better Auth",
@@ -247,6 +251,11 @@ export const openApiDocument = createDocument({
       name: "Cloudinary",
       description: "Cloudinary upload signature generation for file uploads",
     },
+    {
+      name: "Midtrans",
+      description:
+        "Midtrans payment gateway integration: Snap token generation, payment status webhook notifications",
+    },
   ],
   paths: {
     // ═══════════════════════════════════════════════════════════════
@@ -305,115 +314,6 @@ export const openApiDocument = createDocument({
           "200": {
             description: "Auth flow response",
           },
-        },
-      },
-    },
-
-    // ═══════════════════════════════════════════════════════════════
-    // User Management (deprecated)
-    // ═══════════════════════════════════════════════════════════════
-    "/api/users": {
-      get: {
-        summary: "List all users (deprecated)",
-        tags: ["User Management"],
-        responses: {
-          "200": {
-            description: "Returns array of users",
-            content: {
-              "application/json": {
-                example: [
-                  { id: "uuid", name: "John Doe", email: "john@example.com" },
-                  { id: "uuid", name: "Jane Smith", email: "jane@example.com" },
-                ],
-              },
-            },
-          },
-        },
-      },
-      post: {
-        summary: "Create user (deprecated)",
-        tags: ["User Management"],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: UserValidation.CreateUserSchema,
-            },
-          },
-        },
-        responses: {
-          "201": {
-            description: "User created successfully",
-            content: {
-              "application/json": {
-                example: {
-                  id: "uuid",
-                  name: "John Doe",
-                  email: "john@example.com",
-                },
-              },
-            },
-          },
-          "400": { description: "Invalid input" },
-        },
-      },
-    },
-    "/api/users/{id}": {
-      get: {
-        summary: "Get user by ID (deprecated)",
-        tags: ["User Management"],
-        requestParams: { path: UserIdParam },
-        responses: {
-          "200": {
-            description: "Returns user object",
-            content: {
-              "application/json": {
-                example: {
-                  id: "uuid",
-                  name: "John Doe",
-                  email: "john@example.com",
-                },
-              },
-            },
-          },
-          "404": { description: "User not found" },
-        },
-      },
-      put: {
-        summary: "Update user (deprecated)",
-        tags: ["User Management"],
-        requestParams: { path: UserIdParam },
-        requestBody: {
-          content: {
-            "application/json": {
-              schema: UserValidation.UpdateUserSchema,
-            },
-          },
-        },
-        responses: {
-          "200": {
-            description: "User updated successfully",
-            content: {
-              "application/json": {
-                example: {
-                  id: "uuid",
-                  name: "John Updated",
-                  email: "updated@example.com",
-                },
-              },
-            },
-          },
-          "400": { description: "Invalid input" },
-          "404": { description: "User not found" },
-        },
-      },
-      delete: {
-        summary: "Delete user (deprecated)",
-        tags: ["User Management"],
-        requestParams: { path: UserIdParam },
-        responses: {
-          "200": { description: "User deleted successfully" },
-          "404": { description: "User not found" },
         },
       },
     },
@@ -601,7 +501,6 @@ export const openApiDocument = createDocument({
         summary: "Logout current user",
         tags: ["Authentication"],
         description: "Clears access_token and refresh_token cookies",
-        security: [{ CookieAuth: [] }],
         responses: {
           "200": {
             description: "Logout successful",
@@ -622,7 +521,6 @@ export const openApiDocument = createDocument({
         description:
           "Refreshes the access token using the refresh_token cookie. " +
           "The access token must be expired for this to work.",
-        security: [{ CookieAuth: [] }],
         responses: {
           "200": {
             description: "Token refreshed successfully",
@@ -706,7 +604,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get current user profile",
         tags: ["Authentication"],
-        security: [{ CookieAuth: [] }],
         responses: {
           "200": {
             description: "Returns current authenticated user",
@@ -735,7 +632,6 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Update current user profile",
         tags: ["Authentication"],
-        security: [{ CookieAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -853,7 +749,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Request email change",
         tags: ["Authentication"],
-        security: [{ CookieAuth: [] }],
         description:
           "Sends a verification OTP to the new email address. " +
           "Requires authenticated user.",
@@ -887,7 +782,6 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Confirm email change",
         tags: ["Authentication"],
-        security: [{ CookieAuth: [] }],
         description:
           "Confirms the email change with the OTP token. " +
           "Requires temp_jwt cookie from change-email-request step.",
@@ -923,13 +817,98 @@ export const openApiDocument = createDocument({
     },
 
     // ═══════════════════════════════════════════════════════════════
+    // Setup (first super admin)
+    // ═══════════════════════════════════════════════════════════════
+    "/api/setup/": {
+      get: {
+        summary: "Check if setup is required",
+        tags: ["Setup"],
+        description:
+          "Returns whether the first super admin account still needs to be created. " +
+          "Returns 409 when a super admin already exists.",
+        responses: {
+          "200": {
+            description: "Setup is still required",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Setup required",
+                  data: { setupRequired: true },
+                },
+              },
+            },
+          },
+          "409": {
+            description: "Super admin already exists",
+            content: {
+              "application/json": {
+                example: {
+                  success: false,
+                  message: "Super admin already exists",
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        summary: "Create the first super admin",
+        tags: ["Setup"],
+        description:
+          "Creates the first super admin account with email, name, and password. " +
+          "Only works when no super admin exists yet.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: SetupValidation.SetupSuperAdminSchema,
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Super admin created",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Super admin created successfully",
+                  data: {
+                    id: "uuid",
+                    email: "admin@example.com",
+                    name: "Super Admin",
+                    role: "super_admin",
+                    emailVerified: true,
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid input" },
+          "409": {
+            description: "Super admin already exists",
+            content: {
+              "application/json": {
+                example: {
+                  success: false,
+                  message: "Super admin already exists",
+                },
+              },
+            },
+          },
+          "429": { description: "Rate limit exceeded" },
+        },
+      },
+    },
+
+    // ═══════════════════════════════════════════════════════════════
     // Addresses
     // ═══════════════════════════════════════════════════════════════
     "/api/addresses": {
       get: {
         summary: "Get all user addresses",
         tags: ["Addresses"],
-        security: [{ CookieAuth: [] }],
         responses: {
           "200": {
             description: "Returns all addresses for the authenticated user",
@@ -958,7 +937,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Create new address",
         tags: ["Addresses"],
-        security: [{ CookieAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -996,8 +974,7 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Update address",
         tags: ["Addresses"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: AddressIdParam },
+        requestParams: { path: SwaggerDocument.AddressIdParam },
         requestBody: {
           content: {
             "application/json": {
@@ -1026,8 +1003,7 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Delete address",
         tags: ["Addresses"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: AddressIdParam },
+        requestParams: { path: SwaggerDocument.AddressIdParam },
         responses: {
           "200": {
             description: "Address deleted",
@@ -1049,8 +1025,7 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Set address as default",
         tags: ["Addresses"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: AddressIdParam },
+        requestParams: { path: SwaggerDocument.AddressIdParam },
         responses: {
           "200": {
             description: "Default address updated",
@@ -1149,7 +1124,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Create new outlet",
         tags: ["Admin Outlets"],
-        security: [{ CookieAuth: [] }],
         description: "Creates a new laundry outlet. Requires super_admin role.",
         requestBody: {
           required: true,
@@ -1193,8 +1167,7 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Update outlet",
         tags: ["Admin Outlets"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: OutletIdParam },
+        requestParams: { path: SwaggerDocument.OutletIdParam },
         requestBody: {
           content: {
             "application/json": {
@@ -1223,8 +1196,7 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Delete outlet",
         tags: ["Admin Outlets"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: OutletIdParam },
+        requestParams: { path: SwaggerDocument.OutletIdParam },
         responses: {
           "200": {
             description: "Outlet deleted",
@@ -1251,7 +1223,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "List all items",
         tags: ["Admin Items"],
-        security: [{ CookieAuth: [] }],
         responses: {
           "200": {
             description: "Returns all service items",
@@ -1274,7 +1245,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Create new item",
         tags: ["Admin Items"],
-        security: [{ CookieAuth: [] }],
         description: "Creates a new service item. Requires super_admin role.",
         requestBody: {
           required: true,
@@ -1307,7 +1277,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Search items by name",
         tags: ["Admin Items"],
-        security: [{ CookieAuth: [] }],
         requestParams: { query: ItemValidation.QueryItemSchema },
         responses: {
           "200": {
@@ -1332,8 +1301,7 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get item by ID",
         tags: ["Admin Items"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: ItemIdParam },
+        requestParams: { path: SwaggerDocument.ItemIdParam },
         responses: {
           "200": {
             description: "Returns item details",
@@ -1354,8 +1322,7 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Update item",
         tags: ["Admin Items"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: ItemIdParam },
+        requestParams: { path: SwaggerDocument.ItemIdParam },
         requestBody: {
           content: {
             "application/json": {
@@ -1385,8 +1352,7 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Delete item",
         tags: ["Admin Items"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: ItemIdParam },
+        requestParams: { path: SwaggerDocument.ItemIdParam },
         responses: {
           "200": {
             description: "Item deleted",
@@ -1413,7 +1379,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Register internal user (worker/driver)",
         tags: ["Admin"],
-        security: [{ CookieAuth: [] }],
         description:
           "Registers an internal user (worker, driver, or admin). " +
           "A verification email is sent. Requires super_admin or outlet_admin role.",
@@ -1448,7 +1413,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "List all users (admin view)",
         tags: ["Admin"],
-        security: [{ CookieAuth: [] }],
         responses: {
           "200": {
             description: "Returns all users",
@@ -1482,7 +1446,6 @@ export const openApiDocument = createDocument({
       patch: {
         summary: "Change user role",
         tags: ["Admin"],
-        security: [{ CookieAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -1514,8 +1477,7 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Remove user",
         tags: ["Admin"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: UserIdPathParam },
+        requestParams: { path: SwaggerDocument.UserIdPathParam },
         responses: {
           "200": {
             description: "User removed",
@@ -1543,7 +1505,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "List all schedules (with filters)",
         tags: ["Worker Shifts"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all worker schedules for the outlet. Supports filtering by " +
           "role, station, and ordering. Requires super_admin or outlet_admin role.",
@@ -1583,7 +1544,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get workers without schedules",
         tags: ["Worker Shifts"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns workers/drivers who do not have any shift assigned. " +
           "Supports keyword search and role filter.",
@@ -1619,7 +1579,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Schedule summary dashboard",
         tags: ["Worker Shifts"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns a summary of all worker shifts for the dashboard view. " +
           "Shows station coverage across days.",
@@ -1652,11 +1611,10 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Create or update worker schedule",
         tags: ["Worker Shifts"],
-        security: [{ CookieAuth: [] }],
         description:
           "Creates or updates a weekly schedule for a worker. " +
           "Validates for overlapping shifts across the outlet.",
-        requestParams: { path: WorkerIdParam },
+        requestParams: { path: SwaggerDocument.WorkerIdParam },
         requestBody: {
           required: true,
           content: {
@@ -1694,8 +1652,7 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get schedule by worker ID",
         tags: ["Worker Shifts"],
-        security: [{ CookieAuth: [] }],
-        requestParams: { path: WorkerIdParam },
+        requestParams: { path: SwaggerDocument.WorkerIdParam },
         responses: {
           "200": {
             description: "Returns worker schedule",
@@ -1732,7 +1689,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check address coverage for pickup",
         tags: ["Pickup Requests"],
-        security: [{ CookieAuth: [] }],
         description:
           "Checks if the customer's default address is within an outlet's " +
           "pickup coverage radius.",
@@ -1772,7 +1728,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Create pickup request",
         tags: ["Pickup Requests"],
-        security: [{ CookieAuth: [] }],
         description: "Creates a new pickup request for a customer order",
         requestBody: {
           required: true,
@@ -1809,7 +1764,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get all pending pickup requests (driver view)",
         tags: ["Pickup Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all pending pickup requests available for the driver to accept. " +
           "Requires driver role.",
@@ -1846,9 +1800,8 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Cancel pickup request",
         tags: ["Pickup Requests"],
-        security: [{ CookieAuth: [] }],
         description: "Cancels a pending pickup request",
-        requestParams: { path: PickupRequestIdParam },
+        requestParams: { path: SwaggerDocument.PickupRequestIdParam },
         responses: {
           "200": {
             description: "Pickup request cancelled",
@@ -1870,7 +1823,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check user pickup request/order status",
         tags: ["Pickup Requests"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns the status of the customer's latest pickup request",
         responses: {
@@ -1902,9 +1854,8 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Accept pickup request (driver)",
         tags: ["Pickup Orders"],
-        security: [{ CookieAuth: [] }],
         description: "Driver accepts a pending pickup request",
-        requestParams: { path: PickupRequestIdParam },
+        requestParams: { path: SwaggerDocument.PickupRequestIdParam },
         responses: {
           "200": {
             description: "Request accepted",
@@ -1931,7 +1882,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get accepted jobs (driver)",
         tags: ["Pickup Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all pickup requests accepted by the current driver",
         responses: {
@@ -1965,11 +1915,10 @@ export const openApiDocument = createDocument({
       patch: {
         summary: "Update pickup status (driver)",
         tags: ["Pickup Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Advances the pickup status to the next step. " +
           "Status flow: ACCEPTED -> IN_TRANSIT -> ON_DELIVERY -> DONE",
-        requestParams: { path: PickupRequestIdParam },
+        requestParams: { path: SwaggerDocument.PickupRequestIdParam },
         requestBody: {
           required: true,
           content: {
@@ -2000,7 +1949,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get already picked up jobs (driver)",
         tags: ["Pickup Orders"],
-        security: [{ CookieAuth: [] }],
         description: "Returns all completed pickup jobs for the current driver",
         responses: {
           "200": {
@@ -2036,7 +1984,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check active order status",
         tags: ["Customer Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns the customer's currently active (in-progress) order. " +
           "Requires customer role.",
@@ -2073,7 +2020,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check completed order status",
         tags: ["Customer Orders"],
-        security: [{ CookieAuth: [] }],
         description: "Returns the customer's most recently completed order",
         responses: {
           "200": {
@@ -2104,11 +2050,10 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Upload payment proof",
         tags: ["Customer Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Uploads a payment proof image URL for a manual transfer order. " +
           "Requires customer role.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         requestBody: {
           required: true,
           content: {
@@ -2141,15 +2086,134 @@ export const openApiDocument = createDocument({
         },
       },
     },
+    "/api/orders/{orderId}/payment/cancel": {
+      post: {
+        summary: "Cancel selected payment method",
+        tags: ["Customer Orders"],
+        description:
+          "Cancels the selected payment method for an order. For manual payments it " +
+          "clears the payment method so a new one can be chosen. For payment gateway " +
+          "it expires the pending Midtrans transaction. Requires customer role.",
+        requestParams: { path: SwaggerDocument.OrderIdParam },
+        responses: {
+          "200": {
+            description: "Payment cancelled",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Payment cancelled successfully",
+                  data: { id: "uuid", payment_method: null },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid orderId" },
+          "401": { description: "Not authenticated" },
+          "403": {
+            description: "Not allowed to change another customer's payment",
+          },
+          "404": { description: "Order not found" },
+          "409": {
+            description:
+              "Order already paid, no payment method selected, or payment proof already uploaded",
+          },
+        },
+      },
+    },
+    "/api/orders/{orderId}/payment-gateway": {
+      get: {
+        summary: "Generate Midtrans Snap token",
+        tags: ["Customer Orders"],
+        description:
+          "Creates a Midtrans Snap transaction for the order and returns the Snap " +
+          "token plus redirect URL. Reuses an existing pending token if one exists. " +
+          "Requires customer role.",
+        requestParams: { path: SwaggerDocument.OrderIdParam },
+        responses: {
+          "200": {
+            description: "Snap token created or fetched",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Payment gateway token created successfully",
+                  data: {
+                    token: "snap-token-abc123",
+                    redirect_url:
+                      "https://app.sandbox.midtrans.com/snap/v3/transactions/abc123",
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid orderId" },
+          "401": { description: "Not authenticated" },
+          "404": { description: "Order not found" },
+          "409": {
+            description:
+              "Order not eligible for payment yet, already paid, or manual payment selected",
+          },
+          "500": { description: "Failed to create payment gateway token" },
+        },
+      },
+    },
+    "/api/orders/{orderId}/payment/{paymentMethod}": {
+      post: {
+        summary: "Set order payment method",
+        tags: ["Customer Orders"],
+        description:
+          "Sets the payment method (payment_gateway or manual) for an order. " +
+          "The payment method can only be changed after cancelling the current one. " +
+          "Requires customer role.",
+        parameters: [
+          {
+            name: "orderId",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+            description: "Order ID (UUID)",
+          },
+          {
+            name: "paymentMethod",
+            in: "path",
+            required: true,
+            schema: { type: "string", enum: ["payment_gateway", "manual"] },
+            description: "Payment method to select",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Payment method updated",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Payment method updated successfully",
+                  data: { id: "uuid", payment_method: "payment_gateway" },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid orderId or paymentMethod" },
+          "401": { description: "Not authenticated" },
+          "403": { description: "Not allowed to pay another customer's order" },
+          "404": { description: "Order not found" },
+          "409": {
+            description:
+              "Order already paid or payment method already set (cancel first)",
+          },
+        },
+      },
+    },
     "/api/orders/{orderId}/complete": {
       post: {
         summary: "Mark order as done by customer",
         tags: ["Customer Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Customer confirms the order has been received and marks it as complete. " +
           "Requires customer role.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         responses: {
           "200": {
             description: "Order marked as complete",
@@ -2172,11 +2236,10 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Submit complaint",
         tags: ["Customer Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Submits a complaint for an order with a message and optional image. " +
           "Requires customer role.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         requestBody: {
           required: true,
           content: {
@@ -2218,7 +2281,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check available delivery jobs",
         tags: ["Delivery Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all pending delivery requests for the driver's outlet. " +
           "Requires driver role and resolved context.",
@@ -2259,9 +2321,8 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Accept delivery job",
         tags: ["Delivery Orders"],
-        security: [{ CookieAuth: [] }],
         description: "Driver accepts a pending delivery request",
-        requestParams: { path: DeliveryIdParam },
+        requestParams: { path: SwaggerDocument.DeliveryIdParam },
         responses: {
           "200": {
             description: "Delivery accepted",
@@ -2289,11 +2350,10 @@ export const openApiDocument = createDocument({
       patch: {
         summary: "Update delivery status",
         tags: ["Delivery Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Advances the delivery status to the next step. " +
           "Status flow: ACCEPTED -> IN_TRANSIT -> DELIVERED",
-        requestParams: { path: DeliveryIdParam },
+        requestParams: { path: SwaggerDocument.DeliveryIdParam },
         responses: {
           "200": {
             description: "Status updated",
@@ -2319,7 +2379,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check active delivery jobs",
         tags: ["Delivery Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all active (in-progress) delivery jobs for the driver",
         responses: {
@@ -2356,7 +2415,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get completed delivery jobs",
         tags: ["Delivery Orders"],
-        security: [{ CookieAuth: [] }],
         description: "Returns all completed delivery jobs for the driver",
         responses: {
           "200": {
@@ -2391,7 +2449,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check available jobs for worker station",
         tags: ["Worker Stations"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns orders waiting to be processed at the worker's assigned station " +
           "(washing, ironing, or packing). Requires worker role and active shift.",
@@ -2429,7 +2486,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check active jobs for worker station",
         tags: ["Worker Stations"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns orders currently being processed by the worker at their station",
         responses: {
@@ -2462,10 +2518,9 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Assign job to self (worker)",
         tags: ["Worker Stations"],
-        security: [{ CookieAuth: [] }],
         description:
           "Worker accepts/claims an order for processing at their station",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         responses: {
           "200": {
             description: "Job assigned",
@@ -2488,7 +2543,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Re-input item quantities",
         tags: ["Worker Stations"],
-        security: [{ CookieAuth: [] }],
         description:
           "Worker re-enters item quantities after checking. " +
           "If quantities differ from the original, a mismatch is recorded.",
@@ -2532,7 +2586,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Mark job as done (worker)",
         tags: ["Worker Stations"],
-        security: [{ CookieAuth: [] }],
         description:
           "Worker marks their station's processing as complete. " +
           "The order advances to the next station in the workflow.",
@@ -2565,7 +2618,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get completed jobs for worker station",
         tags: ["Worker Stations"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all jobs completed by the current worker at their station",
         responses: {
@@ -2601,7 +2653,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get all orders for outlet",
         tags: ["Admin Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all orders for the admin's outlet. " +
           "Requires outlet_admin role.",
@@ -2638,11 +2689,10 @@ export const openApiDocument = createDocument({
       patch: {
         summary: "Update order items",
         tags: ["Admin Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Updates the items and total weight of an order that has arrived at the outlet. " +
           "Recalculates pricing based on new weights.",
-        requestParams: { path: OrderIdParam },
+        requestParams: { path: SwaggerDocument.OrderIdParam },
         requestBody: {
           required: true,
           content: {
@@ -2682,7 +2732,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Check customer payment proofs",
         tags: ["Admin Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all pending payment proofs for the outlet. " +
           "Requires outlet_admin role.",
@@ -2721,11 +2770,10 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Approve or reject payment proof",
         tags: ["Admin Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Approves or rejects a customer's payment proof. " +
           "If approved, the order status advances to the next step.",
-        requestParams: { path: PaymentProofIdActionParam },
+        requestParams: { path: SwaggerDocument.PaymentProofIdActionParam },
         responses: {
           "200": {
             description: "Payment proof action taken",
@@ -2752,7 +2800,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get all pending complaints",
         tags: ["Admin Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all customer complaints pending resolution for the outlet. " +
           "Requires outlet_admin role.",
@@ -2791,14 +2838,13 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Resolve or reject customer complaint",
         tags: ["Admin Orders"],
-        security: [{ CookieAuth: [] }],
         description:
           "Admin responds to a customer complaint with a resolution or rejection. " +
           "Requires outlet_admin role.",
         requestParams: {
           path: z
             .object({
-              complaintId: z.string().uuid().meta({
+              complaintId: z.uuid().meta({
                 description: "Complaint ID (UUID)",
                 example: "123e4567-e89b-12d3-a456-426614174000",
               }),
@@ -2853,7 +2899,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Create walk-in customer",
         tags: ["Walk-in Customers"],
-        security: [{ CookieAuth: [] }],
         description:
           "Creates a walk-in customer profile for walk-in orders. " +
           "Requires outlet_admin role.",
@@ -2890,7 +2935,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Search walk-in customers",
         tags: ["Walk-in Customers"],
-        security: [{ CookieAuth: [] }],
         description: "Searches walk-in customers by name or phone keyword",
         requestParams: {
           query: WalkInCustomerValidation.keywordWalkInCustomerSchema,
@@ -2923,7 +2967,6 @@ export const openApiDocument = createDocument({
       patch: {
         summary: "Update walk-in customer",
         tags: ["Walk-in Customers"],
-        security: [{ CookieAuth: [] }],
         description: "Updates a walk-in customer's name or phone number",
         requestParams: {
           path: UpdateWalkInCustomerValidation.IDParamSchema,
@@ -2961,7 +3004,6 @@ export const openApiDocument = createDocument({
       delete: {
         summary: "Delete walk-in customer",
         tags: ["Walk-in Customers"],
-        security: [{ CookieAuth: [] }],
         description: "Deletes a walk-in customer profile",
         requestParams: {
           path: UpdateWalkInCustomerValidation.IDParamSchema,
@@ -2988,7 +3030,6 @@ export const openApiDocument = createDocument({
       post: {
         summary: "Create manual walk-in order",
         tags: ["Walk-in Customers"],
-        security: [{ CookieAuth: [] }],
         description:
           "Creates a manual order for a walk-in customer. " +
           "All fees are set to 0 since the customer is at the outlet.",
@@ -3044,7 +3085,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get all mismatches (with station filter)",
         tags: ["Admin Mismatch"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns all item quantity mismatches for the outlet. " +
           "Can be filtered by station name. Supports pagination.",
@@ -3087,7 +3127,6 @@ export const openApiDocument = createDocument({
       get: {
         summary: "Get detail mismatch data",
         tags: ["Admin Mismatch"],
-        security: [{ CookieAuth: [] }],
         description:
           "Returns detailed mismatch data for a specific order and station",
         requestParams: {
@@ -3128,7 +3167,6 @@ export const openApiDocument = createDocument({
       put: {
         summary: "Manage mismatch (approve/reject)",
         tags: ["Admin Mismatch"],
-        security: [{ CookieAuth: [] }],
         description:
           "Admin reviews mismatched items: approves or rejects each item, " +
           "and updates final quantities.",
@@ -3173,19 +3211,66 @@ export const openApiDocument = createDocument({
     },
 
     // ═══════════════════════════════════════════════════════════════
+    // Midtrans Payment Gateway
+    // ═══════════════════════════════════════════════════════════════
+    "/api/midtrans/notification": {
+      post: {
+        summary: "Midtrans payment notification webhook",
+        tags: ["Midtrans"],
+        description:
+          "Receives payment status notifications from Midtrans. Verifies the signature " +
+          "key, stores the transaction data, and updates the order status (marks order " +
+          "as paid on capture/settlement, or clears the payment method on cancel/deny/expire). " +
+          "No authentication required (server-to-server webhook).",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: MidtransValidation.MidtransNotificationSchema,
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Webhook processed successfully",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Webhook notification processed successfully",
+                  data: {
+                    storedWebhook: {
+                      id: "uuid",
+                      order_id: "uuid",
+                      transaction_status: "settlement",
+                      fraud_status: "accept",
+                    },
+                    updateOrderStatus: { id: "uuid", paid: true },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid request payload or invalid signature key",
+          },
+        },
+      },
+    },
+
+    // ═══════════════════════════════════════════════════════════════
     // Cloudinary
     // ═══════════════════════════════════════════════════════════════
     "/api/signature/{folder}": {
       get: {
         summary: "Get Cloudinary upload signature",
         tags: ["Cloudinary"],
-        security: [{ CookieAuth: [] }],
         description:
           "Generates a signed upload URL for Cloudinary. " +
           "Rate limited to 5 requests per window. " +
           "Folders: avatars, payment-proofs, complaints.",
         requestParams: {
-          path: CloudinaryFolderParam,
+          path: SwaggerDocument.CloudinaryFolderParam,
         },
         responses: {
           "200": {
@@ -3211,21 +3296,5 @@ export const openApiDocument = createDocument({
       },
     },
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // Components
-  // ═══════════════════════════════════════════════════════════════
-  components: {
-    securitySchemes: {
-      CookieAuth: {
-        type: "apiKey",
-        in: "cookie",
-        name: "access_token",
-        description:
-          "JWT access token stored in an HTTP-only cookie. " +
-          "Obtained via /api/login or /api/register flow. " +
-          "Expires after 15 minutes by default.",
-      },
-    },
-  },
 });
+}

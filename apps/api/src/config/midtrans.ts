@@ -48,6 +48,7 @@ export interface SnapRequestPayload {
     unit: "minutes" | "hours" | "days";
     duration: number;
   };
+  custom_field1?: string;
 }
 
 export interface SnapResponse {
@@ -121,6 +122,7 @@ export async function createSnapTransaction(
           start_time: formatMidtransStartTime(payload.expiry.start_time),
         }
       : undefined,
+    custom_field1: payload.custom_field1,
   };
 
   const response = await fetch(midtransConfig.snapCreateUrl, {

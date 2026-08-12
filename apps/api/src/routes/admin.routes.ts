@@ -1,13 +1,12 @@
 import { Router } from "express";
 import { AdminController } from "@/controllers/admin.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { AdminValidation } from "@/validations/admin.validation";
 import { AdminService } from "@/services/admin.services";
 import { PrismaWrapper } from "@/config/prisma";
 import { PaginationSchema } from "@/validations/pagination.validation";
-
 
 export class AdminRoute {
   public router = Router();
@@ -22,8 +21,8 @@ export class AdminRoute {
   private createInternalUser() {
     this.router.post(
       "/register",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin", "outlet_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin", "outlet_admin"),
       Validator.validate({
         body: AdminValidation.RegisterInternalUserSchema,
       }),
@@ -34,16 +33,16 @@ export class AdminRoute {
   private manageInternalUser() {
     this.router.get(
       "/users",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin", "outlet_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin", "outlet_admin"),
       Validator.validate({ query: PaginationSchema }),
       this.controller.getAllUser,
     );
 
     this.router.patch(
       "/users",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin", "outlet_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin", "outlet_admin"),
       Validator.validate({
         body: AdminValidation.ChangeRoleSchema,
       }),
@@ -52,8 +51,8 @@ export class AdminRoute {
 
     this.router.delete(
       "/users/:userId",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin", "outlet_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin", "outlet_admin"),
       Validator.validate({
         params: AdminValidation.RemoveUserSchema,
       }),

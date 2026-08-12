@@ -1,5 +1,5 @@
 // src/services/midtrans.services.ts
-import { prisma } from "@/config/prisma";
+import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
 import {
   createSnapTransaction,
@@ -7,7 +7,11 @@ import {
   verifyNotificationSignature,
 } from "@/config/midtrans";
 import { Prisma } from "@/generated/prisma/client";
-import type { PaymentGatewayStatus } from "@/generated/prisma/enums";
+import midtrans, { MidtransClients } from "@/utils/midtrans";
+import {
+  ParsedMidtransNotification,
+  RawMidtransNotification,
+} from "@/validations/midtrans.validation";
 
 export async function finalizePaidOrder(
   tx: Prisma.TransactionClient,
@@ -37,27 +41,14 @@ export async function finalizePaidOrder(
   }
 }
 
-function mapTransactionStatus(
+function isPaidTransaction(
   transactionStatus?: string,
   fraudStatus?: string,
-): PaymentGatewayStatus | null {
-  switch (transactionStatus) {
-    case "settlement":
-      return "paid";
-    case "capture":
-      return fraudStatus === "challenge" ? "pending" : "paid";
-    case "pending":
-      return "pending";
-    case "deny":
-    case "cancel":
-      return "cancelled";
-    case "expire":
-      return "expired";
-    case "refund":
-      return "cancelled";
-    default:
-      return null;
-  }
+): boolean {
+  return (
+    transactionStatus === "settlement" ||
+    (transactionStatus === "capture" && fraudStatus === "accept")
+  );
 }
 
 export interface MidtransNotificationPayload {
@@ -70,12 +61,29 @@ export interface MidtransNotificationPayload {
   transaction_id?: string;
   payment_type?: string;
   transaction_time?: string;
+  settlement_time?: string;
+  custom_field1?: string;
+  va_numbers?: Array<{ bank?: string }>;
+  bank?: string;
+  issuer?: string;
+  acquirer?: string;
   [key: string]: unknown;
 }
 
 export class MidtransService {
+  private readonly prisma: PrismaWrapper;
+  private readonly midtrans: MidtransClients;
+
+  constructor(
+    prismaClient: PrismaWrapper = defaultPrisma,
+    midtransClient: MidtransClients = midtrans,
+  ) {
+    this.prisma = prismaClient;
+    this.midtrans = midtransClient;
+  }
+
   async createPayment(orderId: string, userId: string) {
-    const order = await prisma.order.findUnique({
+    const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       select: {
         id: true,
@@ -99,32 +107,29 @@ export class MidtransService {
       throw new HttpError(400, "Order is already paid");
     }
 
-    const existing = await prisma.paymentTransaction.findFirst({
-      where: { order_id: orderId, status: "pending" },
+    const existing = await this.prisma.paymentGatewayTransaction.findFirst({
+      where: { order_id: orderId, transaction_status: "pending" },
       orderBy: { created_at: "desc" },
-      select: { id: true, snap_token: true, provider_order_id: true },
+      select: { id: true, token: true },
     });
 
-    if (existing?.snap_token && existing.provider_order_id) {
+    if (existing?.token) {
       try {
-        const status = await getTransactionStatus(existing.provider_order_id);
-        const mapped = mapTransactionStatus(
-          status.transaction_status,
-          status.fraud_status,
-        );
-        if (mapped === "paid") {
-          await prisma.$transaction(async (tx) => {
-            await tx.paymentTransaction.update({
+        const status = await getTransactionStatus(orderId);
+        if (isPaidTransaction(status.transaction_status, status.fraud_status)) {
+          await this.prisma.$transaction(async (tx) => {
+            await tx.paymentGatewayTransaction.update({
               where: { id: existing.id },
               data: {
-                status: "paid",
                 provider_transaction_id: status.transaction_id ?? null,
                 payment_type: status.payment_type ?? null,
+                transaction_status: status.transaction_status ?? null,
+                status_code: status.status_code ?? null,
                 fraud_status: status.fraud_status ?? null,
-                transaction_time: status.transaction_time
-                  ? new Date(status.transaction_time)
-                  : null,
-                raw_response: status as Prisma.InputJsonValue,
+                transaction_time: status.transaction_time ?? null,
+                settlement_time: status.settlement_time ?? null,
+                gross_amount: status.gross_amount ?? null,
+                raw_response: status as unknown as Prisma.InputJsonValue,
               },
             });
             const current = await tx.order.findUnique({
@@ -135,20 +140,26 @@ export class MidtransService {
               await finalizePaidOrder(tx, orderId);
             }
           });
-          return { snap_token: existing.snap_token, already_paid: true };
-        }
-        if (mapped !== null) {
-          return { snap_token: existing.snap_token };
+          return { snap_token: existing.token, already_paid: true };
         }
       } catch {
-        return { snap_token: existing.snap_token };
+        // fall through and return the existing token
       }
+      return { snap_token: existing.token };
     }
 
-    const providerOrderId = `IWN-${orderId.slice(0, 8).toUpperCase()}-${Date.now()}`;
+    const transaction = await this.prisma.paymentGatewayTransaction.create({
+      data: {
+        order_id: orderId,
+        gross_amount: String(order.total_amount),
+        transaction_status: "pending",
+        status_code: "201",
+      },
+      select: { id: true },
+    });
 
     const snapResponse = await createSnapTransaction({
-      order_id: providerOrderId,
+      order_id: orderId,
       gross_amount: order.total_amount,
       customer_details: {
         first_name: order.customer?.name,
@@ -159,29 +170,24 @@ export class MidtransService {
         unit: "hours",
         duration: 24,
       },
+      custom_field1: transaction.id,
     });
 
-    if (existing) {
-      await prisma.paymentTransaction.update({
-        where: { id: existing.id },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.paymentGatewayTransaction.update({
+        where: { id: transaction.id },
         data: {
-          provider_order_id: providerOrderId,
-          snap_token: snapResponse.token,
-          raw_response: { redirect_url: snapResponse.redirect_url },
+          token: snapResponse.token,
+          raw_response: {
+            redirect_url: snapResponse.redirect_url,
+          } as Prisma.InputJsonValue,
         },
       });
-    } else {
-      await prisma.paymentTransaction.create({
-        data: {
-          order_id: orderId,
-          amount: order.total_amount,
-          status: "pending",
-          provider_order_id: providerOrderId,
-          snap_token: snapResponse.token,
-          raw_response: { redirect_url: snapResponse.redirect_url },
-        },
+      await tx.order.update({
+        where: { id: orderId },
+        data: { payment_method: "payment_gateway" },
       });
-    }
+    });
 
     return {
       snap_token: snapResponse.token,
@@ -200,6 +206,12 @@ export class MidtransService {
       transaction_id,
       payment_type,
       transaction_time,
+      settlement_time,
+      custom_field1,
+      va_numbers,
+      bank,
+      issuer,
+      acquirer,
     } = payload;
 
     if (!signature_key || !order_id || !status_code || !gross_amount) {
@@ -216,36 +228,37 @@ export class MidtransService {
       throw new HttpError(403, "Invalid signature");
     }
 
-    const transaction = await prisma.paymentTransaction.findUnique({
-      where: { provider_order_id: order_id },
-      select: { id: true, order_id: true },
-    });
+    const transaction = custom_field1
+      ? await this.prisma.paymentGatewayTransaction.findUnique({
+          where: { id: custom_field1 },
+          select: { id: true, order_id: true },
+        })
+      : null;
 
     if (!transaction) {
       throw new HttpError(404, "Transaction not found");
     }
 
-    const nextStatus = mapTransactionStatus(transaction_status, fraud_status);
-    if (!nextStatus) {
-      return { message: "Unknown transaction status, no action taken" };
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.paymentTransaction.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.paymentGatewayTransaction.update({
         where: { id: transaction.id },
         data: {
-          status: nextStatus,
           provider_transaction_id: transaction_id ?? null,
           payment_type: payment_type ?? null,
+          transaction_status: transaction_status ?? null,
+          status_code: status_code ?? null,
           fraud_status: fraud_status ?? null,
-          transaction_time: transaction_time
-            ? new Date(transaction_time)
-            : null,
+          transaction_time: transaction_time ?? null,
+          settlement_time: settlement_time ?? null,
+          gross_amount: gross_amount ?? null,
+          bank: bank ?? va_numbers?.[0]?.bank ?? null,
+          issuer: issuer ?? null,
+          acquirer: acquirer ?? null,
           raw_response: payload as Prisma.InputJsonValue,
         },
       });
 
-      if (nextStatus === "paid") {
+      if (isPaidTransaction(transaction_status, fraud_status)) {
         const order = await tx.order.findUnique({
           where: { id: transaction.order_id },
           select: { paid: true },
@@ -253,6 +266,15 @@ export class MidtransService {
         if (order && !order.paid) {
           await finalizePaidOrder(tx, transaction.order_id);
         }
+      } else if (
+        transaction_status === "cancel" ||
+        transaction_status === "deny" ||
+        transaction_status === "expire"
+      ) {
+        await tx.order.update({
+          where: { id: transaction.order_id },
+          data: { payment_method: null },
+        });
       }
     });
 
@@ -260,7 +282,7 @@ export class MidtransService {
   }
 
   async getPaymentStatus(orderId: string, userId: string) {
-    const order = await prisma.order.findUnique({
+    const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       select: { id: true, customer_id: true, status: true, paid: true },
     });
@@ -270,16 +292,16 @@ export class MidtransService {
       throw new HttpError(403, "Not your order");
     }
 
-    const transactions = await prisma.paymentTransaction.findMany({
+    const transactions = await this.prisma.paymentGatewayTransaction.findMany({
       where: { order_id: orderId },
       orderBy: { created_at: "desc" },
       select: {
         id: true,
-        provider_order_id: true,
+        provider_transaction_id: true,
         payment_type: true,
-        status: true,
+        transaction_status: true,
         fraud_status: true,
-        amount: true,
+        gross_amount: true,
         created_at: true,
       },
     });
@@ -292,7 +314,7 @@ export class MidtransService {
   }
 
   async syncPaymentStatus(orderId: string, userId: string) {
-    const order = await prisma.order.findUnique({
+    const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       select: { id: true, customer_id: true, status: true, paid: true },
     });
@@ -302,47 +324,35 @@ export class MidtransService {
       throw new HttpError(403, "Not your order");
     }
 
-    const transaction = await prisma.paymentTransaction.findFirst({
+    const transaction = await this.prisma.paymentGatewayTransaction.findFirst({
       where: { order_id: orderId },
       orderBy: { created_at: "desc" },
-      select: { id: true, provider_order_id: true, status: true },
+      select: { id: true, token: true },
     });
 
-    if (!transaction?.provider_order_id) {
+    if (!transaction) {
       throw new HttpError(404, "No payment transaction for this order");
     }
 
-    const status = await getTransactionStatus(transaction.provider_order_id);
+    const status = await getTransactionStatus(orderId);
 
-    const nextStatus = mapTransactionStatus(
-      status.transaction_status,
-      status.fraud_status,
-    );
-    if (!nextStatus) {
-      return {
-        synced: false,
-        order_status: order.status,
-        paid: order.paid,
-        transaction_status: status.transaction_status,
-      };
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.paymentTransaction.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.paymentGatewayTransaction.update({
         where: { id: transaction.id },
         data: {
-          status: nextStatus,
           provider_transaction_id: status.transaction_id ?? null,
           payment_type: status.payment_type ?? null,
+          transaction_status: status.transaction_status ?? null,
+          status_code: status.status_code ?? null,
           fraud_status: status.fraud_status ?? null,
-          transaction_time: status.transaction_time
-            ? new Date(status.transaction_time)
-            : null,
-          raw_response: status as Prisma.InputJsonValue,
+          transaction_time: status.transaction_time ?? null,
+          settlement_time: status.settlement_time ?? null,
+          gross_amount: status.gross_amount ?? null,
+          raw_response: status as unknown as Prisma.InputJsonValue,
         },
       });
 
-      if (nextStatus === "paid") {
+      if (isPaidTransaction(status.transaction_status, status.fraud_status)) {
         const current = await tx.order.findUnique({
           where: { id: orderId },
           select: { paid: true },
@@ -353,7 +363,7 @@ export class MidtransService {
       }
     });
 
-    const updated = await prisma.order.findUnique({
+    const updated = await this.prisma.order.findUnique({
       where: { id: orderId },
       select: { status: true, paid: true },
     });
@@ -364,5 +374,116 @@ export class MidtransService {
       paid: updated?.paid,
       transaction_status: status.transaction_status,
     };
+  }
+
+  async handleWebhookNotification(data: {
+    parsedData: ParsedMidtransNotification;
+    rawData: RawMidtransNotification;
+  }) {
+    try {
+      const { parsedData, rawData } = data;
+      if (!rawData || !parsedData) {
+        throw new HttpError(400, "Invalid request");
+      }
+
+      const {
+        signature_key,
+        order_id,
+        gross_amount,
+        status_code,
+        transaction_id,
+        payment_type,
+        currency,
+        transaction_status,
+        fraud_status,
+        transaction_time,
+        settlement_time,
+        va_numbers,
+        bank,
+        issuer,
+        acquirer,
+        custom_field1,
+      } = parsedData;
+
+      console.log(JSON.stringify(rawData, null, 2));
+
+      // verify the response
+      const isValid = await this.midtrans.verifyResponse({
+        order_id,
+        status_code,
+        gross_amount,
+        signature_key,
+      });
+      if (!isValid) {
+        throw new HttpError(400, "Invalid signature key");
+      }
+
+      //store the raw data
+      const result = await this.prisma.$transaction(async (tx) => {
+        const storedWebhook =
+          await this.prisma.paymentGatewayTransaction.update({
+            where: {
+              id: custom_field1,
+              order_id: parsedData.order_id,
+            },
+            data: {
+              provider_transaction_id: transaction_id,
+              raw_response: rawData,
+              payment_type,
+              gross_amount,
+              currency,
+              transaction_status,
+              status_code,
+              fraud_status,
+              transaction_time,
+              settlement_time,
+              bank: bank ?? va_numbers?.[0]?.["bank"],
+              issuer,
+              acquirer,
+            },
+            select: {
+              id: true,
+              order_id: true,
+              transaction_status: true,
+              fraud_status: true,
+            },
+          });
+
+        if (
+          (storedWebhook.transaction_status === "capture" &&
+            storedWebhook.fraud_status === "accept") ||
+          storedWebhook.transaction_status === "settlement"
+        ) {
+          // change the order status to "paid"
+          const updateOrderStatus = await tx.order.update({
+            where: { id: storedWebhook.order_id },
+            data: { paid: true },
+            select: { id: true, paid: true },
+          });
+
+          return { storedWebhook, updateOrderStatus };
+        }
+
+        // if cancled expired and etc
+        if (
+          storedWebhook.transaction_status === "cancel" ||
+          storedWebhook.transaction_status === "deny" ||
+          storedWebhook.transaction_status === "expire"
+        ) {
+          const cancelPayment = await tx.order.update({
+            where: { id: storedWebhook.order_id },
+            data: { payment_method: null },
+            select: { id: true, payment_method: true },
+          });
+          return cancelPayment;
+        }
+
+        return storedWebhook;
+      });
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
   }
 }

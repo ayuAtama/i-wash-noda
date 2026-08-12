@@ -2,322 +2,335 @@
 import { z } from "zod";
 import "zod-openapi";
 
-export const ReInputItemSchema = z
-  .object({
-    itemId: z.uuid().meta({
-      description: "Item ID",
-      example: "123e4567-e89b-12d3-a456-426614174000",
-    }),
-    itemQuantity: z.number().min(1).max(100).meta({
-      description: "Item Quantity",
-      example: 10,
-    }),
-  })
-  .meta({
-    id: "ReInputItem",
-    description: "Payload for re-input item",
-    example: {
-      itemId: "123e4567-e89b-12d3-a456-426614174000",
-      itemQuantity: 10,
-    },
-  });
+export class WorkerStationValidation {
+  static reInputItemSchema = z
+    .object({
+      itemId: z.uuid().meta({
+        description: "Item ID",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      itemQuantity: z.number().min(1).max(100).meta({
+        description: "Item Quantity",
+        example: 10,
+      }),
+    })
+    .meta({
+      id: "ReInputItem",
+      description: "Payload for re-input item",
+      example: {
+        itemId: "123e4567-e89b-12d3-a456-426614174000",
+        itemQuantity: 10,
+      },
+    });
 
-export const ReInputItemBodySchema = z
-  .object({
-    items: z
-      .array(ReInputItemSchema)
-      .min(1, "At least one item must be inputted")
-      .meta({
-        id: "ReInputItemBody",
-        description: "Payload of body for re-input item",
-        example: [
+  static reInputItemBodySchema = z
+    .object({
+      items: z
+        .array(WorkerStationValidation.reInputItemSchema)
+        .min(1, "At least one item must be inputted")
+        .meta({
+          id: "ReInputItemBody",
+          description: "Payload of body for re-input item",
+          example: [
+            {
+              itemId: "123e4567-e89b-12d3-a456-426614174000",
+              itemQuantity: 10,
+            },
+            {
+              itemId: "123e4567-e89b-12d3-a456-426614174001",
+              itemQuantity: 5,
+            },
+          ],
+        }),
+    })
+    .meta({
+      id: "ReInputItemBodyWrapper",
+      description: "Body payload for re-inputting item quantities",
+      example: {
+        items: [
           {
             itemId: "123e4567-e89b-12d3-a456-426614174000",
             itemQuantity: 10,
           },
-          {
-            itemId: "123e4567-e89b-12d3-a456-426614174001",
-            itemQuantity: 5,
-          },
         ],
+      },
+    });
+
+  static reInputItemParamsSchema = z
+    .object({
+      orderId: z.uuid().meta({
+        description: "Order ID",
+        example: "123e4567-e89b-12d3-a456-426614174000",
       }),
-  })
-  .meta({
-    id: "ReInputItemBodyWrapper",
-    description: "Body payload for re-inputting item quantities",
-    example: {
-      items: [
+    })
+    .meta({
+      id: "ReInputItemParams",
+      description: "Params for re-input item",
+      example: {
+        orderId: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
+
+  static reInputServiceStrategySchema = z.object({
+    userId: z.uuid().meta({
+      description: "User ID from access token",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    outletId: z.uuid().meta({
+      description: "Outlet ID",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    workerStation: z.enum(["washing", "ironing", "packing"]).meta({
+      description: "Worker Station from middleware",
+      example: "washing",
+    }),
+    orderId: WorkerStationValidation.reInputItemParamsSchema.shape.orderId.meta(
+      {
+        description: "Order ID from params",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    ),
+    items: z.array(WorkerStationValidation.reInputItemSchema).meta({
+      description: "Items payload on body",
+      example: [
         {
           itemId: "123e4567-e89b-12d3-a456-426614174000",
           itemQuantity: 10,
         },
+        {
+          itemId: "123e4567-e89b-12d3-a456-426614174001",
+          itemQuantity: 5,
+        },
       ],
-    },
+    }),
   });
 
-export const ReInputItemParamsSchema = z
-  .object({
-    orderId: z.uuid().meta({
-      description: "Order ID",
+  static reInputServiceMethodSchema = z.object({
+    userId: z.uuid().meta({
+      description: "User ID from access token",
       example: "123e4567-e89b-12d3-a456-426614174000",
     }),
-  })
-  .meta({
-    id: "ReInputItemParams",
-    description: "Params for re-input item",
-    example: {
-      orderId: "123e4567-e89b-12d3-a456-426614174000",
-    },
+    outletId: z.uuid().meta({
+      description: "Outlet ID",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    orderId: WorkerStationValidation.reInputItemParamsSchema.shape.orderId.meta(
+      {
+        description: "Order ID from params",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    ),
+    items: z.array(WorkerStationValidation.reInputItemSchema).meta({
+      description: "Items payload on body",
+      example: [
+        {
+          itemId: "123e4567-e89b-12d3-a456-426614174000",
+          itemQuantity: 10,
+        },
+        {
+          itemId: "123e4567-e89b-12d3-a456-426614174001",
+          itemQuantity: 5,
+        },
+      ],
+    }),
   });
 
-export const ReInputServiceStrategySchema = z.object({
-  userId: z.uuid().meta({
-    description: "User ID from access token",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  outletId: z.uuid().meta({
-    description: "Outlet ID",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  workerStation: z.enum(["washing", "ironing", "packing"]).meta({
-    description: "Worker Station from middleware",
-    example: "washing",
-  }),
-  orderId: ReInputItemParamsSchema.shape.orderId.meta({
-    description: "Order ID from params",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  items: z.array(ReInputItemSchema).meta({
-    description: "Items payload on body",
-    example: [
+  static checkActiveJobsSchema = z.object({
+    outlet_id: z.uuid().meta({
+      description: "Outlet ID from middlewere",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    worker_id: z.uuid().meta({
+      description: "Worker ID from middlewere (cookies)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    worker_station: z.enum(["washing", "ironing", "packing"]).meta({
+      description: "Worker Station from middlewere",
+      example: "washing",
+    }),
+  });
+
+  static checkAvailableJobsSchema = z.object({
+    outlet_id: z.uuid().meta({
+      description: "Outlet ID from middlewere",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    worker_station: z.enum(["washing", "ironing", "packing"]).meta({
+      description: "Worker Station from middlewere",
+      example: "washing",
+    }),
+  });
+
+  static outletIDSchema = z.object({
+    outlet_id: z.uuid().meta({
+      description: "Outlet ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  });
+
+  static checkActiveJobsParamsSchema = z.object({
+    workerId: z.uuid().meta({
+      description: "Worker ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    outletId: z.uuid().meta({
+      description: "Outlet ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  });
+
+  static assignJobServiceStrategySchema = z.object({
+    userId: z.uuid().meta({
+      description: "User ID from access token",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    outletId: z.uuid().meta({
+      description: "Outlet ID",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    workerStation: z.enum(["washing", "ironing", "packing"]).meta({
+      description: "Worker Station from middleware",
+      example: "washing",
+    }),
+    orderId: WorkerStationValidation.reInputItemParamsSchema.shape.orderId.meta(
       {
-        itemId: "123e4567-e89b-12d3-a456-426614174000",
-        itemQuantity: 10,
+        description: "Order ID from params",
+        example: "123e4567-e89b-12d3-a456-426614174000",
       },
+    ),
+  });
+
+  static assignJobServiceMethodSchema = z.object({
+    userId: z.uuid().meta({
+      description: "User ID from access token",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    outletId: z.uuid().meta({
+      description: "Outlet ID",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    orderId: WorkerStationValidation.reInputItemParamsSchema.shape.orderId.meta(
       {
-        itemId: "123e4567-e89b-12d3-a456-426614174001",
-        itemQuantity: 5,
+        description: "Order ID from params",
+        example: "123e4567-e89b-12d3-a456-426614174000",
       },
-    ],
-  }),
-});
+    ),
+  });
 
-export const ReInputServiceMethodSchema = z.object({
-  userId: z.uuid().meta({
-    description: "User ID from access token",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  outletId: z.uuid().meta({
-    description: "Outlet ID",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  orderId: ReInputItemParamsSchema.shape.orderId.meta({
-    description: "Order ID from params",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  items: z.array(ReInputItemSchema).meta({
-    description: "Items payload on body",
-    example: [
+  static markDoneServiceStrategySchema = z.object({
+    userId: z.uuid().meta({
+      description: "User ID from access token",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    outletId: z.uuid().meta({
+      description: "Outlet ID",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    workerStation: z.enum(["washing", "ironing", "packing"]).meta({
+      description: "Worker Station from middleware",
+      example: "washing",
+    }),
+    orderId: WorkerStationValidation.reInputItemParamsSchema.shape.orderId.meta(
       {
-        itemId: "123e4567-e89b-12d3-a456-426614174000",
-        itemQuantity: 10,
+        description: "Order ID from params",
+        example: "123e4567-e89b-12d3-a456-426614174000",
       },
+    ),
+  });
+
+  static markDoneServiceMethodSchema = z.object({
+    userId: z.uuid().meta({
+      description: "User ID from access token",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    outletId: z.uuid().meta({
+      description: "Outlet ID",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    orderId: WorkerStationValidation.reInputItemParamsSchema.shape.orderId.meta(
       {
-        itemId: "123e4567-e89b-12d3-a456-426614174001",
-        itemQuantity: 5,
+        description: "Order ID from params",
+        example: "123e4567-e89b-12d3-a456-426614174000",
       },
-    ],
-  }),
-});
+    ),
+  });
 
-export const CheckActiveJobsSchema = z.object({
-  outlet_id: z.uuid().meta({
-    description: "Outlet ID from middlewere",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  worker_id: z.uuid().meta({
-    description: "Worker ID from middlewere (cookies)",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  worker_station: z.enum(["washing", "ironing", "packing"]).meta({
-    description: "Worker Station from middlewere",
-    example: "washing",
-  }),
-});
+  static getCompleteJobsStrategySchema = z.object({
+    outletId: z.uuid().meta({
+      description: "Outlet ID from middleware",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    workerId: z.uuid().meta({
+      description: "Worker ID from access token",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    workerStation: z.enum(["washing", "ironing", "packing"]).meta({
+      description: "Worker Station from middleware",
+      example: "washing",
+    }),
+  });
 
-export const CheckAvailableJobsSchema = z.object({
-  outlet_id: z.uuid().meta({
-    description: "Outlet ID from middlewere",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  worker_station: z.enum(["washing", "ironing", "packing"]).meta({
-    description: "Worker Station from middlewere",
-    example: "washing",
-  }),
-});
+  static getCompleteJobsMethodSchema = z.object({
+    outletId: z.uuid().meta({
+      description: "Outlet ID",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+    workerId: z.uuid().meta({
+      description: "Worker ID from access token",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  });
 
-export const OutletIDSchema = z.object({
-  outlet_id: z.uuid().meta({
-    description: "Outlet ID (UUID)",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export const checkActiveJobsSchema = z.object({
-  workerId: z.uuid().meta({
-    description: "Worker ID (UUID)",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  outletId: z.uuid().meta({
-    description: "Outlet ID (UUID)",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export const AssignJobServiceStrategySchema = z.object({
-  userId: z.uuid().meta({
-    description: "User ID from access token",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  outletId: z.uuid().meta({
-    description: "Outlet ID",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  workerStation: z.enum(["washing", "ironing", "packing"]).meta({
-    description: "Worker Station from middleware",
-    example: "washing",
-  }),
-  orderId: ReInputItemParamsSchema.shape.orderId.meta({
-    description: "Order ID from params",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export const AssignJobServiceMethodSchema = z.object({
-  userId: z.uuid().meta({
-    description: "User ID from access token",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  outletId: z.uuid().meta({
-    description: "Outlet ID",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  orderId: ReInputItemParamsSchema.shape.orderId.meta({
-    description: "Order ID from params",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export const MarkDoneServiceStrategySchema = z.object({
-  userId: z.uuid().meta({
-    description: "User ID from access token",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  outletId: z.uuid().meta({
-    description: "Outlet ID",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  workerStation: z.enum(["washing", "ironing", "packing"]).meta({
-    description: "Worker Station from middleware",
-    example: "washing",
-  }),
-  orderId: ReInputItemParamsSchema.shape.orderId.meta({
-    description: "Order ID from params",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export const MarkDoneServiceMethodSchema = z.object({
-  userId: z.uuid().meta({
-    description: "User ID from access token",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  outletId: z.uuid().meta({
-    description: "Outlet ID",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  orderId: ReInputItemParamsSchema.shape.orderId.meta({
-    description: "Order ID from params",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export const GetCompleteJobsStrategySchema = z.object({
-  outletId: z.uuid().meta({
-    description: "Outlet ID from middleware",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  workerId: z.uuid().meta({
-    description: "Worker ID from access token",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  workerStation: z.enum(["washing", "ironing", "packing"]).meta({
-    description: "Worker Station from middleware",
-    example: "washing",
-  }),
-});
-
-export const GetCompleteJobsMethodSchema = z.object({
-  outletId: z.uuid().meta({
-    description: "Outlet ID",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-  workerId: z.uuid().meta({
-    description: "Worker ID from access token",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export class WorkerStationValidation {
-  static reInputItemSchema = ReInputItemSchema;
-  static reInputItemBodySchema = ReInputItemBodySchema;
-  static reInputItemParamsSchema = ReInputItemParamsSchema;
-  static reInputServiceStrategySchema = ReInputServiceStrategySchema;
-  static assignJobServiceStrategySchema = AssignJobServiceStrategySchema;
-  static assignJobServiceMethodSchema = AssignJobServiceMethodSchema;
-  static markDoneServiceStrategySchema = MarkDoneServiceStrategySchema;
-  static markDoneServiceMethodSchema = MarkDoneServiceMethodSchema;
-  static assignJobParamsSchema = ReInputItemParamsSchema;
-  static markDoneParamsSchema = ReInputItemParamsSchema;
-  static getCompleteJobsStrategySchema = GetCompleteJobsStrategySchema;
-  static getCompleteJobsMethodSchema = GetCompleteJobsMethodSchema;
+  static assignJobParamsSchema =
+    WorkerStationValidation.reInputItemParamsSchema;
+  static markDoneParamsSchema = WorkerStationValidation.reInputItemParamsSchema;
 }
 
-export type ReInputItemBodyPayloadDTO = z.infer<typeof ReInputItemBodySchema>;
+export type ReInputItemBodyPayloadDTO = z.infer<
+  typeof WorkerStationValidation.reInputItemBodySchema
+>;
 export type ReInputItemParamsPayloadDTO = z.infer<
-  typeof ReInputItemParamsSchema
+  typeof WorkerStationValidation.reInputItemParamsSchema
 >;
 export type ReInputServiceStrategyPayloadDTO = z.infer<
-  typeof ReInputServiceStrategySchema
+  typeof WorkerStationValidation.reInputServiceStrategySchema
 >;
 export type ReInputServiceMethodPayloadDTO = z.infer<
-  typeof ReInputServiceStrategySchema
+  typeof WorkerStationValidation.reInputServiceStrategySchema
 >;
-export type CheckActiveJobsPayloadDTO = z.infer<typeof CheckActiveJobsSchema>;
+export type CheckActiveJobsPayloadDTO = z.infer<
+  typeof WorkerStationValidation.checkActiveJobsSchema
+>;
 export type CheckAvailableJobsPayloadDTO = z.infer<
-  typeof CheckAvailableJobsSchema
+  typeof WorkerStationValidation.checkAvailableJobsSchema
 >;
-export type OutletIDPayloadDTO = z.infer<typeof OutletIDSchema>;
-export type checkActiveJobsStrategyDTO = z.infer<typeof checkActiveJobsSchema>;
+export type OutletIDPayloadDTO = z.infer<
+  typeof WorkerStationValidation.outletIDSchema
+>;
+export type checkActiveJobsStrategyDTO = z.infer<
+  typeof WorkerStationValidation.checkActiveJobsParamsSchema
+>;
 export type AssigJobParamsDTO = z.infer<
   typeof WorkerStationValidation.assignJobParamsSchema
 >;
 export type AssignJobServiceStrategyDTO = z.infer<
-  typeof AssignJobServiceStrategySchema
+  typeof WorkerStationValidation.assignJobServiceStrategySchema
 >;
 export type AssignJobServiceMethodDTO = z.infer<
-  typeof AssignJobServiceMethodSchema
+  typeof WorkerStationValidation.assignJobServiceMethodSchema
 >;
 export type MarkDoneServiceStrategyDTO = z.infer<
-  typeof MarkDoneServiceStrategySchema
+  typeof WorkerStationValidation.markDoneServiceStrategySchema
 >;
 export type MarkDoneServiceMethodDTO = z.infer<
-  typeof MarkDoneServiceMethodSchema
+  typeof WorkerStationValidation.markDoneServiceMethodSchema
 >;
-export type MarkDoneParamsPayloadDTO = z.infer<typeof ReInputItemParamsSchema>;
+export type MarkDoneParamsPayloadDTO = z.infer<
+  typeof WorkerStationValidation.reInputItemParamsSchema
+>;
 export type GetCompleteJobsStrategyDTO = z.infer<
-  typeof GetCompleteJobsStrategySchema
+  typeof WorkerStationValidation.getCompleteJobsStrategySchema
 >;
 export type GetCompleteJobsMethodDTO = z.infer<
-  typeof GetCompleteJobsMethodSchema
+  typeof WorkerStationValidation.getCompleteJobsMethodSchema
 >;

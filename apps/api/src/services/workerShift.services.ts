@@ -1,8 +1,7 @@
 // apps/api/src/services/workerShift.services.ts
 import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
-import { validateNoOverlap } from "@/utils/validateNoOverlap";
-import timeToUtcDate from "@/utils/timeToUTCDate";
+import { ShiftValidator } from "@/utils/validateNoOverlap";
 import {
   CreateSchedulePayloadDTO,
   CreateWorkerShiftInputDTO,
@@ -14,11 +13,10 @@ import {
   FetchWorkerSchedulePayloadDTO,
 } from "@/validations/workerShift.validation";
 import { Prisma, WorkerShiftDay } from "@/generated/prisma/client";
-import { today } from "@/utils/today";
+import { DateUtils } from "@/utils/today";
 
 // sse experiment
 import { sseService } from "./sse.services";
-
 
 export class WorkerShiftService {
   constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
@@ -53,7 +51,6 @@ export class WorkerShiftService {
 
       // get the user to validate existence and fallback station
       const user = await this.prisma.user.findFirst({
-
         where: { id: workerId, outlet_id: outletId },
         select: { role: true, worker_station: true },
       });
@@ -63,7 +60,7 @@ export class WorkerShiftService {
       }
 
       // validate overlap in request
-      validateNoOverlap(schedules);
+      ShiftValidator.validateNoOverlap(schedules);
 
       // One transaction = atomic weekly replacement
       const res = await this.prisma.$transaction(async (tx) => {
@@ -82,8 +79,8 @@ export class WorkerShiftService {
             worker_id: workerId,
             station: s.station !== undefined ? s.station : user.worker_station,
             day_of_week: s.day,
-            start_time: timeToUtcDate(s.start),
-            end_time: timeToUtcDate(s.end),
+            start_time: DateUtils.toUtc(s.start),
+            end_time: DateUtils.toUtc(s.end),
           })),
         });
 
@@ -137,7 +134,6 @@ export class WorkerShiftService {
         this.prisma.user.count({ where }),
       ]);
 
-
       return {
         data: workers,
         meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
@@ -188,7 +184,7 @@ export class WorkerShiftService {
           .groupBy({
             by: ["worker_id"],
             where: { outlet_id, day_of_week: today },
-          orderBy: { worker_id: "asc" },
+            orderBy: { worker_id: "asc" },
           })
           .then((res) => res.length),
       ]);
@@ -286,12 +282,14 @@ export class WorkerShiftService {
             by: ["worker_id"],
             where: {
               outlet_id,
-              day_of_week: today(),
+              day_of_week: DateUtils.today(),
+            },
+            orderBy: {
+              worker_id: "asc",
             },
             _count: {
               id: true,
             },
-            orderBy: { worker_id: "asc" },
           }),
         ]);
 
@@ -299,7 +297,7 @@ export class WorkerShiftService {
         totalWorker,
         totalDriver,
         totalOnDuty: totalOnDutyByWorker.length,
-        today: today(),
+        today: DateUtils.today(),
       };
     } catch (error) {
       throw error;

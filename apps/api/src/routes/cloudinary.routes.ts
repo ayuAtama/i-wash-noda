@@ -1,7 +1,7 @@
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { Router } from "express";
 import { CloudinaryController } from "@/controllers/cloudinary.controller";
-import rateLimiter from "@/middleware/rateLimitter";
+import { RateLimiter } from "@/middleware/rateLimitter";
 import { Validator } from "@/middleware/validate";
 import { CloudinaryValidation } from "@/validations/cloudinary.validation";
 import { CloudinaryService } from "@/services/cloudinary.services";
@@ -18,11 +18,11 @@ export class CloudinaryRoute {
   private getSignature() {
     this.router.get(
       "/:folder{/:params}{/:unique}",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       Validator.validate({
         params: CloudinaryValidation.RequestSignatureSchema,
       }),
-      rateLimiter(5),
+      RateLimiter.create(5),
       this.controller.getUploadSignature,
     );
   }

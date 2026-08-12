@@ -1,7 +1,7 @@
 // apps/api/src/services/outletItem.services.ts
 import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
-import calculateDistance from "@/utils/haversineDistance";
+import { GeoUtils } from "@/utils/haversineDistance";
 import {
   CreateOutletDto,
   UpdateOutletDto,
@@ -28,7 +28,7 @@ export class OutletItemService {
 
       const result = outlets
         .map((outlet) => {
-          const distance = calculateDistance(
+          const distance = GeoUtils.calculateDistance(
             lat,
             lng,
             Number(outlet.lat),

@@ -1,106 +1,56 @@
 // src/validations/adminOrder.validation.ts
 import { z } from "zod";
+import {
+  OrderSource,
+  OrderStatus,
+  PaymentProofStatus,
+} from "@/generated/prisma/enums";
 import "zod-openapi";
 
-export const CreateWalkInCustomerSchema = z
-  .object({
-    name: z.string().min(1, "Name is required").meta({
-      description: "Name of the customer",
-      example: "John Doe",
-    }),
-    phone: z
-      .string()
-      .regex(/^(?:\+62|62|0)8[1-9][0-9]{6,11}$/, "Invalid phone number")
-      .meta({
-        description: "Phone number of the customer",
-        example: "+6281234567890 or 081234567890",
-      }),
-  })
-  .meta({
-    id: "CreateWalkInCustomer",
-    description: "Payload for creating a walk-in customer",
-    example: {
-      name: "John Doe",
-      phone: "+6281234567890",
-    },
-  });
-
-export const keywordWalkInCustomerSchema = z
-  .object({
-    keyword: z.string().min(1, "Keyword is required").meta({
-      description: "Keyword to search for walk-in customers",
-      example: "John or 081222222222",
-    }),
-  })
-  .meta({
-    id: "KeywordWalkInCustomer",
-    description: "Query params for searching walk-in customers",
-    example: {
-      keyword: "John",
-    },
-  });
-
-export const outletIDSchema = z.object({
-  outlet_id: z.uuid().meta({
-    description: "Outlet ID (UUID)",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export const adminIDSchema = z.object({
-  admin_id: z.uuid().meta({
-    description: "Admin ID (UUID)",
-    example: "123e4567-e89b-12d3-a456-426614174000",
-  }),
-});
-
-export const UpdateWalkInCustomerSchema = z
-  .object({
-    name: z.string().min(1, "Name is required").optional().meta({
-      description: "Name of the customer",
-      example: "John Doe",
-    }),
-    phone: z
-      .string()
-      .regex(/^(?:\+62|62|0)8[1-9][0-9]{6,11}$/, "Invalid phone number")
-      .optional()
-      .meta({
-        description: "Phone number of the customer",
-        example: "+6281234567890 or 081234567890",
-      }),
-  })
-  .meta({
-    id: "UpdateWalkInCustomer",
-    description:
-      "Payload for updating a walk-in customer (at least one field required)",
-    example: {
-      name: "John Updated",
-    },
-  })
-  .refine((data) => !!data.name || !!data.phone, {
-    message:
-      "Either name or phone is required and what the you update without a data?",
-    // path: ["name"], // or ["phone"], or omit to make it a form-level error
-  });
-
-export const IDParamSchema = z
-  .object({
-    id: z.uuid().meta({
-      description: "Walk-in Customer ID (UUID)",
-      example: "123e4567-e89b-12d3-a456-426614174000",
-    }),
-  })
-  .meta({
-    id: "WalkInCustomerIdParam",
-    description: "Path params for walk-in customer ID",
-    example: {
-      id: "123e4567-e89b-12d3-a456-426614174000",
-    },
-  });
-
 export class UpdateWalkInCustomerValidation {
-  static UpdateWalkInCustomerSchema = UpdateWalkInCustomerSchema;
-  static IDParamSchema = IDParamSchema;
+  static UpdateWalkInCustomerSchema = z
+    .object({
+      name: z.string().min(1, "Name is required").optional().meta({
+        description: "Name of the customer",
+        example: "John Doe",
+      }),
+      phone: z
+        .string()
+        .regex(/^(?:\+62|62|0)8[1-9][0-9]{6,11}$/, "Invalid phone number")
+        .optional()
+        .meta({
+          description: "Phone number of the customer",
+          example: "+6281234567890 or 081234567890",
+        }),
+    })
+    .meta({
+      id: "UpdateWalkInCustomer",
+      description:
+        "Payload for updating a walk-in customer (at least one field required)",
+      example: {
+        name: "John Updated",
+      },
+    })
+    .refine((data) => !!data.name || !!data.phone, {
+      message:
+        "Either name or phone is required and what the you update without a data?",
+      // path: ["name"], // or ["phone"], or omit to make it a form-level error
+    });
+
+  static IDParamSchema = z
+    .object({
+      id: z.uuid().meta({
+        description: "Walk-in Customer ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "WalkInCustomerIdParam",
+      description: "Path params for walk-in customer ID",
+      example: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
 }
 export type UpdateWalkInCustomerValidationDTO = z.infer<
   typeof UpdateWalkInCustomerValidation.UpdateWalkInCustomerSchema
@@ -115,15 +65,152 @@ export type UpdatePayloadDTO = UpdateWalkInCustomerValidationDTO &
 export type DeletePayloadDTO = IDParamSchemaDTO & outletIDSchemaDTO;
 
 export class WalkInCustomerValidation {
-  static CreateWalkInCustomerSchema = CreateWalkInCustomerSchema;
-  static keywordWalkInCustomerSchema = keywordWalkInCustomerSchema;
+  static CreateWalkInCustomerSchema = z
+    .object({
+      name: z.string().min(1, "Name is required").meta({
+        description: "Name of the customer",
+        example: "John Doe",
+      }),
+      phone: z
+        .string()
+        .regex(/^(?:\+62|62|0)8[1-9][0-9]{6,11}$/, "Invalid phone number")
+        .meta({
+          description: "Phone number of the customer",
+          example: "+6281234567890 or 081234567890",
+        }),
+    })
+    .meta({
+      id: "CreateWalkInCustomer",
+      description: "Payload for creating a walk-in customer",
+      example: {
+        name: "John Doe",
+        phone: "+6281234567890",
+      },
+    });
+
+  static keywordWalkInCustomerSchema = z
+    .object({
+      keyword: z.string().min(1, "Keyword is required").meta({
+        description: "Keyword to search for walk-in customers",
+        example: "John or 081222222222",
+      }),
+    })
+    .meta({
+      id: "KeywordWalkInCustomer",
+      description: "Query params for searching walk-in customers",
+      example: {
+        keyword: "John",
+      },
+    });
 }
 export type WalkInCustomerValidationDTO = z.infer<
   typeof WalkInCustomerValidation.CreateWalkInCustomerSchema
 >;
 
-export type adminIDSchemaDTO = z.infer<typeof adminIDSchema>;
-export type outletIDSchemaDTO = z.infer<typeof outletIDSchema>;
+export class AdminOrderValidation {
+  static ItemOrderSchema = z
+    .object({
+      id: z.uuid().optional().meta({
+        description:
+          "Item ID (UUID), it's opional because it will be auto generated if not exist",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+      name: z.string().optional().meta({
+        description:
+          "Item name, it's opional because it will be auto generated if not exist",
+        example: "Jaket Hoodie",
+      }),
+      quantity: z.number().min(1, "Quantity must be at least 1").meta({
+        description: "Item quantity",
+        example: 2,
+      }),
+    })
+    .meta({
+      id: "ItemOrder",
+      description: "Item order line (provide either id or name, not both)",
+      example: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        quantity: 2,
+      },
+    })
+    .refine(({ id, name }) => (id ? 1 : 0) + (name ? 1 : 0) === 1, {
+      error: "Please only provide exactly one of id or name for the items",
+    });
+
+  /////////////////////////////////////////////////////
+  //                AdminOrderSchema                 //
+  ////////////////////////////////////////////////////
+  static AdminOrderSchema = z
+    .object({
+      total_kilos: z.number().min(1, "Total kilos must be at least 1").meta({
+        description: "Total kilos of laundry",
+        example: 5,
+      }),
+      items: z
+        .array(AdminOrderValidation.ItemOrderSchema)
+        .min(1, "At least one item must be inputted")
+        .meta({
+          description: "Array of items with quantities",
+          example: [
+            { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
+            { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },
+          ],
+        }),
+    })
+    .meta({
+      id: "AdminOrder",
+      description: "Payload for creating an order",
+      example: {
+        total_kilos: 5,
+        items: [
+          { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
+          { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },
+        ],
+      },
+    });
+
+  static AdminOrderParamsSchema = z
+    .object({
+      id: z.uuid().meta({
+        description: "Order ID (UUID)",
+        example: "123e4567-e89b-12d3-a456-426614174000",
+      }),
+    })
+    .meta({
+      id: "AdminOrderParams",
+      description: "Payload for updating an order",
+      example: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      },
+    });
+
+  static outletIDSchema = z.object({
+    outlet_id: z.uuid().meta({
+      description: "Outlet ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  });
+
+  static adminIDSchema = z.object({
+    admin_id: z.uuid().meta({
+      description: "Admin ID (UUID)",
+      example: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  });
+}
+export type AdminOrderInputDTO = z.infer<
+  typeof AdminOrderValidation.AdminOrderSchema
+>;
+export type AdminOrderParamsSchemaDTO = z.infer<
+  typeof AdminOrderValidation.AdminOrderParamsSchema
+>;
+
+export type adminIDSchemaDTO = z.infer<
+  typeof AdminOrderValidation.adminIDSchema
+>;
+export type outletIDSchemaDTO = z.infer<
+  typeof AdminOrderValidation.outletIDSchema
+>;
 
 export type WalkInCustomerPayloadDTO = WalkInCustomerValidationDTO &
   outletIDSchemaDTO &
@@ -136,94 +223,9 @@ export type KeywordWalkInCustomerSchmaDTO = z.infer<
   typeof WalkInCustomerValidation.keywordWalkInCustomerSchema
 >;
 
-export const ItemOrderSchema = z
-  .object({
-    id: z.uuid().optional().meta({
-      description:
-        "Item ID (UUID), it's opional because it will be auto generated if not exist",
-      example: "123e4567-e89b-12d3-a456-426614174000",
-    }),
-    name: z.string().optional().meta({
-      description:
-        "Item name, it's opional because it will be auto generated if not exist",
-      example: "Jaket Hoodie",
-    }),
-    quantity: z.number().min(1, "Quantity must be at least 1").meta({
-      description: "Item quantity",
-      example: 2,
-    }),
-  })
-  .meta({
-    id: "ItemOrder",
-    description: "Item order line (provide either id or name, not both)",
-    example: {
-      id: "123e4567-e89b-12d3-a456-426614174000",
-      quantity: 2,
-    },
-  })
-  .refine(({ id, name }) => (id ? 1 : 0) + (name ? 1 : 0) === 1, {
-    error: "Please only provide exactly one of id or name for the items",
-  });
-
-/////////////////////////////////////////////////////
-//                AdminOrderSchema                 //
-////////////////////////////////////////////////////
-export const AdminOrderSchema = z
-  .object({
-    total_kilos: z.number().min(1, "Total kilos must be at least 1").meta({
-      description: "Total kilos of laundry",
-      example: 5,
-    }),
-    items: z
-      .array(ItemOrderSchema)
-      .min(1, "At least one item must be inputted")
-      .meta({
-        description: "Array of items with quantities",
-        example: [
-          { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
-          { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },
-        ],
-      }),
-  })
-  .meta({
-    id: "AdminOrder",
-    description: "Payload for creating an order",
-    example: {
-      total_kilos: 5,
-      items: [
-        { id: "123e4567-e89b-12d3-a456-426614174000", quantity: 2 },
-        { id: "123e4567-e89b-12d3-a456-426614174001", quantity: 3 },
-      ],
-    },
-  });
-
-export const AdminOrderParamsSchema = z
-  .object({
-    id: z.uuid().meta({
-      description: "Order ID (UUID)",
-      example: "123e4567-e89b-12d3-a456-426614174000",
-    }),
-  })
-  .meta({
-    id: "AdminOrderParams",
-    description: "Payload for updating an order",
-    example: {
-      id: "123e4567-e89b-12d3-a456-426614174000",
-    },
-  });
-
-export class AdminOrderValidation {
-  static AdminOrderSchema = AdminOrderSchema;
-  static AdminOrderParamsSchema = AdminOrderParamsSchema;
-}
-export type AdminOrderInputDTO = z.infer<typeof AdminOrderSchema>;
-export type AdminOrderParamsSchemaDTO = z.infer<typeof AdminOrderParamsSchema>;
-
 ///////////////////////////////////////////////
 // Manual order by admin (walk-in customer) //
 //////////////////////////////////////////////
-
-import { OrderSource, OrderStatus } from "@/generated/prisma/enums";
 
 export class ManualOrderValidation {
   static CreateManualOrderSchema = z
@@ -269,7 +271,7 @@ export class ManualOrderValidation {
         example: "walkin donut",
       }),
       items: z
-        .array(ItemOrderSchema)
+        .array(AdminOrderValidation.ItemOrderSchema)
         .min(1, "At least one item must be inputted")
         .meta({
           description: "Array of items with quantities",
@@ -359,7 +361,7 @@ export class UpdateOrderItemValidation {
         example: 5,
       }),
       items: z
-        .array(ItemOrderSchema)
+        .array(AdminOrderValidation.ItemOrderSchema)
         .min(1, "At least one item must be inputted")
         .meta({
           description: "Array of items with quantities",
@@ -413,8 +415,6 @@ export type OrderIdParamsSchemaDTO = z.infer<
 ///////////////////////////////////////////////
 // ACC/REJ Payment Order by outlet_admin     //
 //////////////////////////////////////////////
-
-import { PaymentProofStatus } from "@/generated/prisma/enums";
 
 export class PaymentOrderValidation {
   static ActionOfPaymentProofSchema = z

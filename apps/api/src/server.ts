@@ -7,6 +7,9 @@ import { CronService } from "./services/cron.services";
 import authRoutes from "./routes/auth.routes";
 import authUserRoutes from "./routes/authUser.routes";
 
+// setup
+import setupRoutes from "./routes/setup.routes";
+
 // admin
 import adminRoutes from "./routes/admin.routes";
 import workerShiftRoutes from "./routes/workerShift.routes";
@@ -48,6 +51,7 @@ export class Server {
     const registry = new RouteRegistry()
       .register("/api/auth", authRoutes)
       .register("/api", authUserRoutes)
+      .register("/api/setup", setupRoutes)
       .register("/api/admin", adminRoutes)
       .register("/api/admin/schedule", workerShiftRoutes)
       .register("/api/admin/mismatch", adminMismatchRoutes)
@@ -67,7 +71,8 @@ export class Server {
       .register("/api/worker/orders", workerOrderRoutes)
       .register("/api/driver/delivery-requests", deliveryOrderRoutes)
       .register("/api/sse", sseRoutes)
-      .register("/api/signature", cloudinaryRoutes);
+      .register("/api/signature", cloudinaryRoutes)
+      .register("/api/midtrans", midtransRoutes);
 
     this.app = new App(registry);
   }

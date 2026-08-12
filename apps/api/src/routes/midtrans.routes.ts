@@ -1,20 +1,26 @@
-// src/routes/midtrans.routes.ts
 import { Router } from "express";
 import { MidtransController } from "@/controllers/midtrans.controller";
 import { MidtransService } from "@/services/midtrans.services";
+import { MidtransValidation } from "@/validations/midtrans.validation";
+import { Validator } from "@/middleware/validate";
 
-export class MidtransRoute {
+class MidtransRoute {
   public router = Router();
-  private controller: MidtransController;
 
-  constructor() {
-    this.controller = new MidtransController(new MidtransService());
-    this.notification();
+  constructor(private controller: MidtransController) {
+    this.notificationWebhook();
   }
 
-  private notification() {
-    this.router.post("/notification", this.controller.notification);
+  private notificationWebhook() {
+    this.router.post(
+      "/notification",
+      Validator.validate({
+        body: MidtransValidation.MidtransNotificationSchema,
+      }),
+      this.controller.handleWebhookNotification,
+    );
   }
 }
 
-export default new MidtransRoute().router;
+export default new MidtransRoute(new MidtransController(new MidtransService()))
+  .router;

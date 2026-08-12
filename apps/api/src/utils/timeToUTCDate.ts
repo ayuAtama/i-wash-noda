@@ -1,10 +1,7 @@
-function timeToUtcDate(time: string): Date {
-  const [hours, minutes] = time.split(":").map(Number);
+import { DateUtils } from "./today";
 
-  // IMPORTANT: use UTC setters
-  const date = new Date(Date.UTC(1970, 0, 1, hours, minutes, 0));
-
-  return date;
+export class TimeUtils {
+  static toUtc(time: string): Date {
+    return DateUtils.toUtc(time);
+  }
 }
-
-export default timeToUtcDate;

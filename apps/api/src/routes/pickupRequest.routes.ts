@@ -3,7 +3,7 @@ import { Router } from "express";
 import { PickupRequestController } from "@/controllers/pickupRequest.controller";
 import { PickupRequestService } from "@/services/pickupRequest.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { PickupRequestValidation } from "@/validations/pickupRequest.validation";
 
@@ -23,8 +23,8 @@ export class PickupRequestRoute {
   private checkAddressFirst() {
     this.router.get(
       "/coverage-check",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       this.controller.checkAddressFirst,
     );
   }
@@ -32,8 +32,8 @@ export class PickupRequestRoute {
   private createPickupRequest() {
     this.router.post(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         body: PickupRequestValidation.CreatePickupRequestSchema,
       }),
@@ -44,8 +44,8 @@ export class PickupRequestRoute {
   private cancelPickupRequest() {
     this.router.delete(
       "/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: PickupRequestValidation.PickupRequestIdParamsSchema,
       }),
@@ -56,8 +56,8 @@ export class PickupRequestRoute {
   private checkOrderStatus() {
     this.router.get(
       "/status",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       this.controller.checkOrderStatus,
     );
   }

@@ -2,8 +2,8 @@
 import { Router } from "express";
 import { DeliveryOrderController } from "@/controllers/deliveryOrder.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
-import { resolveContext } from "@/middleware/resolveContext";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
+import { ResolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { DeliveryValidation } from "@/validations/delivery.validation";
 import { DeliveryOrderService } from "@/services/deliveryOrder.services";
@@ -25,9 +25,9 @@ export class DeliveryOrderRoute {
   private getAllDeliveryRequests() {
     this.router.get(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       Validator.validate({ query: PaginationSchema }),
       this.controller.getAllDeliveryRequests,
     );
@@ -36,9 +36,9 @@ export class DeliveryOrderRoute {
   private acceptDeliveryRequest() {
     this.router.post(
       "/:id/accept",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       Validator.validate({
         params: DeliveryValidation.DeliveryIdParamsSchema,
       }),
@@ -49,9 +49,9 @@ export class DeliveryOrderRoute {
   private updateDeliveryStatus() {
     this.router.patch(
       "/:id/next",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       Validator.validate({
         params: DeliveryValidation.DeliveryIdParamsSchema,
       }),
@@ -62,9 +62,9 @@ export class DeliveryOrderRoute {
   private getAcceptedDeliveries() {
     this.router.get(
       "/accepted",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       Validator.validate({ query: PaginationSchema }),
       this.controller.getAcceptedDeliveries,
     );
@@ -73,9 +73,9 @@ export class DeliveryOrderRoute {
   private getCompletedDeliveries() {
     this.router.get(
       "/completed",
-      authenticationMiddleware,
-      authorizationMiddleware("driver"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("driver"),
+      ResolveContext.handler,
       Validator.validate({ query: PaginationSchema }),
       this.controller.getCompletedDeliveries,
     );

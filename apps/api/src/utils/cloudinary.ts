@@ -14,22 +14,31 @@ import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import "dotenv/config";
 
-// ── Connect to Cloudinary ──
-// Option 1: Use CLOUDINARY_URL (one string that has everything)
-// Option 2: Use separate env vars (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)
-if (process.env.CLOUDINARY_URL) {
-  cloudinary.config({
-    cloudinary_url: process.env.CLOUDINARY_URL,
-    secure: true, // always use https
-  });
-} else {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true,
-  });
+export class CloudinaryClient {
+  private static instance: typeof cloudinary;
+
+  private constructor() {
+    // cloudinary config
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+  }
+
+  // get the configured instance
+  static getInstance(): typeof cloudinary {
+    if (!CloudinaryClient.instance) {
+      new CloudinaryClient();
+      CloudinaryClient.instance = cloudinary;
+    }
+    return CloudinaryClient.instance;
+  }
 }
+
+// export the configured instance
+export default CloudinaryClient.getInstance();
 
 // ── Types & Interfaces ──
 
@@ -147,7 +156,6 @@ export function createCloudinaryStorage(
 }
 
 export { cloudinary };
-export default cloudinary;
 
 // ── Delete Image ──
 
@@ -157,7 +165,7 @@ export default cloudinary;
  * How it works:
  *   Cloudinary URLs look like this:
  *   https://res.cloudinary.com/demo/image/upload/v1/avatar/photo.jpg
- *                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+ *                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  *                                 This part is the "public_id"
  *
  *   We use a regex to extract everything between "/upload/" and the last "."

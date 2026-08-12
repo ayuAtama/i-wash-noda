@@ -81,11 +81,12 @@ export class PaymentService {
       const result = await prisma.$transaction(async (tx) => {
         await finalizePaidOrder(tx, orderId);
 
-        await tx.paymentTransaction.create({
+        await tx.paymentGatewayTransaction.create({
           data: {
             order_id: orderId,
-            amount: order.total_amount,
-            status: "paid",
+            gross_amount: String(order.total_amount),
+            transaction_status: "paid",
+            payment_type: "manual",
           },
         });
 
@@ -125,11 +126,11 @@ export class PaymentService {
         where: { order_id: orderId },
       });
 
-      await prisma.paymentTransaction.create({
+      await prisma.paymentGatewayTransaction.create({
         data: {
           order_id: orderId,
-          amount: 0,
-          status: "cancelled",
+          gross_amount: "0",
+          transaction_status: "cancelled",
           raw_response: { reason },
         },
       });

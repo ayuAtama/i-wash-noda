@@ -9,16 +9,16 @@ import ms, { StringValue } from "ms";
  * @returns Konfigurasi middleware express-rate-limit.
  * * @example
  * // Membatasi maksimal 5 request per 2 menit
- * export const loginLimiter = rateLimiter(5, "2m");
+ * export const loginLimiter = RateLimiter.create(5, "2m");
  */
-const rateLimiter = (maxRequests: number, windowMs: StringValue = "1m") => {
-  return rateLimit({
-    windowMs: ms(windowMs), // default 1 minute for rate limit
-    max: maxRequests, // Limit how much IP can request per windowMs
-    standardHeaders: true, // send RateLimit-* headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    message: { error: "Too many requests, please try again later." },
-  });
-};
-
-export default rateLimiter;
+export class RateLimiter {
+  static create(maxRequests: number, windowMs: StringValue = "1m") {
+    return rateLimit({
+      windowMs: ms(windowMs), // default 1 minute for rate limit
+      max: maxRequests, // Limit how much IP can request per windowMs
+      standardHeaders: true, // send RateLimit-* headers
+      legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+      message: { error: "Too many requests, please try again later." },
+    });
+  }
+}

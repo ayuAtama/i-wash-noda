@@ -2,8 +2,8 @@
 import { Router } from "express";
 import { AdminMismatchController } from "@/controllers/adminMismatch.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
-import { resolveContext } from "@/middleware/resolveContext";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
+import { ResolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { AdminMismatchValidation } from "@/validations/adminMismatch.validation";
 import { AdminMissmatchServices } from "@/services/adminMissmatch.services";
@@ -23,9 +23,9 @@ export class AdminMismatchRoute {
   private getMismatches() {
     this.router.get(
       "/",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         query: AdminMismatchValidation.MismatchQuerySchema.extend({
           page: PaginationSchema.shape.page,
@@ -39,9 +39,9 @@ export class AdminMismatchRoute {
   private approve() {
     this.router.patch(
       "/:id/approve",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: AdminMismatchValidation.MismatchIdParamsSchema,
         body: AdminMismatchValidation.ApproveMismatchSchema,
@@ -53,9 +53,9 @@ export class AdminMismatchRoute {
   private reject() {
     this.router.patch(
       "/:id/reject",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: AdminMismatchValidation.MismatchIdParamsSchema,
         body: AdminMismatchValidation.RejectMismatchSchema,

@@ -1,9 +1,9 @@
 // apps/api/src/services/admin.services.ts
 import { prisma as defaultPrisma, PrismaWrapper } from "@/config/prisma";
 import { HttpError } from "@/utils/httpError";
-import { sendVerifyEmailbyAdmin } from "@/utils/mail";
-import { validateMXRecord } from "@/utils/mxRecordValidatior";
-import { generate6DigitCode, hashToken } from "@/utils/tokenGenerator";
+import { Mailer } from "@/utils/mail";
+import { MXValidator } from "@/utils/mxRecordValidatior";
+import { TokenGenerator } from "@/utils/tokenGenerator";
 import { addHours } from "date-fns";
 import {
   RegisterInternalUserDto,
@@ -18,7 +18,11 @@ export class AdminService {
   //   this.prisma = prismaClient;
   // }
 
-  constructor(private readonly prisma: PrismaWrapper = defaultPrisma) {}
+  constructor(
+    private readonly prisma: PrismaWrapper = defaultPrisma,
+    private readonly tokenGenerator: TokenGenerator = TokenGenerator.getInstance(),
+    private readonly mailer: Mailer = Mailer.getInstance(),
+  ) {}
 
   async registerInternalUser(data: RegisterInternalUserDto) {
     try {
@@ -39,7 +43,7 @@ export class AdminService {
             );
           }
 
-          const validDomain = await validateMXRecord(
+          const validDomain = await MXValidator.validate(
             data.email.toLocaleLowerCase().trim(),
           );
           if (!validDomain) {
@@ -50,8 +54,8 @@ export class AdminService {
             data,
           });
 
-          const generateToken = generate6DigitCode();
-          const hashedToken = hashToken(generateToken);
+          const generateToken = this.tokenGenerator.generate6DigitCode();
+          const hashedToken = this.tokenGenerator.hashToken(generateToken);
 
           const { token } = await tx.verificationToken.create({
             data: {
@@ -70,11 +74,12 @@ export class AdminService {
           };
         });
 
-      try {
-        await sendVerifyEmailbyAdmin(email, userId, hashedToken, role);
-      } catch (emailError) {
-        console.error("Failed to send verification email:", emailError);
-      }
+      await this.mailer.sendVerifyEmailbyAdmin(
+        email,
+        userId,
+        hashedToken,
+        role,
+      );
 
       return result;
     } catch (error) {
@@ -133,7 +138,6 @@ export class AdminService {
         data: users,
         meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
       };
-
     } catch (error) {
       throw error;
     }

@@ -2,8 +2,8 @@
 import { Router } from "express";
 import { PaymentController } from "@/controllers/payment.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
-import { resolveContext } from "@/middleware/resolveContext";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
+import { ResolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { PaymentValidation } from "@/validations/payment.validation";
 import { PaymentService } from "@/services/payment.services";
@@ -21,9 +21,9 @@ export class AdminPaymentRoute {
   private confirm() {
     this.router.patch(
       "/:id/payment-confirm",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: PaymentValidation.OrderIdParamsSchema,
         body: PaymentValidation.PaymentConfirmSchema,
@@ -35,9 +35,9 @@ export class AdminPaymentRoute {
   private reject() {
     this.router.patch(
       "/:id/payment-reject",
-      authenticationMiddleware,
-      authorizationMiddleware("outlet_admin"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("outlet_admin"),
+      ResolveContext.handler,
       Validator.validate({
         params: PaymentValidation.OrderIdParamsSchema,
         body: PaymentValidation.PaymentRejectSchema,

@@ -3,7 +3,7 @@ import { Router } from "express";
 import { AuthUserService } from "../services/authUser.services";
 import { AuthUserController } from "../controllers/authUser.controller";
 import { requireStep } from "@/middleware/requireStep";
-import rateLimiter from "@/middleware/rateLimitter";
+import { RateLimiter } from "@/middleware/rateLimitter";
 import { authenticationMiddleware } from "@/middleware/authentication";
 import { refreshTokenMiddleware } from "@/middleware/refreshToken";
 import { Validator } from "@/middleware/validate";
@@ -27,7 +27,7 @@ export class AuthUserRoute {
   private register() {
     this.router.post(
       "/register",
-      rateLimiter(10),
+      RateLimiter.create(10),
       Validator.validate({
         body: AuthValidation.RegisterSchema,
       }),
@@ -35,26 +35,26 @@ export class AuthUserRoute {
     );
     this.router.post(
       "/verify",
-      rateLimiter(5),
+      RateLimiter.create(5),
       Validator.validate({
         body: AuthValidation.VerifySchemaTokenBody,
         query: AuthValidation.VerifySchemaTokenParams,
       }),
-      requireStep(1),
+      requireStep.handler(1),
       this.controller.verify,
     );
     this.router.post(
       "/complete-register",
-      rateLimiter(3),
+      RateLimiter.create(3),
       Validator.validate({
         body: AuthValidation.CompleteRegisterSchema,
       }),
-      requireStep(2),
+      requireStep.handler(2),
       this.controller.completeRegistration,
     );
     this.router.post(
       "/resend-otp",
-      rateLimiter(3),
+      RateLimiter.create(3),
       Validator.validate({
         body: AuthValidation.ResendSchema,
       }),
@@ -65,7 +65,7 @@ export class AuthUserRoute {
   private logout() {
     this.router.get(
       "/logout",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       this.controller.logout,
     );
   }
@@ -83,7 +83,7 @@ export class AuthUserRoute {
   private refresh() {
     this.router.get(
       "/refresh",
-      refreshTokenMiddleware,
+      refreshTokenMiddleware.handler,
       this.controller.refresh,
     );
   }
@@ -101,16 +101,20 @@ export class AuthUserRoute {
       Validator.validate({
         body: AuthValidation.ResetConfirmSchema,
       }),
-      requireStep(69),
+      requireStep.handler(69),
       this.controller.setResetPassword,
     );
   }
 
   private userData() {
-    this.router.get("/me", authenticationMiddleware, this.controller.fetchMe);
+    this.router.get(
+      "/me",
+      authenticationMiddleware.handler,
+      this.controller.fetchMe,
+    );
     this.router.put(
       "/me",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       Validator.validate({
         body: AuthValidation.UpdateMeSchema,
       }),
@@ -118,8 +122,8 @@ export class AuthUserRoute {
     );
     this.router.post(
       "/me/avatar",
-      authenticationMiddleware,
-      rateLimiter(10),
+      authenticationMiddleware.handler,
+      RateLimiter.create(10),
       cloudinaryUploadMiddleware("avatar", {
         type: "image",
         maxSize: 5,
@@ -130,13 +134,13 @@ export class AuthUserRoute {
     );
     this.router.delete(
       "/me/avatar",
-      authenticationMiddleware,
-      rateLimiter(10),
+      authenticationMiddleware.handler,
+      RateLimiter.create(10),
       this.controller.deleteAvatar,
     );
     this.router.post(
       "/change-email-request",
-      authenticationMiddleware,
+      authenticationMiddleware.handler,
       Validator.validate({
         body: AuthValidation.EmailChangeRequestSchema,
       }),
@@ -144,8 +148,8 @@ export class AuthUserRoute {
     );
     this.router.put(
       "/change-email-confirm",
-      requireStep(67),
-      authenticationMiddleware,
+      requireStep.handler(67),
+      authenticationMiddleware.handler,
       Validator.validate({
         body: AuthValidation.EmailChangeConfirmSchema,
       }),

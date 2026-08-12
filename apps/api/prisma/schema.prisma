@@ -60,14 +60,6 @@ enum PaymentProofStatus {
   rejected
 }
 
-enum PaymentGatewayStatus {
-  pending
-  paid
-  failed
-  expired
-  cancelled
-}
-
 enum DriverJobStatusEnum {
   in_transit
   on_delivery
@@ -93,6 +85,11 @@ enum ComplaintStatus {
   pending
   resolved
   rejected
+}
+
+enum PaymentMethod {
+  manual
+  payment_gateway
 }
 
 // -----------------------
@@ -292,17 +289,17 @@ model Item {
 // -----------------------
 
 model Order {
-  id                   String      @id @default(uuid()) @db.Uuid
-  customer_id          String?     @db.Uuid
-  walkin_customer_id   String?     @db.Uuid
-  pickup_address_id    String?     @db.Uuid
-  source               OrderSource @default(customer_app)
-  outlet_id            String      @db.Uuid
-  driver_pickup_id     String?     @db.Uuid
-  driver_delivery_id   String?     @db.Uuid
-  washing_worker_id    String?     @db.Uuid
-  ironing_worker_id    String?     @db.Uuid
-  packing_worker_id    String?     @db.Uuid
+  id                   String         @id @default(uuid()) @db.Uuid
+  customer_id          String?        @db.Uuid
+  walkin_customer_id   String?        @db.Uuid
+  pickup_address_id    String?        @db.Uuid
+  source               OrderSource    @default(customer_app)
+  outlet_id            String         @db.Uuid
+  driver_pickup_id     String?        @db.Uuid
+  driver_delivery_id   String?        @db.Uuid
+  washing_worker_id    String?        @db.Uuid
+  ironing_worker_id    String?        @db.Uuid
+  packing_worker_id    String?        @db.Uuid
   washing_completed_at DateTime?
   ironing_completed_at DateTime?
   packing_completed_at DateTime?
@@ -311,31 +308,33 @@ model Order {
   delivery_fee         Int
   laundry_price        Int
   total_amount         Int
-  total_kilo           Decimal     @db.Decimal(5, 2)
+  total_kilo           Decimal        @db.Decimal(5, 2)
+  total_km             Decimal?       @db.Decimal(5, 2)
   confirmed_at         DateTime?
   status               OrderStatus
-  paid                 Boolean     @default(false)
-  created_at           DateTime    @default(now())
-  updated_at           DateTime    @updatedAt
+  payment_method       PaymentMethod?
+  paid                 Boolean        @default(false)
+  created_at           DateTime       @default(now())
+  updated_at           DateTime       @updatedAt
 
   //relation
-  customer         User?                @relation("CustomerOrders", fields: [customer_id], references: [id])
-  walkInCustomer   WalkInCustomer?      @relation("WalkInCustumerOrder", fields: [walkin_customer_id], references: [id])
-  pickupDriver     User?                @relation("PickupDriver", fields: [driver_pickup_id], references: [id])
-  deliveryDriver   User?                @relation("DeliveryDriver", fields: [driver_delivery_id], references: [id])
-  washingWorker    User?                @relation("WashingWorker", fields: [washing_worker_id], references: [id])
-  ironingWorker    User?                @relation("IroningWorker", fields: [ironing_worker_id], references: [id])
-  packingWorker    User?                @relation("PackingWorker", fields: [packing_worker_id], references: [id])
-  pickupAddress    UserAddress?         @relation(fields: [pickup_address_id], references: [id])
-  outlet           Outlet               @relation(fields: [outlet_id], references: [id])
-  items            OrderItem[]
-  summary          StationSummary[]
-  stationLogs      OrderStationLog[]
-  paymentProof     PaymentProof?
-  pickupRequests   PickupRequest[]
-  deliveryRequests DeliveryRequest[]
-  transactions     PaymentTransaction[]
-  complaints       Complaint[]
+  customer                   User?                       @relation("CustomerOrders", fields: [customer_id], references: [id])
+  walkInCustomer             WalkInCustomer?             @relation("WalkInCustumerOrder", fields: [walkin_customer_id], references: [id])
+  pickupDriver               User?                       @relation("PickupDriver", fields: [driver_pickup_id], references: [id])
+  deliveryDriver             User?                       @relation("DeliveryDriver", fields: [driver_delivery_id], references: [id])
+  washingWorker              User?                       @relation("WashingWorker", fields: [washing_worker_id], references: [id])
+  ironingWorker              User?                       @relation("IroningWorker", fields: [ironing_worker_id], references: [id])
+  packingWorker              User?                       @relation("PackingWorker", fields: [packing_worker_id], references: [id])
+  pickupAddress              UserAddress?                @relation(fields: [pickup_address_id], references: [id])
+  outlet                     Outlet                      @relation(fields: [outlet_id], references: [id])
+  items                      OrderItem[]
+  summary                    StationSummary[]
+  stationLogs                OrderStationLog[]
+  pickupRequests             PickupRequest[]
+  deliveryRequests           DeliveryRequest[]
+  paymentProof               PaymentProof[]
+  paymentGatewayTransactions PaymentGatewayTransaction[] @relation("PaymentGatewayTransactions")
+  complaints                 Complaint[]
 
   @@map("orders")
 }
@@ -460,24 +459,37 @@ model PaymentProof {
 //  PAYMENT GATEWAY (single provider)
 // -----------------------
 
-model PaymentTransaction {
-  id                      String               @id @default(uuid()) @db.Uuid
-  order_id                String               @db.Uuid
+model PaymentGatewayTransaction {
+  id                      String  @id @default(uuid()) @db.Uuid
+  order_id                String  @db.Uuid
   provider_transaction_id String?
-  provider_order_id       String?              @unique
-  payment_type            String?
-  snap_token              String?
-  fraud_status            String?
-  transaction_time        DateTime?
-  amount                  Int
-  status                  PaymentGatewayStatus
-  raw_response            Json?
-  created_at              DateTime             @default(now())
-  updated_at              DateTime             @updatedAt
 
-  order Order @relation(fields: [order_id], references: [id])
+  raw_response Json?
+  token        String? // untuk snap
+  gross_amount String?
+  payment_type String?
+  currency     String  @default("IDR")
 
-  @@map("payment_transactions")
+  transaction_status String?
+  status_code        String?
+  fraud_status       String?
+
+  transaction_time String?
+  settlement_time  String?
+
+  // BANK / VA
+  bank String?
+
+  // untuk Qris
+  issuer   String?
+  acquirer String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  order Order @relation("PaymentGatewayTransactions", fields: [order_id], references: [id])
+
+  @@map("payment_gateway_transactions")
 }
 
 // -----------------------

@@ -2,8 +2,8 @@
 import { Router } from "express";
 import { PaymentController } from "@/controllers/payment.controller";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
-import { resolveContext } from "@/middleware/resolveContext";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
+import { ResolveContext } from "@/middleware/resolveContext";
 import { Validator } from "@/middleware/validate";
 import { PaymentValidation } from "@/validations/payment.validation";
 import { PaymentService } from "@/services/payment.services";
@@ -28,9 +28,9 @@ export class PaymentRoute {
   private uploadProof() {
     this.router.post(
       "/:id/payment-proof",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
+      ResolveContext.handler,
       Validator.validate({
         params: PaymentValidation.OrderIdParamsSchema,
       }),
@@ -44,8 +44,8 @@ export class PaymentRoute {
   private getProof() {
     this.router.get(
       "/:id/payment-proof",
-      authenticationMiddleware,
-      resolveContext,
+      authenticationMiddleware.handler,
+      ResolveContext.handler,
       Validator.validate({
         params: PaymentValidation.OrderIdParamsSchema,
       }),
@@ -56,8 +56,8 @@ export class PaymentRoute {
   private pay() {
     this.router.post(
       "/:id/pay",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: PaymentValidation.OrderIdParamsSchema,
       }),
@@ -68,8 +68,8 @@ export class PaymentRoute {
   private paymentStatus() {
     this.router.get(
       "/:id/payment-status",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: PaymentValidation.OrderIdParamsSchema,
       }),
@@ -78,8 +78,8 @@ export class PaymentRoute {
 
     this.router.post(
       "/:id/payment-sync",
-      authenticationMiddleware,
-      authorizationMiddleware("customer"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("customer"),
       Validator.validate({
         params: PaymentValidation.OrderIdParamsSchema,
       }),

@@ -3,9 +3,9 @@
 import { Router } from "express";
 import { WorkerStationController } from "@/controllers/workerStation.controller";
 import { WorkerStationService } from "@/services/workerStation.services";
-import { authorizationMiddleware } from "@/middleware/authorization";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { resolveContext } from "@/middleware/resolveContext";
+import { ResolveContext } from "@/middleware/resolveContext";
 import { WorkerStationValidation } from "@/validations/workerStation.validation";
 import { Validator } from "@/middleware/validate";
 
@@ -24,9 +24,9 @@ export class WorkerStationRoute {
   private checkAvailableJobs() {
     this.router.get(
       "/available",
-      authenticationMiddleware,
-      authorizationMiddleware("worker"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("worker"),
+      ResolveContext.handler,
       this.controller.checkAvailableJobs,
     );
   }
@@ -34,9 +34,9 @@ export class WorkerStationRoute {
   private checkActiveJobs() {
     this.router.get(
       "/active",
-      authenticationMiddleware,
-      authorizationMiddleware("worker"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("worker"),
+      ResolveContext.handler,
       this.controller.checkActiveJobs,
     );
   }
@@ -44,9 +44,9 @@ export class WorkerStationRoute {
   private assignJob() {
     this.router.post(
       "/:orderId/accept",
-      authenticationMiddleware,
-      authorizationMiddleware("worker"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("worker"),
+      ResolveContext.handler,
       Validator.validate({
         params: WorkerStationValidation.assignJobParamsSchema,
       }),
@@ -57,9 +57,9 @@ export class WorkerStationRoute {
   private reinputData() {
     this.router.post(
       "/reinput/:orderId",
-      authenticationMiddleware,
-      authorizationMiddleware("worker"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("worker"),
+      ResolveContext.handler,
       Validator.validate({
         params: WorkerStationValidation.reInputItemParamsSchema,
         body: WorkerStationValidation.reInputItemBodySchema,
@@ -71,9 +71,9 @@ export class WorkerStationRoute {
   private markDone() {
     this.router.post(
       "/complete/:orderId",
-      authenticationMiddleware,
-      authorizationMiddleware("worker"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("worker"),
+      ResolveContext.handler,
       Validator.validate({
         params: WorkerStationValidation.markDoneParamsSchema,
       }),
@@ -84,9 +84,9 @@ export class WorkerStationRoute {
   private getCompleteJobs() {
     this.router.get(
       "/complete",
-      authenticationMiddleware,
-      authorizationMiddleware("worker"),
-      resolveContext,
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("worker"),
+      ResolveContext.handler,
       this.controller.getCompleteJobs,
     );
   }

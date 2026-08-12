@@ -13,7 +13,11 @@ export class SseRoute {
   }
 
   private createRoutes() {
-    this.router.get("/", authenticationMiddleware, this.controller.connect);
+    this.router.get(
+      "/",
+      authenticationMiddleware.handler,
+      this.controller.connect,
+    );
 
     this.router.post("/", this.controller.sendData);
 

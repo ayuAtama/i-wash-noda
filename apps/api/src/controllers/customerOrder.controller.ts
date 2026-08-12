@@ -4,7 +4,9 @@ import { HttpError } from "@/utils/httpError";
 import {
   complainDTO,
   OrderIdParamsDTO,
+  PaymentMethodDTO,
   PaymentProofDTO,
+  SetPaymentMethodParamsDTO,
   UserIdDTO,
 } from "@/validations/customerOrder.validation";
 
@@ -61,6 +63,28 @@ export class CustomerOrderController {
     }
   };
 
+  setPaymentMethod = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const { paymentMethod, orderId } = req.validated!
+        .params as SetPaymentMethodParamsDTO;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+      if (!paymentMethod) throw new HttpError(400, "Invalid paymentMethod");
+      const result = await this.CustomerOrderService.setPaymentMethod({
+        userId,
+        paymentMethod,
+        orderId,
+      });
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   uploadPaymentProof = async (
     req: Request,
     res: Response,
@@ -77,6 +101,42 @@ export class CustomerOrderController {
         orderId,
         userId,
         urlProof,
+      });
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  payWithPaymentGateway = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const { orderId } = req.validated!.params as OrderIdParamsDTO;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+      if (!orderId) throw new HttpError(400, "Invalid orderId");
+      const result = await this.CustomerOrderService.payWithPaymentGateway({
+        orderId,
+        userId,
+      });
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  cancelPayment = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.access_token?.sub ?? req.user?.id;
+      const { orderId } = req.validated!.params as OrderIdParamsDTO;
+      if (!userId) throw new HttpError(401, "Invalid user id");
+      if (!orderId) throw new HttpError(400, "Invalid orderId");
+      const result = await this.CustomerOrderService.cancelPayment({
+        orderId,
+        userId,
       });
       res.status(200).json(result);
     } catch (error) {

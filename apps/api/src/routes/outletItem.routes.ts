@@ -2,7 +2,7 @@ import { Router } from "express";
 import { OutletItemController } from "@/controllers/outletItem.controller";
 import { OutletItemService } from "@/services/outletItem.services";
 import { authenticationMiddleware } from "@/middleware/authentication";
-import { authorizationMiddleware } from "@/middleware/authorization";
+import { AuthorizationMiddleware } from "@/middleware/authorization";
 import { Validator } from "@/middleware/validate";
 import { OutletValidation } from "@/validations/outlet.validation";
 import { PaginationSchema } from "@/validations/pagination.validation";
@@ -38,8 +38,8 @@ export class OutletItemRoute {
   private createOutlet() {
     this.router.post(
       "/outlets",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       Validator.validate({
         body: OutletValidation.CreateOutletSchema,
       }),
@@ -51,15 +51,15 @@ export class OutletItemRoute {
     // handle if the user input no outlet id
     this.router.put(
       "/outlets",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       this.controller.idNotFound,
     );
 
     this.router.put(
       "/outlets/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       Validator.validate({
         params: OutletValidation.OutletIdParamSchema,
         body: OutletValidation.UpdateOutletSchema,
@@ -72,15 +72,15 @@ export class OutletItemRoute {
     // handle if the user input no outlet id
     this.router.delete(
       "/outlets",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       this.controller.idNotFound,
     );
 
     this.router.delete(
       "/outlets/:id",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       Validator.validate({
         params: OutletValidation.OutletIdParamSchema,
       }),
@@ -99,8 +99,8 @@ export class OutletItemRoute {
   private createItem() {
     this.router.post(
       "/items",
-      authenticationMiddleware,
-      authorizationMiddleware("super_admin"),
+      authenticationMiddleware.handler,
+      AuthorizationMiddleware.handler("super_admin"),
       Validator.validate({
         //body: OutletValidation.CreateItemSchema,
       }),

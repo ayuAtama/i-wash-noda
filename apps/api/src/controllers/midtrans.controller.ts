@@ -3,13 +3,10 @@ import { MidtransService } from "@/services/midtrans.services";
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "@/utils/httpError";
 import { OrderIdParamsDto } from "@/validations/payment.validation";
+import { ParsedMidtransNotification } from "@/validations/midtrans.validation";
 
 export class MidtransController {
-  private service: MidtransService;
-
-  constructor(service: MidtransService) {
-    this.service = service;
-  }
+  constructor(private midtransService: MidtransService) {}
 
   pay = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -17,7 +14,7 @@ export class MidtransController {
       const { id: orderId } = req.validated!.params as OrderIdParamsDto;
       if (!userId) throw new HttpError(401, "Unauthorized");
 
-      const data = await this.service.createPayment(orderId, userId);
+      const data = await this.midtransService.createPayment(orderId, userId);
       res.status(200).json({
         success: true,
         message: "Midtrans Snap token generated",
@@ -30,7 +27,7 @@ export class MidtransController {
 
   notification = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = await this.service.handleNotification(req.body);
+      const data = await this.midtransService.handleNotification(req.body);
       res.status(200).json({
         success: true,
         message: "Notification processed",
@@ -47,7 +44,7 @@ export class MidtransController {
       const { id: orderId } = req.validated!.params as OrderIdParamsDto;
       if (!userId) throw new HttpError(401, "Unauthorized");
 
-      const data = await this.service.getPaymentStatus(orderId, userId);
+      const data = await this.midtransService.getPaymentStatus(orderId, userId);
       res.status(200).json({
         success: true,
         message: "Payment status fetched successfully",
@@ -68,11 +65,41 @@ export class MidtransController {
       const { id: orderId } = req.validated!.params as OrderIdParamsDto;
       if (!userId) throw new HttpError(401, "Unauthorized");
 
-      const data = await this.service.syncPaymentStatus(orderId, userId);
+      const data = await this.midtransService.syncPaymentStatus(
+        orderId,
+        userId,
+      );
       res.status(200).json({
         success: true,
         message: "Payment status synced with Midtrans",
         data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  handleWebhookNotification = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const parsedBody = req.validated!.body as ParsedMidtransNotification;
+      const rawBody = req.body;
+      if (!parsedBody || !rawBody) {
+        throw new HttpError(400, "Invalid request");
+      }
+
+      const result = await this.midtransService.handleWebhookNotification({
+        parsedData: parsedBody,
+        rawData: rawBody,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Webhook notification processed successfully",
+        data: result,
       });
     } catch (error) {
       next(error);

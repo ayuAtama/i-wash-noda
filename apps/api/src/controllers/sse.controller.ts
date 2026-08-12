@@ -2,7 +2,7 @@ import { createSession } from "better-sse";
 import type { Request, Response, NextFunction } from "express";
 import { prisma } from "@/config/prisma";
 import { sseService } from "@/services/sse.services";
-import { isUserRole, type UserRole } from "@/types/role";
+import { UserRoleValidator, type UserRole } from "@/types/role";
 
 export class SSEController {
   private SSE: typeof sseService;
@@ -15,10 +15,9 @@ export class SSEController {
     try {
       const userId = req.access_token?.sub ?? req.user?.id;
       const role = (req.access_token?.role ?? req.user?.role) as
-        | string
-        | undefined;
+        string | undefined;
 
-      if (!userId || !isUserRole(role)) {
+      if (!userId || !UserRoleValidator.isUserRole(role)) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
@@ -91,7 +90,7 @@ export class SSEController {
   ) => {
     try {
       const role = req.query.role as string;
-      if (!isUserRole(role)) {
+      if (!UserRoleValidator.isUserRole(role)) {
         res.status(400).json({
           message: `Invalid role. Use: super_admin, outlet_admin, worker, driver, customer`,
         });
@@ -178,7 +177,7 @@ export class SSEController {
         return;
       }
       const roles = raw.split(",").map((r) => r.trim());
-      const invalid = roles.filter((r) => !isUserRole(r));
+      const invalid = roles.filter((r) => !UserRoleValidator.isUserRole(r));
       if (invalid.length > 0) {
         res
           .status(400)
