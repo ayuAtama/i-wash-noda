@@ -4,6 +4,8 @@ packages:
 
 onlyBuiltDependencies:
   - '@prisma/engines'
+  - '@scarf/scarf'
   - bcrypt
   - esbuild
   - prisma
+  - sharp

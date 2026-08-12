@@ -21,8 +21,11 @@ async function findUserRoles(userId: string) {
   return userWithRoles.role;
 }
 
+const API_URL = process.env.API_URL || "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3001";
+
 export const auth = betterAuth({
-  baseURL: "http://localhost:3000",
+  baseURL: API_URL,
 
   // connect to database orm
   database: prismaAdapter(prisma, {
@@ -34,22 +37,22 @@ export const auth = betterAuth({
     github: {
       clientId: process.env.GITHUB_CLIENT_ID! as string,
       clientSecret: process.env.GITHUB_CLIENT_SECRET! as string,
-      redirectURI: "http://localhost:3000/api/auth/callback/github",
+      redirectURI: `${API_URL}/api/auth/callback/github`,
     },
     twitter: {
       clientId: process.env.TWITTER_CLIENT_ID! as string,
       clientSecret: process.env.TWITTER_CLIENT_SECRET! as string,
-      redirectURI: "http://localhost:3000/api/auth/callback/twitter",
+      redirectURI: `${API_URL}/api/auth/callback/twitter`,
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID! as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET! as string,
-      redirectURI: "http://localhost:3000/api/auth/callback/google",
+      redirectURI: `${API_URL}/api/auth/callback/google`,
     },
   },
 
   //cors error fix
-  trustedOrigins: ["http://localhost:3001"],
+  trustedOrigins: [FRONTEND_URL],
 
   //uuid error fix
   advanced: {
