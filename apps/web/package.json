@@ -15,12 +15,16 @@
     "@next/third-parties": "^16.1.6",
     "@react-google-maps/api": "^2.20.8",
     "@repo/ui": "workspace:*",
+    "@tailwindcss/postcss": "^4.3.3",
     "axios": "^1.13.4",
     "better-auth": "^1.4.1",
+    "framer-motion": "^13.1.0",
     "next": "16.1.6",
+    "postcss": "^8.5.26",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.69.0",
+    "tailwindcss": "^4.3.3",
     "zod": "^4.1.13"
   },
   "devDependencies": {
