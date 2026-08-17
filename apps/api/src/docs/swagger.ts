@@ -191,6 +191,10 @@ export const openApiDocument = createDocument({
       description: "Admin service item management (super_admin, outlet_admin)",
     },
     {
+      name: "Items",
+      description: "Service item search for authenticated users (any role)",
+    },
+    {
       name: "Admin",
       description:
         "Admin internal user management (register, role changes, removal)",
@@ -1281,6 +1285,38 @@ export const openApiDocument = createDocument({
           "401": { description: "Not authenticated" },
           "403": { description: "Insufficient permissions" },
           "404": { description: "Item not found" },
+        },
+      },
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // Items (Authenticated Search)
+    // ═══════════════════════════════════════════════════════════════
+    "/api/items/search": {
+      get: {
+        summary: "Search items by name",
+        tags: ["Items"],
+        description:
+          "Searches service items by name for any authenticated user. " +
+          "Used by workers during re-input and other roles that need item lookups.",
+        requestParams: { query: ItemValidation.QueryItemSchema },
+        responses: {
+          "200": {
+            description: "Returns matching items",
+            content: {
+              "application/json": {
+                example: {
+                  success: true,
+                  message: "Item searched successfully",
+                  data: [
+                    { id: "uuid", name: "Baju Pramuka", pricePerKg: 8000 },
+                  ],
+                },
+              },
+            },
+          },
+          "400": { description: "Missing or invalid name query param" },
+          "401": { description: "Not authenticated" },
         },
       },
     },

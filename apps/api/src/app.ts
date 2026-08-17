@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { errorHandler } from "@/middleware/error-handler";
 import { RouteRegistry } from "@/routes";
+import { prisma } from "./config/prisma";
 
 export class App {
   public app: Application;
@@ -24,12 +25,14 @@ export class App {
   }
 
   private initializeHealthCheck() {
-    this.app.get("/", (_req, res) => {
+    this.app.get("/", async (_req, res) => {
+      const alamak = await prisma.user.findMany({take: 1})
       res.status(200).json({
         success: true,
         message: "API is healthy",
         data: {
           timestamp: new Date().toISOString(),
+          data: alamak
         },
       });
     });

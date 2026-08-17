@@ -3,5 +3,17 @@
     {
       "mode": "auto"
     }
+  ],
+  "sqltools.connections": [
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "UwU",
+      "database": "laundry_app",
+      "username": "postgres"
+    }
   ]
 }

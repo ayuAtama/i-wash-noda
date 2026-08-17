@@ -36,6 +36,9 @@ import deliveryOrderRoutes from "./routes/deliveryOrder.routes";
 import cloudinaryRoutes from "./routes/cloudinary.routes";
 import midtransRoutes from "./routes/midtrans.routes";
 
+// authenticated item search (worker re-input, etc.)
+import itemPublicRoutes from "./routes/itemPublic.routes";
+
 export class Server {
   private app: App;
   private cronService: CronService;
@@ -53,6 +56,7 @@ export class Server {
       .register("/api/admin/walk-in-customer", adminWalkInOrderRoutes)
       .register("/api/admin/outlets", adminOutletRoutes)
       .register("/api/admin/items", ItemRoute)
+      .register("/api/items", itemPublicRoutes)
       .register("/api/outlets", OutletRoute)
       .register("/api/addresses", AddressRoute)
       .register("/api/orders", customerOrderRoutes)
