@@ -1,6 +1,17 @@
+/* eslint-disable no-undef */
 /** @type {import('next').NextConfig} */
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 const nextConfig = {
   allowedDevOrigins: ['alfredo-condimental-amare.ngrok-free.dev'],
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${API_URL}/api/:path*`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

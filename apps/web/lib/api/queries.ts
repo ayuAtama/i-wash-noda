@@ -179,13 +179,6 @@ export function useChangeEmailConfirm() {
   });
 }
 
-export function useTelegramLogin() {
-  return useMutation({
-    mutationFn: authApi.telegramLogin,
-    onError: (error) => toast.error(normalizeError(error).message),
-  });
-}
-
 export function useTelegramEmailRequest() {
   return useMutation({
     mutationFn: authApi.telegramEmailRequest,

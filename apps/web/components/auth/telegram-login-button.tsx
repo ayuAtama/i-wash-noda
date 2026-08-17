@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import { authApi } from "@/lib/api/endpoints";
 import { setSession, ROLE_HOME } from "@/lib/auth/session-store";
 import type { Role } from "@/lib/api/types";
 
@@ -38,32 +37,29 @@ export function TelegramLoginButton({
               return;
             }
 
-            const sessionData = result.data as { user: Record<string, unknown>; session: Record<string, unknown> } | null;
-            if (!sessionData?.user) {
+            const { data: session } = await authClient.getSession();
+            if (!session?.user) {
               toast.error("Sesi tidak ditemukan");
               return;
             }
 
-            const user = sessionData.user;
-            const email = (user.email as string) ?? null;
-            const userId = user.id as string;
+            const user = session.user as typeof session.user & { role?: string };
+            const email = user.email ?? null;
 
             if (email && email.endsWith("@telegram.user")) {
               sessionStorage.setItem("telegram-new-user", "true");
-              sessionStorage.setItem("telegram-user-id", userId);
+              sessionStorage.setItem("telegram-user-id", user.id as string);
               router.push("/register/telegram-email");
               return;
             }
 
-            const loginResult = await authApi.telegramLogin({ userId });
-            const data = loginResult.data;
-            const role = (data.role ?? "CUSTOMER") as Role;
+            const role = ((user.role ?? "CUSTOMER") as Role);
             setSession({
-              name: data.name,
-              email: data.email,
+              name: user.name,
+              email: user.email,
               role,
-              image: data.image ?? null,
-              emailVerified: data.emailVerified ?? false,
+              image: user.image ?? null,
+              emailVerified: user.emailVerified ?? false,
             });
             router.replace(
               callbackURL.startsWith("http")

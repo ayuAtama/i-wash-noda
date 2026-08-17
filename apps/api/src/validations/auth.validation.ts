@@ -218,21 +218,6 @@ export class AuthValidation {
       },
     });
 
-  static TelegramLoginSchema = z
-    .object({
-      userId: z.string().min(1).meta({
-        description: "User ID from Better Auth Telegram session",
-        example: "abc-123-def-456",
-      }),
-    })
-    .meta({
-      id: "TelegramLogin",
-      description: "Payload for Telegram login to issue JWT tokens",
-      example: {
-        userId: "abc-123-def-456",
-      },
-    });
-
   static TelegramEmailSchema = z
     .object({
       userId: z.string().min(1).meta({
@@ -444,9 +429,6 @@ export type EmailChangeConfirmDto = z.infer<
 >;
 export type TelegramEmailDto = z.infer<
   typeof AuthValidation.TelegramEmailSchema
->;
-export type TelegramLoginDto = z.infer<
-  typeof AuthValidation.TelegramLoginSchema
 >;
 export type TelegramVerifyEmailDto = z.infer<
   typeof AuthValidation.TelegramVerifyEmailSchema

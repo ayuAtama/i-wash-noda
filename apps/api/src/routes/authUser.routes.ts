@@ -133,13 +133,6 @@ export class AuthUserRoute {
       this.controller.setNewEmail,
     );
     this.router.post(
-      "/telegram-login",
-      Validator.validate({
-        body: AuthValidation.TelegramLoginSchema,
-      }),
-      this.controller.telegramLogin,
-    );
-    this.router.post(
       "/telegram-email/request",
       rateLimiter(3),
       Validator.validate({

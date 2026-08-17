@@ -12,9 +12,9 @@ import { Button } from "@/components/ui/button";
 import {
   useTelegramEmailRequest,
   useTelegramEmailVerify,
-  useTelegramLogin,
 } from "@/lib/api/queries";
 import { setSession, ROLE_HOME } from "@/lib/auth/session-store";
+import { authClient } from "@/lib/auth-client";
 import type { Role } from "@/lib/api/types";
 
 const EmailSchema = z.object({
@@ -25,7 +25,6 @@ export default function TelegramEmailPage() {
   const router = useRouter();
   const requestEmail = useTelegramEmailRequest();
   const verifyEmail = useTelegramEmailVerify();
-  const telegramLogin = useTelegramLogin();
 
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
@@ -60,26 +59,24 @@ export default function TelegramEmailPage() {
     verifyEmail.mutate(
       { userId, email, otp },
       {
-        onSuccess: () => {
-          telegramLogin.mutate(
-            { userId },
-            {
-              onSuccess: (loginData) => {
-                const data = loginData.data;
-                const role = (data.role ?? "CUSTOMER") as Role;
-                setSession({
-                  name: data.name,
-                  email: data.email,
-                  role,
-                  image: data.image ?? null,
-                  emailVerified: data.emailVerified ?? false,
-                });
-                sessionStorage.removeItem("telegram-new-user");
-                sessionStorage.removeItem("telegram-user-id");
-                router.replace(ROLE_HOME[role]);
-              },
-            },
-          );
+        onSuccess: async () => {
+          const { data: session } = await authClient.getSession();
+          if (!session?.user) {
+            router.replace("/login");
+            return;
+          }
+          const user = session.user as typeof session.user & { role?: string };
+          const role = ((user.role ?? "CUSTOMER") as Role);
+          setSession({
+            name: user.name,
+            email: user.email,
+            role,
+            image: user.image ?? null,
+            emailVerified: user.emailVerified ?? false,
+          });
+          sessionStorage.removeItem("telegram-new-user");
+          sessionStorage.removeItem("telegram-user-id");
+          router.replace(ROLE_HOME[role]);
         },
       },
     );

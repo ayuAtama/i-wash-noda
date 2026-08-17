@@ -70,7 +70,7 @@ export function normalizeError(error: unknown): ApiError {
 }
 
 export const client: AxiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: "",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

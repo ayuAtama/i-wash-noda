@@ -850,56 +850,6 @@ export class AuthUserService {
     }
   }
 
-  async telegramLogin(sub: UserIdDto, userAgent: string | null, ip: string) {
-    try {
-      const user = await this.prisma.user.findUnique({ where: { id: sub } });
-      if (!user) throw new HttpError(404, "User not found");
-
-      const { sessionId } = await this.prisma.$transaction(async (tx) => {
-        const sessionId = generateSessionId();
-        const hashedSessionId = hashSessionId(sessionId);
-        await tx.session.create({
-          data: {
-            userId: user.id,
-            token: hashedSessionId,
-            expiresAt: addDays(new Date(), 7),
-            userAgent,
-            ipAddress: ip,
-          },
-        });
-        return { sessionId };
-      });
-
-      const accessTokenPayload = {
-        sub: user.id,
-        email: user.email,
-        role: user.role,
-      };
-      const accessToken = await signToken(accessTokenPayload, "15m");
-
-      const refreshTokenPayload = {
-        sub: user.id,
-        sid: sessionId,
-      };
-      const refreshToken = await signToken(refreshTokenPayload, "7d");
-
-      return {
-        success: true,
-        message: "Telegram login successful",
-        accessToken,
-        refreshToken,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        image: user.image,
-        emailVerified: user.emailVerified,
-      };
-    } catch (error) {
-      if (error instanceof HttpError) throw error;
-      throw error;
-    }
-  }
-
   async telegramEmailRequest(sub: UserIdDto, email: EmailDto) {
     try {
       const user = await this.prisma.user.findUnique({
