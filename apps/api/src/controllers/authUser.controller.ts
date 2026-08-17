@@ -15,6 +15,9 @@ import {
   UpdateMeDto,
   VerifyDtoBody,
   VerifyDtoParams,
+  TelegramEmailDto,
+  TelegramLoginDto,
+  TelegramVerifyEmailDto,
 } from "@/validations/auth.validation";
 
 export class AuthUserController {
@@ -685,6 +688,122 @@ export class AuthUserController {
         success: true,
         message: "Email updated successfully",
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  telegramLogin = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const payload = req.validated!.body as TelegramLoginDto;
+      if (!payload?.userId) throw new HttpError(400, "userId required");
+
+      const userAgent = req.headers["user-agent"] || null;
+      const ip =
+        (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+        req.socket.remoteAddress ||
+        "";
+
+      const result = await this.authUserService.telegramLogin(
+        payload.userId,
+        userAgent,
+        ip,
+      );
+
+      res.cookie("access_token", result.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        expires: addMinutes(new Date(), 30),
+        path: "/",
+      });
+
+      res.cookie("refresh_token", result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        expires: addDays(new Date(), 7),
+        path: "/",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {
+          name: result.name,
+          email: result.email,
+          role: result.role,
+          image: result.image,
+          emailVerified: result.emailVerified,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  telegramEmailRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const payload = req.validated!.body as TelegramEmailDto;
+      if (!payload?.email || !payload?.userId) {
+        throw new HttpError(400, "Email and userId required");
+      }
+
+      const { accessToken } = await this.authUserService.telegramEmailRequest(
+        payload.userId,
+        payload.email,
+      );
+
+      res.cookie("temp_jwt", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        expires: addYears(new Date(), 1),
+        path: "/",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Verification code sent to your email",
+        data: null,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  telegramEmailVerify = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const payload = req.validated!.body as TelegramVerifyEmailDto;
+      if (!payload?.email || !payload?.otp || !payload?.userId) {
+        throw new HttpError(400, "Email, OTP, and userId required");
+      }
+
+      const result = await this.authUserService.telegramEmailVerify(
+        payload.userId,
+        payload.email,
+        payload.otp,
+      );
+
+      res.clearCookie("temp_jwt");
+
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result.user ?? null,
       });
     } catch (error) {
       next(error);

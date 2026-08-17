@@ -179,6 +179,30 @@ export function useChangeEmailConfirm() {
   });
 }
 
+export function useTelegramLogin() {
+  return useMutation({
+    mutationFn: authApi.telegramLogin,
+    onError: (error) => toast.error(normalizeError(error).message),
+  });
+}
+
+export function useTelegramEmailRequest() {
+  return useMutation({
+    mutationFn: authApi.telegramEmailRequest,
+    onSuccess: () =>
+      toast.success("Kode verifikasi berhasil dikirim ke email Anda"),
+    onError: (error) => toast.error(normalizeError(error).message),
+  });
+}
+
+export function useTelegramEmailVerify() {
+  return useMutation({
+    mutationFn: authApi.telegramEmailVerify,
+    onSuccess: () => toast.success("Email berhasil diverifikasi"),
+    onError: (error) => toast.error(normalizeError(error).message),
+  });
+}
+
 // ---------- Outlets & items ----------
 
 export function useOutlets() {

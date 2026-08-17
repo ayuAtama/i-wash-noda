@@ -37,6 +37,8 @@ import {
   temp_jwtDTO,
   UserIdDto,
   SessionIdDto,
+  TelegramEmailDto,
+  TelegramVerifyEmailDto,
 } from "@/validations/auth.validation";
 
 export class AuthUserService {
@@ -844,6 +846,221 @@ export class AuthUserService {
 
       return result;
     } catch (error) {
+      throw error;
+    }
+  }
+
+  async telegramLogin(sub: UserIdDto, userAgent: string | null, ip: string) {
+    try {
+      const user = await this.prisma.user.findUnique({ where: { id: sub } });
+      if (!user) throw new HttpError(404, "User not found");
+
+      const { sessionId } = await this.prisma.$transaction(async (tx) => {
+        const sessionId = generateSessionId();
+        const hashedSessionId = hashSessionId(sessionId);
+        await tx.session.create({
+          data: {
+            userId: user.id,
+            token: hashedSessionId,
+            expiresAt: addDays(new Date(), 7),
+            userAgent,
+            ipAddress: ip,
+          },
+        });
+        return { sessionId };
+      });
+
+      const accessTokenPayload = {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+      };
+      const accessToken = await signToken(accessTokenPayload, "15m");
+
+      const refreshTokenPayload = {
+        sub: user.id,
+        sid: sessionId,
+      };
+      const refreshToken = await signToken(refreshTokenPayload, "7d");
+
+      return {
+        success: true,
+        message: "Telegram login successful",
+        accessToken,
+        refreshToken,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        image: user.image,
+        emailVerified: user.emailVerified,
+      };
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+      throw error;
+    }
+  }
+
+  async telegramEmailRequest(sub: UserIdDto, email: EmailDto) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: sub },
+      });
+
+      if (!user) throw new HttpError(404, "User not found");
+
+      if (!user.email.endsWith("@telegram.user")) {
+        throw new HttpError(400, "Email already set");
+      }
+
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          email: email.toLowerCase().trim(),
+          id: { not: sub },
+          is_deleted: false,
+        },
+      });
+
+      if (existingUser) {
+        throw new HttpError(409, "Email already in use");
+      }
+
+      const validDomain = await validateMXRecord(email.toLowerCase().trim());
+      if (!validDomain) {
+        throw new HttpError(422, "Please use a valid email address");
+      }
+
+      const existingToken = await this.prisma.verificationToken.findFirst({
+        where: {
+          user_id: sub,
+          used: false,
+          expires_at: { gt: new Date() },
+        },
+        orderBy: { created_at: "desc" },
+      });
+
+      if (existingToken) {
+        const secondsSinceLastToken = differenceInSeconds(
+          new Date(),
+          existingToken.created_at,
+        );
+
+        if (secondsSinceLastToken < 60) {
+          const wait = 60 - secondsSinceLastToken;
+          throw new HttpError(
+            429,
+            `Please wait ${formatDistanceStrict(0, wait * 1000)} before requesting another code.`,
+          );
+        }
+
+        await this.prisma.verificationToken.update({
+          where: { id: existingToken.id },
+          data: { used: true },
+        });
+      }
+
+      const rawToken = generate6DigitCode();
+      const hashedToken = hashToken(rawToken);
+
+      await this.prisma.verificationToken.create({
+        data: {
+          user_id: sub,
+          token: hashedToken,
+          expires_at: addHours(new Date(), 1),
+        },
+      });
+
+      await sendVerificationEmail(email, rawToken, hashedToken);
+
+      const tokenPayload = { sub: user.id, email: user.email };
+      const accessToken = await signToken(tokenPayload, "365d");
+
+      return {
+        success: true,
+        message: `Verification code sent to ${email}`,
+        accessToken,
+      };
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+      throw error;
+    }
+  }
+
+  async telegramEmailVerify(
+    sub: UserIdDto,
+    email: EmailDto,
+    otp: string,
+  ) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: sub },
+      });
+
+      if (!user) throw new HttpError(404, "User not found");
+
+      if (!user.email.endsWith("@telegram.user")) {
+        throw new HttpError(400, "Email already set");
+      }
+
+      if (!otp || otp.length !== 6) {
+        throw new HttpError(400, "Invalid OTP");
+      }
+
+      const hashedOtp = hashToken(otp);
+
+      const record = await this.prisma.verificationToken.findFirst({
+        where: {
+          user_id: sub,
+          token: hashedOtp,
+          used: false,
+          expires_at: { gt: new Date() },
+        },
+      });
+
+      if (!record) {
+        throw new HttpError(400, "Invalid or expired verification code");
+      }
+
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          email: email.toLowerCase().trim(),
+          id: { not: sub },
+          is_deleted: false,
+        },
+      });
+
+      if (existingUser) {
+        throw new HttpError(409, "Email already in use");
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.verificationToken.update({
+          where: { id: record.id },
+          data: { used: true },
+        });
+
+        await tx.user.update({
+          where: { id: sub },
+          data: {
+            email: email.toLowerCase().trim(),
+            emailVerified: true,
+          },
+        });
+      });
+
+      return {
+        success: true,
+        message: "Email updated successfully",
+        user: {
+          id: user.id,
+          name: user.name,
+          email: email.toLowerCase().trim(),
+          image: user.image,
+          role: user.role,
+          emailVerified: true,
+        },
+      };
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
       throw error;
     }
   }

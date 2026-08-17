@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useRegister } from "@/lib/api/queries";
 import { RequireGuest } from "@/lib/auth/guards";
 import { SocialAuthButtons } from "@/components/auth/social-buttons";
+import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 
 const RegisterSchema = z.object({
   email: z.string().email("Email tidak valid"),
@@ -51,6 +52,7 @@ export default function RegisterPage() {
 
           <div className="space-y-2">
             <SocialAuthButtons callbackURL="/" />
+            <TelegramLoginButton />
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-border" />

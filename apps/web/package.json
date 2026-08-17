@@ -39,6 +39,7 @@
     "@tanstack/zod-form-adapter": "^0.42.1",
     "axios": "^1.13.4",
     "better-auth": "^1.6.29",
+    "better-auth-telegram": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

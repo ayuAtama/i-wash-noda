@@ -41,7 +41,7 @@ export class App {
   private initializeCors() {
     this.app.use(
       cors({
-        origin: process.env.NEXT_PUBLIC_APP_URL,
+        origin: [process.env.NEXT_PUBLIC_APP_URL!, process.env.NGROK_URL!],
         credentials: true,
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       }),

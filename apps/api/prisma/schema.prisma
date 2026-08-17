@@ -131,6 +131,10 @@ model User {
   ironingOrders  Order[]              @relation("IroningWorker")
   packingOrders  Order[]              @relation("PackingWorker")
 
+  telegramId          String?  @unique
+  telegramUsername    String?
+  telegramPhoneNumber String?
+
   emailVerified   Boolean          @default(false)
   image           String?
   createdAt       DateTime         @default(now())
@@ -568,6 +572,8 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
+  telegramId            String?
+  telegramUsername       String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 

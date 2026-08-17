@@ -8,6 +8,9 @@ import { prisma } from "../config/prisma";
 // custom session response
 import { customSession } from "better-auth/plugins";
 
+// telegram login widget plugin
+import { telegram } from "better-auth-telegram";
+
 // Add this function before your auth configuration
 async function findUserRoles(userId: string) {
   // Implement your role-finding logic here using Prisma
@@ -52,7 +55,7 @@ export const auth = betterAuth({
   },
 
   //cors error fix
-  trustedOrigins: [FRONTEND_URL],
+  trustedOrigins: [FRONTEND_URL, process.env.NGROK_URL!],
 
   //uuid error fix
   advanced: {
@@ -72,6 +75,21 @@ export const auth = betterAuth({
         },
         session,
       };
+    }),
+    telegram({
+      botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      botUsername: process.env.TELEGRAM_BOT_USERNAME!,
+      autoCreateUser: true,
+      allowUserToLink: true,
+      maxAuthAge: 86400,
+      mapTelegramDataToUser: (data) => ({
+        name: data.last_name
+          ? `${data.first_name} ${data.last_name}`
+          : data.first_name,
+        image: data.photo_url,
+        email: `${data.id}@telegram.user`,
+        emailVerified: false,
+      }),
     }),
   ],
 });

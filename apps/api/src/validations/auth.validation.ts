@@ -218,6 +218,69 @@ export class AuthValidation {
       },
     });
 
+  static TelegramLoginSchema = z
+    .object({
+      userId: z.string().min(1).meta({
+        description: "User ID from Better Auth Telegram session",
+        example: "abc-123-def-456",
+      }),
+    })
+    .meta({
+      id: "TelegramLogin",
+      description: "Payload for Telegram login to issue JWT tokens",
+      example: {
+        userId: "abc-123-def-456",
+      },
+    });
+
+  static TelegramEmailSchema = z
+    .object({
+      userId: z.string().min(1).meta({
+        description: "Telegram user ID from Better Auth session",
+        example: "abc-123-def-456",
+      }),
+      email: z.email().meta({
+        description: "New email address for Telegram user",
+        example: "user@example.com",
+      }),
+    })
+    .meta({
+      id: "TelegramEmail",
+      description: "Payload for requesting email verification for Telegram user",
+      example: {
+        userId: "abc-123-def-456",
+        email: "user@example.com",
+      },
+    });
+
+  static TelegramVerifyEmailSchema = z
+    .object({
+      userId: z.string().min(1).meta({
+        description: "Telegram user ID from Better Auth session",
+        example: "abc-123-def-456",
+      }),
+      email: z.email().meta({
+        description: "Email address to verify",
+        example: "user@example.com",
+      }),
+      otp: z
+        .string()
+        .regex(/^\d{6}$/)
+        .meta({
+          description: "6-digit OTP verification code",
+          example: "123456",
+        }),
+    })
+    .meta({
+      id: "TelegramVerifyEmail",
+      description: "Payload for verifying email for Telegram user",
+      example: {
+        userId: "abc-123-def-456",
+        email: "user@example.com",
+        otp: "123456",
+      },
+    });
+
   static RegisterServiceSchema = z
     .object({
       email: z.email().meta({
@@ -378,6 +441,15 @@ export type EmailChangeRequestDto = z.infer<
 >;
 export type EmailChangeConfirmDto = z.infer<
   typeof AuthValidation.EmailChangeConfirmSchema
+>;
+export type TelegramEmailDto = z.infer<
+  typeof AuthValidation.TelegramEmailSchema
+>;
+export type TelegramLoginDto = z.infer<
+  typeof AuthValidation.TelegramLoginSchema
+>;
+export type TelegramVerifyEmailDto = z.infer<
+  typeof AuthValidation.TelegramVerifyEmailSchema
 >;
 export type RegisterServiceDto = z.infer<
   typeof AuthValidation.RegisterServiceSchema

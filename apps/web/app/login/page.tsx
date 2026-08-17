@@ -11,6 +11,7 @@ import { useLogin } from "@/lib/api/queries";
 import { RequireGuest } from "@/lib/auth/guards";
 import { ROLE_HOME, setSession } from "@/lib/auth/session-store";
 import { SocialAuthButtons } from "@/components/auth/social-buttons";
+import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 
 const LoginSchema = z.object({
   email: z.string().email("Email tidak valid"),
@@ -113,6 +114,7 @@ export default function LoginPage() {
 
           <div className="space-y-2">
             <SocialAuthButtons callbackURL="/" />
+            <TelegramLoginButton />
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-border" />

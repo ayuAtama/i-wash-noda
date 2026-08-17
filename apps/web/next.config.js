@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: ['alfredo-condimental-amare.ngrok-free.dev'],
   images: {
     remotePatterns: [
       {
@@ -20,6 +21,11 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "**.twimg.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "t.me",
         pathname: "/**",
       },
     ],

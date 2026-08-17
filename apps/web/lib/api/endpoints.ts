@@ -127,6 +127,27 @@ export const authApi = {
     unwrap<ChangeEmailConfirmResponse>(
       client.put<ChangeEmailConfirmResponse>("/api/change-email-confirm", body),
     ),
+  telegramLogin: (body: { userId: string }) =>
+    unwrap<{ success: boolean; message: string; data: { name: string | null; email: string; role: string; image: string | null; emailVerified: boolean } }>(
+      client.post<{ success: boolean; message: string; data: { name: string | null; email: string; role: string; image: string | null; emailVerified: boolean } }>(
+        "/api/telegram-login",
+        body,
+      ),
+    ),
+  telegramEmailRequest: (body: { userId: string; email: string }) =>
+    unwrap<{ success: boolean; message: string }>(
+      client.post<{ success: boolean; message: string }>(
+        "/api/telegram-email/request",
+        body,
+      ),
+    ),
+  telegramEmailVerify: (body: { userId: string; email: string; otp: string }) =>
+    unwrap<{ success: boolean; message: string; data: { id: string; name: string | null; email: string; image: string | null; role: string; emailVerified: boolean } | null }>(
+      client.post<{ success: boolean; message: string; data: { id: string; name: string | null; email: string; image: string | null; role: string; emailVerified: boolean } | null }>(
+        "/api/telegram-email/verify",
+        body,
+      ),
+    ),
 };
 
 // ---------- Outlets & items ----------
