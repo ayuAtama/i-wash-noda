@@ -36,3 +36,11 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Database dumps, session queries, and backup files (may contain secrets)
+/*.sql
+*.session.sql
+*.log
+*.bak
+*.ba
+*.bak.uwu
