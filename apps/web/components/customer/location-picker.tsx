@@ -1,6 +1,7 @@
 "use client";
 
-import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import { useCallback, useRef } from "react";
+import { GoogleMap, LoadScript } from "@react-google-maps/api";
 import { MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -14,12 +15,14 @@ export const DEFAULT_CENTER = { lat: -6.2008568, lng: 106.8444966 };
 const JAKARTA_CENTER = { lat: -6.2, lng: 106.816666 };
 
 const MAP_OPTIONS: google.maps.MapOptions = {
-  disableDefaultUI: false,
+  disableDefaultUI: true,
   zoomControl: true,
   streetViewControl: false,
   mapTypeControl: false,
   fullscreenControl: false,
 };
+
+const DEFAULT_ZOOM = 15;
 
 export function LocationPicker({
   value,
@@ -31,6 +34,20 @@ export function LocationPicker({
   height?: number;
 }) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  const handleLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
+
+  const handleIdle = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const center = map.getCenter();
+    if (center) {
+      onChange({ lat: center.lat(), lng: center.lng() });
+    }
+  }, [onChange]);
 
   if (!apiKey) {
     return (
@@ -54,27 +71,24 @@ export function LocationPicker({
         <Skeleton className="w-full rounded-lg" style={{ height }} />
       }
     >
-      <GoogleMap
-        mapContainerStyle={{ width: "100%", height }}
-        center={value ?? JAKARTA_CENTER}
-        zoom={value ? 15 : 11}
-        options={MAP_OPTIONS}
-        onClick={(event) => {
-          const latLng = event.latLng;
-          if (latLng) onChange({ lat: latLng.lat(), lng: latLng.lng() });
-        }}
-      >
-        {value ? (
-          <Marker
-            position={value}
-            draggable
-            onDragEnd={(event) => {
-              const latLng = event.latLng;
-              if (latLng) onChange({ lat: latLng.lat(), lng: latLng.lng() });
-            }}
-          />
-        ) : null}
-      </GoogleMap>
+      <div className="relative" style={{ width: "100%", height }}>
+        <GoogleMap
+          mapContainerStyle={{ width: "100%", height: "100%" }}
+          center={value ?? JAKARTA_CENTER}
+          zoom={value ? DEFAULT_ZOOM : 11}
+          options={MAP_OPTIONS}
+          onLoad={handleLoad}
+          onIdle={handleIdle}
+        />
+
+        <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
+          <div className="relative">
+            <div className="flex h-10 w-10 items-center justify-center text-red-800">
+              <MapPin className="h-15 w-15" />
+            </div>
+          </div>
+        </div>
+      </div>
     </LoadScript>
   );
 }
