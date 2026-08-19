@@ -1,11 +1,21 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ipGeolocate } from "@/lib/location/actions";
 
 export interface GeoPosition {
   lat: number;
   lng: number;
+}
+
+async function ipGeolocateClient(): Promise<GeoPosition | null> {
+  try {
+    const res = await fetch("https://ipwho.is/");
+    const data = await res.json();
+    if (!data?.success || typeof data.latitude !== "number") return null;
+    return { lat: data.latitude, lng: data.longitude };
+  } catch {
+    return null;
+  }
 }
 
 export function useGeolocation() {
@@ -18,9 +28,9 @@ export function useGeolocation() {
     if (typeof window === "undefined") return;
 
     const runIpFallback = async () => {
-      const result = await ipGeolocate();
+      const result = await ipGeolocateClient();
       if (result) {
-        setPosition({ lat: result.lat, lng: result.lng });
+        setPosition(result);
         setApproximate(true);
         setError(null);
       } else {
@@ -50,5 +60,22 @@ export function useGeolocation() {
     );
   }, []);
 
-  return { position, approximate, error, loading, locate };
+  const locateByIp = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await ipGeolocateClient();
+      if (result) {
+        setPosition(result);
+        setApproximate(true);
+      } else {
+        setError("Gagal mengambil lokasi dari IP.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { position, approximate, error, loading, locate, locateByIp };
 }

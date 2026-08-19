@@ -1,25 +1,28 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Loader2, LocateFixed, MapPinned, PackageCheck, Shirt, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CustomerShell } from "@/components/customer/customer-shell";
-import { OutletCard, OutletCardSkeleton } from "@/components/customer/outlet-card";
-import { useOutletCoverage, useOutlets } from "@/lib/api/queries";
+import { OutletMap } from "@/components/customer/outlet-map";
+import { useOutlets } from "@/lib/api/queries";
 import { useGeolocation } from "@/hooks/use-geolocation";
 
 export default function HomePage() {
-  const { position, approximate, error, loading, locate } = useGeolocation();
-  const coverage = useOutletCoverage(position?.lat ?? 0, position?.lng ?? 0, Boolean(position));
+  const { position, approximate, error, loading, locate, locateByIp } = useGeolocation();
   const outlets = useOutlets();
-  const coveredOutlets = coverage.data?.data ?? [];
+  const allOutlets = outlets.data?.data ?? [];
 
-  const allOutlets = coveredOutlets.length > 0 ? coveredOutlets : (outlets.data?.data ?? []);
+  useEffect(() => {
+    locateByIp();
+  }, [locateByIp]);
 
   return (
     <CustomerShell>
-      <section className="mx-auto max-w-2xl space-y-6">
+      <section className="mx-auto max-w-5xl space-y-6">
         <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 text-center sm:p-10">
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
             I-Wash <span className="text-primary">Noda</span>
@@ -50,7 +53,7 @@ export default function HomePage() {
             <p className="mt-3 text-sm text-destructive">{error}</p>
           ) : null}
 
-          {approximate ? (
+          {approximate && position ? (
             <p className="mt-3 text-sm text-muted-foreground">
               Lokasi diperkirakan dari koneksi internet Anda — Anda tetap bisa
               menyesuaikannya di peta.
@@ -58,65 +61,35 @@ export default function HomePage() {
           ) : null}
         </div>
 
-        {position ? (
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Outlet di sekitar Anda</h2>
-              <span className="text-sm text-muted-foreground">
-                {coverage.isLoading
-                  ? "Menghitung…"
-                  : `${coveredOutlets.length} outlet tersedia`}
-              </span>
-            </div>
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Outlet kami</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={locate}
+              disabled={loading}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              {loading ? (
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <LocateFixed className="mr-1 h-3.5 w-3.5" />
+              )}
+              Lokasi tidak sesuai?
+            </Button>
+          </div>
 
-            {coverage.isLoading ? (
-              <div className="space-y-3">
-                <OutletCardSkeleton />
-                <OutletCardSkeleton />
-              </div>
-            ) : coveredOutlets.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <p className="font-medium">Belum ada outlet di area Anda</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Saat ini kami belum menjangkau lokasi Anda. Cobalah memilih lokasi
-                    lain di peta, atau hubungi kami untuk info lebih lanjut.
-                  </p>
-                  <Button asChild variant="outline" className="mt-4">
-                    <Link href="/location">Ubah lokasi</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {coveredOutlets.map((outlet) => (
-                  <OutletCard key={outlet.id} outlet={outlet} />
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Outlet kami</h2>
-              <Link href="/location" className="text-sm text-primary hover:underline">
-                Cek jangkauan
-              </Link>
-            </div>
-            {outlets.isLoading ? (
-              <div className="space-y-3">
-                <OutletCardSkeleton />
-                <OutletCardSkeleton />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {allOutlets.map((outlet) => (
-                  <OutletCard key={outlet.id} outlet={outlet} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+          {outlets.isLoading ? (
+            <Skeleton className="w-full rounded-xl" style={{ height: 400 }} />
+          ) : (
+            <OutletMap
+              outlets={allOutlets}
+              initialCenter={position}
+              userPosition={!approximate && position ? position : undefined}
+            />
+          )}
+        </div>
 
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Cara kerjanya</h2>
