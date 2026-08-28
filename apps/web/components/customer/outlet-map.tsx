@@ -30,6 +30,8 @@ const MAP_OPTIONS: google.maps.MapOptions = {
   streetViewControl: false,
   mapTypeControl: false,
   fullscreenControl: false,
+  gestureHandling: "greedy",
+  scrollwheel: false,
 };
 
 function createPinSvg(color: string): google.maps.Icon {

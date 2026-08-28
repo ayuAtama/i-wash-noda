@@ -20,6 +20,8 @@ const MAP_OPTIONS: google.maps.MapOptions = {
   streetViewControl: false,
   mapTypeControl: false,
   fullscreenControl: false,
+  gestureHandling: "greedy",
+  scrollwheel: false,
 };
 
 const DEFAULT_ZOOM = 15;
